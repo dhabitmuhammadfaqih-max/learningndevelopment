@@ -42,16 +42,23 @@ class OfficialController extends Controller
     public function storeEmployee(Request $request)
     {
         $validated = $request->validate([
-            'name'     => 'required|string|max:255',
-            'email'    => 'required|email|max:255|unique:users,email',
-            'password' => 'required|string|min:8|confirmed',
+            'name'       => 'required|string|max:255',
+            'username'   => 'required|string|max:100|alpha_dash|unique:users,username',
+            'nik'        => 'required|string|max:50|unique:users,nik',
+            'unit_kerja' => 'nullable|string|max:255',
         ]);
 
         User::create([
-            'name'     => $validated['name'],
-            'email'    => $validated['email'],
-            'password' => bcrypt($validated['password']),
-            'role'     => 'karyawan',
+            'name'       => $validated['name'],
+            'username'   => $validated['username'],
+            'nik'        => $validated['nik'],
+            'unit_kerja' => $validated['unit_kerja'] ?? null,
+            // Kolom email masih wajib & unik di database, jadi diisi otomatis
+            // dari username (karyawan tidak login/pakai email ini sama sekali).
+            'email'      => $validated['username'] . '@karyawan.local',
+            // Password = NIK karyawan, jadi tidak perlu diinput terpisah.
+            'password'   => bcrypt($validated['nik']),
+            'role'       => 'karyawan',
         ]);
 
         return back()->with('success', 'Akun karyawan berhasil ditambahkan.');
@@ -62,17 +69,24 @@ class OfficialController extends Controller
         $employee = User::where('role', 'karyawan')->findOrFail($id);
 
         $validated = $request->validate([
-            'name'     => 'required|string|max:255',
-            'email'    => 'required|email|max:255|unique:users,email,' . $employee->id,
-            'password' => 'nullable|string|min:8|confirmed',
+            'name'       => 'required|string|max:255',
+            'username'   => 'required|string|max:100|alpha_dash|unique:users,username,' . $employee->id,
+            'nik'        => 'required|string|max:50|unique:users,nik,' . $employee->id,
+            'unit_kerja' => 'nullable|string|max:255',
         ]);
 
-        $employee->name  = $validated['name'];
-        $employee->email = $validated['email'];
+        $employee->name       = $validated['name'];
+        $employee->username   = $validated['username'];
+        $employee->unit_kerja = $validated['unit_kerja'] ?? null;
+        // Ikut sinkronkan email placeholder kalau username berubah.
+        $employee->email      = $validated['username'] . '@karyawan.local';
 
-        if (!empty($validated['password'])) {
-            $employee->password = bcrypt($validated['password']);
+        // Kalau NIK diubah, password ikut diperbarui (password = NIK).
+        if ($validated['nik'] !== $employee->nik) {
+            $employee->password = bcrypt($validated['nik']);
         }
+
+        $employee->nik = $validated['nik'];
 
         $employee->save();
 
