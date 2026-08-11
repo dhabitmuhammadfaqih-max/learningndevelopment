@@ -241,17 +241,20 @@
         <form method="POST" action="{{ route('official.employee.store') }}">
             @csrf
 
-            <label for="add-name">Nama</label>
+            <label for="add-name">Nama Lengkap</label>
             <input type="text" id="add-name" name="name" value="{{ old('name') }}" required>
 
-            <label for="add-email">Email</label>
-            <input type="email" id="add-email" name="email" value="{{ old('email') }}" required>
+            <label for="add-username">Username</label>
+            <input type="text" id="add-username" name="username" value="{{ old('username') }}" required>
 
-            <label for="add-password">Password</label>
-            <input type="password" id="add-password" name="password" required>
+            <label for="add-nik">NIK</label>
+            <input type="text" id="add-nik" name="nik" value="{{ old('nik') }}" required>
+            <small style="display:block; color:#888; font-size:11px; margin-top:2px;">
+                NIK ini juga dipakai sebagai password login.
+            </small>
 
-            <label for="add-password-confirm">Konfirmasi Password</label>
-            <input type="password" id="add-password-confirm" name="password_confirmation" required>
+            <label for="add-unit-kerja">Unit Kerja</label>
+            <input type="text" id="add-unit-kerja" name="unit_kerja" value="{{ old('unit_kerja') }}">
 
             @if($errors->any())
                 <div class="error">
@@ -285,7 +288,12 @@
 
             <div class="card">
                 <strong>{{ $employee->name }}</strong>
-                <small>{{ $employee->email }}</small>
+                <small>
+                    {{ $employee->username }}
+                    @if($employee->unit_kerja)
+                        &middot; {{ $employee->unit_kerja }}
+                    @endif
+                </small>
 
                 <div class="badges">
                     <span class="badge badge-korelasi">
@@ -327,21 +335,24 @@
                         @method('PUT')
                         <input type="hidden" name="_form_employee_id" value="{{ $employee->id }}">
 
-                        <label for="name-{{ $employee->id }}">Nama</label>
+                        <label for="name-{{ $employee->id }}">Nama Lengkap</label>
                         <input type="text" id="name-{{ $employee->id }}" name="name"
                                value="{{ old('name', $employee->name) }}" required>
 
-                        <label for="email-{{ $employee->id }}">Email</label>
-                        <input type="email" id="email-{{ $employee->id }}" name="email"
-                               value="{{ old('email', $employee->email) }}" required>
+                        <label for="username-{{ $employee->id }}">Username</label>
+                        <input type="text" id="username-{{ $employee->id }}" name="username"
+                               value="{{ old('username', $employee->username) }}" required>
 
-                        <label for="password-{{ $employee->id }}">Password Baru (opsional)</label>
-                        <input type="password" id="password-{{ $employee->id }}" name="password"
-                               placeholder="Kosongkan jika tidak diubah">
+                        <label for="nik-{{ $employee->id }}">NIK</label>
+                        <input type="text" id="nik-{{ $employee->id }}" name="nik"
+                               value="{{ old('nik', $employee->nik) }}" required>
+                        <small style="display:block; color:#888; font-size:11px; margin-top:2px;">
+                            NIK ini juga dipakai sebagai password login. Ubah NIK = password ikut berubah.
+                        </small>
 
-                        <label for="password-confirm-{{ $employee->id }}">Konfirmasi Password</label>
-                        <input type="password" id="password-confirm-{{ $employee->id }}" name="password_confirmation"
-                               placeholder="Ulangi password baru">
+                        <label for="unit-kerja-{{ $employee->id }}">Unit Kerja</label>
+                        <input type="text" id="unit-kerja-{{ $employee->id }}" name="unit_kerja"
+                               value="{{ old('unit_kerja', $employee->unit_kerja) }}">
 
                         @if($errors->any())
                             <div class="error">

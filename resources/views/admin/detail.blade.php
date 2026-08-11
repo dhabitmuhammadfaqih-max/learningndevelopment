@@ -102,7 +102,7 @@
 <div class="topbar">
     <h1>Penilaian {{ $employee->name }}</h1>
 </div>
-<p style="color:#777; margin-top:-10px;">{{ $employee->email }}</p>
+<p style="color:#777; margin-top:-10px;">{{ $employee->username }}</p>
 
 
 <div class="card">

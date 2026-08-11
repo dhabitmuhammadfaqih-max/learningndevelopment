@@ -99,7 +99,7 @@
 
             <div class="card">
                 <h3>{{ $employee->name }}</h3>
-                <p>{{ $employee->email }}</p>
+                <p>{{ $employee->username }}</p>
 
                 <a href="{{ route('admin.employee', $employee->id) }}">
                     Lihat Detail
