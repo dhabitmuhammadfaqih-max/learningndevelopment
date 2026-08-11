@@ -69,11 +69,20 @@ Route::middleware('auth')->group(function () {
         Route::get('/dashboard', [OfficialController::class, 'index'])
             ->name('dashboard');
 
+        Route::post('/karyawan', [OfficialController::class, 'storeEmployee'])
+            ->name('employee.store');
+
         Route::get('/karyawan/{id}', [OfficialController::class, 'show'])
             ->name('employee');
 
         Route::post('/karyawan/{id}/nilai', [OfficialController::class, 'evaluate'])
             ->name('evaluate');
+
+        Route::put('/karyawan/{id}', [OfficialController::class, 'updateEmployee'])
+            ->name('employee.update');
+
+        Route::delete('/karyawan/{id}', [OfficialController::class, 'destroyEmployee'])
+            ->name('employee.destroy');
 
         // Tambahan: kalau ada yang akses /nilai lewat GET, redirect balik
         Route::get('/karyawan/{id}/nilai', function ($id) {

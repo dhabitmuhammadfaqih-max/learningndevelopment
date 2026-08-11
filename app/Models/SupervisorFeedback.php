@@ -11,6 +11,7 @@ class SupervisorFeedback extends Model
         'employee_id',
         'supervisor_id',
         'feedback',
+        'signature',
     ];
 
     public function employee()

@@ -156,6 +156,11 @@
             height: 50px; /* Space area tanda tangan */
         }
 
+        .ttd-signature-img {
+            height: 46px;
+            max-width: 100%;
+        }
+
         .ttd-name {
             display: block;
             border-top: 1px solid #000;
@@ -386,7 +391,11 @@
         <tr>
             <td>
                 ATASAN PENILAI
-                <div class="ttd-space"></div>
+                <div class="ttd-space">
+                    @if(!empty($signatures['atasan']))
+                        <img src="{{ $signatures['atasan'] }}" class="ttd-signature-img">
+                    @endif
+                </div>
                 <span class="ttd-name">
                     {{ $supervisorFeedback->supervisor->name ?? 'Ishana Mahisa' }}
                 </span>
@@ -400,7 +409,11 @@
             </td>
             <td>
                 KORELASI KERJA
-                <div class="ttd-space"></div>
+                <div class="ttd-space">
+                    @if(!empty($signatures['korelasi']))
+                        <img src="{{ $signatures['korelasi'] }}" class="ttd-signature-img">
+                    @endif
+                </div>
                 <span class="ttd-name">
                     @if(isset($feedbacks) && $feedbacks->count() > 0)
                         {{ $feedbacks->first()->reviewer->name ?? '-' }}
@@ -411,7 +424,11 @@
             </td>
             <td>
                 PEJABAT YANG MENILAI
-                <div class="ttd-space"></div>
+                <div class="ttd-space">
+                    @if(!empty($signatures['pejabat']))
+                        <img src="{{ $signatures['pejabat'] }}" class="ttd-signature-img">
+                    @endif
+                </div>
                 <span class="ttd-name">
                     {{ $evaluation->official->name ?? 'Irawati Tjaturini' }}
                 </span>

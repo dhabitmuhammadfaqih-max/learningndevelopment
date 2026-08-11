@@ -12,6 +12,7 @@ class Feedback extends Model
         'employee_id',
         'reviewer_id',
         'feedback',
+        'signature',
     ];
 
     public function employee()
