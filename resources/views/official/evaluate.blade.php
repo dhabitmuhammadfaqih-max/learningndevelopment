@@ -146,6 +146,66 @@
         button:hover {
             background: #333;
         }
+
+        button:disabled {
+            background: #999;
+            cursor: not-allowed;
+        }
+
+        /* Signature pad */
+        .signature-wrap {
+            max-width: 500px;
+        }
+
+        #signature-pad {
+            width: 100%;
+            height: 160px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            background: white;
+            touch-action: none;
+            cursor: crosshair;
+            display: block;
+        }
+
+        .signature-actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 8px;
+        }
+
+        .signature-hint {
+            font-size: 12px;
+            color: #999;
+        }
+
+        .signature-clear {
+            background: none;
+            border: none;
+            color: #666;
+            font-size: 13px;
+            cursor: pointer;
+            padding: 4px 8px;
+            margin: 0;
+            text-decoration: underline;
+        }
+
+        .signature-clear:hover {
+            background: none;
+            color: #111;
+        }
+
+        .signature-saved {
+            width: 100%;
+            max-width: 300px;
+            height: 120px;
+            object-fit: contain;
+            border: 1px solid #eee;
+            border-radius: 6px;
+            background: #fafafa;
+            display: block;
+        }
     </style>
 </head>
 
@@ -206,6 +266,13 @@
             <p>{{ $myEvaluation->recommendationLabel() }}</p>
         </div>
 
+        @if ($myEvaluation->signature)
+            <div class="field">
+                <label>Tanda Tangan Penilai</label>
+                <img src="{{ Storage::disk('public')->url($myEvaluation->signature) }}" class="signature-saved">
+            </div>
+        @endif
+
     @else
 
         <form method="POST" action="{{ route('official.evaluate', $employee->id) }}" id="form-penilaian">
@@ -261,7 +328,18 @@
                 </select>
             </div>
 
-            <button type="submit">Simpan Penilaian</button>
+            <div class="field signature-wrap">
+                <label>Tanda Tangan Penilai</label>
+                <canvas id="signature-pad"></canvas>
+                <div class="signature-actions">
+                    <span class="signature-hint">Gambar tanda tangan di kotak di atas</span>
+                    <button type="button" class="signature-clear" id="btn-clear-signature">Hapus &amp; ulangi</button>
+                </div>
+                {{-- Diisi otomatis oleh JS sebelum form dikirim --}}
+                <input type="hidden" name="signature" id="signature-input">
+            </div>
+
+            <button type="submit" id="btn-submit">Simpan Penilaian</button>
 
         </form>
 
@@ -292,6 +370,83 @@
     });
 
     hitungTotal();
+
+    // ---- Signature pad ----
+    const canvas = document.getElementById('signature-pad');
+
+    if (canvas) {
+        const ctx = canvas.getContext('2d');
+        const ratio = window.devicePixelRatio || 1;
+
+        function resizeCanvas() {
+            const imageData = canvas.toDataURL();
+            canvas.width = canvas.clientWidth * ratio;
+            canvas.height = canvas.clientHeight * ratio;
+            ctx.scale(ratio, ratio);
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            ctx.lineWidth = 2.2;
+            ctx.strokeStyle = '#111';
+        }
+        resizeCanvas();
+
+        let drawing = false;
+        let last = null;
+        let hasStroke = false;
+
+        function getPos(e) {
+            const rect = canvas.getBoundingClientRect();
+            const point = e.touches ? e.touches[0] : e;
+            return { x: point.clientX - rect.left, y: point.clientY - rect.top };
+        }
+
+        function start(e) {
+            e.preventDefault();
+            drawing = true;
+            hasStroke = true;
+            last = getPos(e);
+        }
+
+        function move(e) {
+            if (!drawing) return;
+            e.preventDefault();
+            const pos = getPos(e);
+            ctx.beginPath();
+            ctx.moveTo(last.x, last.y);
+            ctx.lineTo(pos.x, pos.y);
+            ctx.stroke();
+            last = pos;
+        }
+
+        function end() {
+            drawing = false;
+        }
+
+        canvas.addEventListener('mousedown', start);
+        canvas.addEventListener('mousemove', move);
+        canvas.addEventListener('mouseup', end);
+        canvas.addEventListener('mouseleave', end);
+        canvas.addEventListener('touchstart', start);
+        canvas.addEventListener('touchmove', move);
+        canvas.addEventListener('touchend', end);
+
+        document.getElementById('btn-clear-signature').addEventListener('click', function () {
+            ctx.clearRect(0, 0, canvas.clientWidth, canvas.clientHeight);
+            hasStroke = false;
+        });
+
+        const form = document.getElementById('form-penilaian');
+        const signatureInput = document.getElementById('signature-input');
+
+        form.addEventListener('submit', function (e) {
+            if (!hasStroke) {
+                e.preventDefault();
+                alert('Tanda tangan wajib diisi sebelum menyimpan penilaian.');
+                return;
+            }
+            signatureInput.value = canvas.toDataURL('image/png');
+        });
+    }
 </script>
 
 </body>

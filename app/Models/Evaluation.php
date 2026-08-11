@@ -24,6 +24,7 @@ class Evaluation extends Model
         'feedback',
         'recommendation',
         'employee_response',
+        'signature',
     ];
 
     // Bobot setiap komponen penilaian (total harus 100)
