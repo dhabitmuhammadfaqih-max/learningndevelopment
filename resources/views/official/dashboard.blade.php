@@ -92,11 +92,23 @@
         @foreach($employees as $employee)
 
             <div class="card">
+
                 <strong>{{ $employee->name }}</strong>
 
-                <a href="{{ route('official.employee', $employee->id) }}">
-                    Berikan Penilaian
-                </a>
+                @if(in_array($employee->id, $evaluatedEmployeeIds))
+
+                    <a href="{{ route('official.employee', $employee->id) }}">
+                        Lihat Nilai
+                    </a>
+
+                @else
+
+                    <a href="{{ route('official.employee', $employee->id) }}">
+                        Berikan Penilaian
+                    </a>
+
+                @endif
+
             </div>
 
         @endforeach

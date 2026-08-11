@@ -13,7 +13,15 @@ class OfficialController extends Controller
     {
         $employees = User::where('role', 'karyawan')->get();
 
-        return view('official.dashboard', compact('employees'));
+        // Ambil ID karyawan yang sudah dinilai oleh pejabat yang login
+        $evaluatedEmployeeIds = Evaluation::where('official_id', Auth::id())
+            ->pluck('employee_id')
+            ->toArray();
+
+        return view('official.dashboard', compact(
+            'employees',
+            'evaluatedEmployeeIds'
+        ));
     }
 
     public function show($id)
@@ -25,12 +33,17 @@ class OfficialController extends Controller
             ->latest()
             ->get();
 
+        // Ambil penilaian dari pejabat yang sedang login
         $myEvaluation = $employee->evaluations()
             ->where('official_id', Auth::id())
             ->latest()
             ->first();
 
-        return view('official.evaluate', compact('employee', 'peerFeedbacks', 'myEvaluation'));
+        return view('official.evaluate', compact(
+            'employee',
+            'peerFeedbacks',
+            'myEvaluation'
+        ));
     }
 
     public function evaluate(Request $request, $id)
@@ -53,7 +66,12 @@ class OfficialController extends Controller
 
         $score = Evaluation::calculateScore($validated);
 
-        Evaluation::create([
+        // Cari penilaian yang sudah ada
+        $evaluation = Evaluation::where('employee_id', $employee->id)
+            ->where('official_id', Auth::id())
+            ->first();
+
+        $data = [
             'employee_id'                 => $employee->id,
             'official_id'                 => Auth::id(),
             'pengetahuan_kerja'           => $validated['pengetahuan_kerja'],
@@ -68,8 +86,22 @@ class OfficialController extends Controller
             'score'                       => $score,
             'feedback'                    => $validated['feedback'],
             'recommendation'              => $validated['recommendation'],
-        ]);
+        ];
 
-        return back()->with('success', 'Penilaian berhasil disimpan. Nilai akhir: '.$score);
+        if ($evaluation) {
+            // Kalau sudah ada, update penilaian lama
+            $evaluation->update($data);
+
+            $message = 'Penilaian berhasil diperbarui. Nilai akhir: '.$score;
+        } else {
+            // Kalau belum ada, buat penilaian baru
+            Evaluation::create($data);
+
+            $message = 'Penilaian berhasil disimpan. Nilai akhir: '.$score;
+        }
+
+        return redirect()
+            ->route('official.employee', $employee->id)
+            ->with('success', $message);
     }
 }
