@@ -6,6 +6,7 @@ use App\Models\User;
 use App\Models\Feedback;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 
 class EmployeeController extends Controller
 {
@@ -40,15 +41,26 @@ class EmployeeController extends Controller
 
     public function feedback(Request $request)
     {
-        $request->validate([
+        $validated = $request->validate([
             'employee_id' => 'required|exists:users,id',
-            'feedback' => 'required|string|min:10',
+            'feedback'    => 'required|string|min:10',
+            'signature'   => 'required|string',
         ]);
 
+        // Pastikan data yang dikirim benar-benar gambar base64 dari canvas
+        if (! preg_match('/^data:image\/png;base64,/', $validated['signature'])) {
+            return back()->withErrors(['signature' => 'Format tanda tangan tidak valid.'])->withInput();
+        }
+
+        $imageContent = base64_decode(substr($validated['signature'], strpos($validated['signature'], ',') + 1));
+        $signaturePath = 'signatures/feedback_' . $validated['employee_id'] . '_' . Auth::id() . '_' . time() . '.png';
+        Storage::disk('public')->put($signaturePath, $imageContent);
+
         Feedback::create([
-            'employee_id' => $request->employee_id,
+            'employee_id' => $validated['employee_id'],
             'reviewer_id' => auth::id(),
-            'feedback' => $request->feedback,
+            'feedback'    => $validated['feedback'],
+            'signature'   => $signaturePath,
         ]);
 
         return back()->with(

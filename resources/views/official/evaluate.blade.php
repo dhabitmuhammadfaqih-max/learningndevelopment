@@ -206,6 +206,33 @@
             background: #fafafa;
             display: block;
         }
+
+        .alert {
+            padding: 12px 16px;
+            border-radius: 6px;
+            margin-bottom: 16px;
+        }
+
+        .alert-success {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .alert-error {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .alert-error ul {
+            margin: 0;
+            padding-left: 18px;
+        }
+
+        .field-error {
+            color: #dc2626;
+            font-size: 13px;
+            margin-top: 4px;
+        }
     </style>
 </head>
 
@@ -214,6 +241,20 @@
 <a href="{{ route('official.dashboard') }}" class="back">&larr; Kembali</a>
 
 <h1>Penilaian {{ $employee->name }}</h1>
+
+@if(session('success'))
+    <div class="alert alert-success">{{ session('success') }}</div>
+@endif
+
+@if($errors->any())
+    <div class="alert alert-error">
+        <ul>
+            @foreach($errors->all() as $error)
+                <li>{{ $error }}</li>
+            @endforeach
+        </ul>
+    </div>
+@endif
 
 
 <div class="card">
@@ -314,7 +355,10 @@
 
             <div class="field">
                 <label>Tanggapan</label>
-                <textarea name="feedback" required>{{ old('feedback') }}</textarea>
+                <textarea name="feedback" required minlength="10">{{ old('feedback') }}</textarea>
+                @error('feedback')
+                    <div class="field-error">{{ $message }}</div>
+                @enderror
             </div>
 
             <div class="field">
@@ -326,6 +370,9 @@
                     <option value="kenaikan_gaji" @selected(old('recommendation') === 'kenaikan_gaji')>Kenaikan Gaji</option>
                     <option value="tidak_ada" @selected(old('recommendation') === 'tidak_ada')>Tidak Ada</option>
                 </select>
+                @error('recommendation')
+                    <div class="field-error">{{ $message }}</div>
+                @enderror
             </div>
 
             <div class="field signature-wrap">

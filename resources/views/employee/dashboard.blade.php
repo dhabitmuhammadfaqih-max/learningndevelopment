@@ -32,10 +32,98 @@
             cursor: pointer;
         }
 
+        button:disabled {
+            background: #999;
+            cursor: not-allowed;
+        }
+
         .topbar {
             display: flex;
             justify-content: space-between;
             align-items: center;
+        }
+
+        .alert {
+            padding: 12px 16px;
+            border-radius: 6px;
+            margin-bottom: 16px;
+        }
+
+        .alert-success {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .alert-error {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .alert-error ul {
+            margin: 0;
+            padding-left: 18px;
+        }
+
+        /* Signature pad */
+        .signature-wrap {
+            margin-top: 16px;
+            max-width: 500px;
+        }
+
+        .signature-wrap label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: bold;
+        }
+
+        #signature-pad {
+            width: 100%;
+            height: 140px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            background: white;
+            touch-action: none;
+            cursor: crosshair;
+            display: block;
+        }
+
+        .signature-actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 8px;
+        }
+
+        .signature-hint {
+            font-size: 12px;
+            color: #999;
+        }
+
+        .signature-clear {
+            background: none;
+            border: none;
+            color: #666;
+            font-size: 13px;
+            cursor: pointer;
+            padding: 4px 8px;
+            margin: 0;
+            text-decoration: underline;
+        }
+
+        .signature-clear:hover {
+            background: none;
+            color: #111;
+        }
+
+        .signature-saved {
+            width: 160px;
+            height: 70px;
+            object-fit: contain;
+            border: 1px solid #eee;
+            border-radius: 6px;
+            background: #fafafa;
+            display: block;
+            margin-top: 6px;
         }
     </style>
 </head>
@@ -57,8 +145,16 @@
 </p>
 
 @if(session('success'))
-    <div class="card">
-        {{ session('success') }}
+    <div class="alert alert-success">{{ session('success') }}</div>
+@endif
+
+@if($errors->any())
+    <div class="alert alert-error">
+        <ul>
+            @foreach($errors->all() as $error)
+                <li>{{ $error }}</li>
+            @endforeach
+        </ul>
     </div>
 @endif
 
@@ -99,7 +195,8 @@
     <h2>Berikan Tanggapan Teman</h2>
 
     <form method="POST"
-          action="{{ route('employee.feedback') }}">
+          action="{{ route('employee.feedback') }}"
+          id="form-feedback">
 
         @csrf
 
@@ -109,7 +206,7 @@
 
             @foreach($employees as $employee)
 
-                <option value="{{ $employee->id }}">
+                <option value="{{ $employee->id }}" @selected(old('employee_id') == $employee->id)>
                     {{ $employee->name }}
                 </option>
 
@@ -122,10 +219,22 @@
         <textarea
             name="feedback"
             placeholder="Tulis tanggapan..."
+            minlength="10"
             required
-        ></textarea>
+        >{{ old('feedback') }}</textarea>
 
-        <br><br>
+        <div class="signature-wrap">
+            <label>Tanda Tangan</label>
+            <canvas id="signature-pad"></canvas>
+            <div class="signature-actions">
+                <span class="signature-hint">Gambar tanda tangan di kotak di atas</span>
+                <button type="button" class="signature-clear" id="btn-clear-signature">Hapus &amp; ulangi</button>
+            </div>
+            {{-- Diisi otomatis oleh JS sebelum form dikirim --}}
+            <input type="hidden" name="signature" id="signature-input">
+        </div>
+
+        <br>
 
         <button type="submit">
             Kirim Tanggapan
@@ -150,6 +259,10 @@
             <p>
                 {{ $feedback->feedback }}
             </p>
+
+            @if($feedback->signature)
+                <img src="{{ Storage::disk('public')->url($feedback->signature) }}" class="signature-saved">
+            @endif
         </div>
 
         <hr>
@@ -161,6 +274,80 @@
     @endforelse
 
 </div>
+
+<script>
+    const canvas = document.getElementById('signature-pad');
+    const ctx = canvas.getContext('2d');
+    const ratio = window.devicePixelRatio || 1;
+
+    function resizeCanvas() {
+        canvas.width = canvas.clientWidth * ratio;
+        canvas.height = canvas.clientHeight * ratio;
+        ctx.scale(ratio, ratio);
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.lineWidth = 2.2;
+        ctx.strokeStyle = '#111';
+    }
+    resizeCanvas();
+
+    let drawing = false;
+    let last = null;
+    let hasStroke = false;
+
+    function getPos(e) {
+        const rect = canvas.getBoundingClientRect();
+        const point = e.touches ? e.touches[0] : e;
+        return { x: point.clientX - rect.left, y: point.clientY - rect.top };
+    }
+
+    function start(e) {
+        e.preventDefault();
+        drawing = true;
+        hasStroke = true;
+        last = getPos(e);
+    }
+
+    function move(e) {
+        if (!drawing) return;
+        e.preventDefault();
+        const pos = getPos(e);
+        ctx.beginPath();
+        ctx.moveTo(last.x, last.y);
+        ctx.lineTo(pos.x, pos.y);
+        ctx.stroke();
+        last = pos;
+    }
+
+    function end() {
+        drawing = false;
+    }
+
+    canvas.addEventListener('mousedown', start);
+    canvas.addEventListener('mousemove', move);
+    canvas.addEventListener('mouseup', end);
+    canvas.addEventListener('mouseleave', end);
+    canvas.addEventListener('touchstart', start);
+    canvas.addEventListener('touchmove', move);
+    canvas.addEventListener('touchend', end);
+
+    document.getElementById('btn-clear-signature').addEventListener('click', function () {
+        ctx.clearRect(0, 0, canvas.clientWidth, canvas.clientHeight);
+        hasStroke = false;
+    });
+
+    const form = document.getElementById('form-feedback');
+    const signatureInput = document.getElementById('signature-input');
+
+    form.addEventListener('submit', function (e) {
+        if (!hasStroke) {
+            e.preventDefault();
+            alert('Tanda tangan wajib diisi sebelum mengirim tanggapan.');
+            return;
+        }
+        signatureInput.value = canvas.toDataURL('image/png');
+    });
+</script>
 
 </body>
 </html>

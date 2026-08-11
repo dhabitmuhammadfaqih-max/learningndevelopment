@@ -7,6 +7,7 @@ use App\Models\Feedback;
 use App\Models\Evaluation;
 use App\Models\SupervisorFeedback;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Support\Facades\Storage;
 
 class AdminController extends Controller
 {
@@ -109,13 +110,31 @@ class AdminController extends Controller
             );
         }
 
+        // Sematkan tanda tangan sebagai base64 supaya dompdf tidak perlu
+        // mengakses file lewat HTTP (lebih aman & konsisten, sama seperti
+        // pola di SignatureDocumentController).
+        $toBase64 = function (?string $path) {
+            if (! $path || ! Storage::disk('public')->exists($path)) {
+                return null;
+            }
+
+            return 'data:image/png;base64,' . base64_encode(Storage::disk('public')->get($path));
+        };
+
+        $signatures = [
+            'pejabat'  => $toBase64($evaluation->signature),
+            'atasan'   => $toBase64($supervisorFeedback->signature),
+            'korelasi' => $toBase64($feedbacks->first()->signature ?? null),
+        ];
+
         $pdf = Pdf::loadView(
             'admin.pdf',
             compact(
                 'employee',
                 'feedbacks',
                 'evaluation',
-                'supervisorFeedback'
+                'supervisorFeedback',
+                'signatures'
             )
         );
 

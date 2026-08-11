@@ -12,7 +12,12 @@ class OfficialController extends Controller
 {
     public function index()
     {
-        $employees = User::where('role', 'karyawan')->get();
+        $employees = User::where('role', 'karyawan')
+            ->withCount('feedbacksReceived')
+            ->with(['evaluations' => function ($query) {
+                $query->where('official_id', Auth::id());
+            }])
+            ->get();
 
         return view('official.dashboard', compact('employees'));
     }
@@ -34,9 +39,70 @@ class OfficialController extends Controller
         return view('official.evaluate', compact('employee', 'peerFeedbacks', 'myEvaluation'));
     }
 
+    public function storeEmployee(Request $request)
+    {
+        $validated = $request->validate([
+            'name'     => 'required|string|max:255',
+            'email'    => 'required|email|max:255|unique:users,email',
+            'password' => 'required|string|min:8|confirmed',
+        ]);
+
+        User::create([
+            'name'     => $validated['name'],
+            'email'    => $validated['email'],
+            'password' => bcrypt($validated['password']),
+            'role'     => 'karyawan',
+        ]);
+
+        return back()->with('success', 'Akun karyawan berhasil ditambahkan.');
+    }
+
+    public function updateEmployee(Request $request, $id)
+    {
+        $employee = User::where('role', 'karyawan')->findOrFail($id);
+
+        $validated = $request->validate([
+            'name'     => 'required|string|max:255',
+            'email'    => 'required|email|max:255|unique:users,email,' . $employee->id,
+            'password' => 'nullable|string|min:8|confirmed',
+        ]);
+
+        $employee->name  = $validated['name'];
+        $employee->email = $validated['email'];
+
+        if (!empty($validated['password'])) {
+            $employee->password = bcrypt($validated['password']);
+        }
+
+        $employee->save();
+
+        return back()->with('success', 'Data karyawan berhasil diperbarui.');
+    }
+
+    public function destroyEmployee($id)
+    {
+        $employee = User::where('role', 'karyawan')->findOrFail($id);
+
+        $employee->delete();
+
+        return back()->with('success', 'Data karyawan berhasil dihapus.');
+    }
+
     public function evaluate(Request $request, $id) 
     {
         $employee = User::where('role', 'karyawan')->findOrFail($id);
+
+        // Cegah double-submit: satu pejabat hanya boleh menilai satu karyawan sekali
+        // (constraint unique di tabel evaluations). Cek di sini SEBELUM menyimpan
+        // apa pun, supaya tidak ada file tanda tangan yang nyangkut di storage
+        // dan tidak muncul error mentah kalau tombol Simpan tidak sengaja diklik dua kali.
+        $alreadyEvaluated = $employee->evaluations()
+            ->where('official_id', Auth::id())
+            ->exists();
+
+        if ($alreadyEvaluated) {
+            return back()->with('success', 'Karyawan ini sudah pernah Anda nilai sebelumnya.');
+        }
 
         $validated = $request->validate([
             'pengetahuan_kerja'           => 'required|numeric|min:0|max:100',
@@ -64,23 +130,29 @@ class OfficialController extends Controller
 
         $score = Evaluation::calculateScore($validated);
 
-        Evaluation::create([
-            'employee_id'                 => $employee->id,
-            'official_id'                 => Auth::id(),
-            'pengetahuan_kerja'           => $validated['pengetahuan_kerja'],
-            'penguasaan_peralatan'        => $validated['penguasaan_peralatan'],
-            'volume_kerja'                => $validated['volume_kerja'],
-            'mutu_tanggung_jawab'         => $validated['mutu_tanggung_jawab'],
-            'disiplin_dedikasi_loyalitas' => $validated['disiplin_dedikasi_loyalitas'],
-            'prakarsa'                    => $validated['prakarsa'],
-            'daya_serap'                  => $validated['daya_serap'],
-            'kerajinan'                   => $validated['kerajinan'],
-            'kerjasama'                   => $validated['kerjasama'],
-            'score'                       => $score,
-            'feedback'                    => $validated['feedback'],
-            'recommendation'              => $validated['recommendation'],
-            'signature'                   => $signaturePath,
-        ]);
+        try {
+            Evaluation::create([
+                'employee_id'                 => $employee->id,
+                'official_id'                 => Auth::id(),
+                'pengetahuan_kerja'           => $validated['pengetahuan_kerja'],
+                'penguasaan_peralatan'        => $validated['penguasaan_peralatan'],
+                'volume_kerja'                => $validated['volume_kerja'],
+                'mutu_tanggung_jawab'         => $validated['mutu_tanggung_jawab'],
+                'disiplin_dedikasi_loyalitas' => $validated['disiplin_dedikasi_loyalitas'],
+                'prakarsa'                    => $validated['prakarsa'],
+                'daya_serap'                  => $validated['daya_serap'],
+                'kerajinan'                   => $validated['kerajinan'],
+                'kerjasama'                   => $validated['kerjasama'],
+                'score'                       => $score,
+                'feedback'                    => $validated['feedback'],
+                'recommendation'              => $validated['recommendation'],
+                'signature'                   => $signaturePath,
+            ]);
+        } catch (\Illuminate\Database\QueryException $e) {
+            Storage::disk('public')->delete($signaturePath);
+
+            return back()->with('success', 'Karyawan ini sudah pernah Anda nilai sebelumnya.');
+        }
 
         return back()->with('success', 'Penilaian berhasil disimpan. Nilai akhir: '.$score);
     }
