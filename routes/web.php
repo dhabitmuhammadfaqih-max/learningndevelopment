@@ -6,6 +6,7 @@ use App\Http\Controllers\OfficialController;
 use App\Http\Controllers\SupervisorController;
 use App\Http\Controllers\AdminController;
 use Illuminate\Support\Facades\Auth;
+use App\Http\Controllers\SignatureDocumentController;
 
 /*
 |--------------------------------------------------------------------------
@@ -136,5 +137,17 @@ Route::middleware('auth')->group(function () {
             )->name('pdf');
         });
 });
+
+    Route::get('/dokumen/baru', [SignatureDocumentController::class, 'create'])
+        ->name('signature.create');
+ 
+    Route::get('/dokumen/{document}', [SignatureDocumentController::class, 'edit'])
+        ->name('signature.edit');
+ 
+    Route::post('/dokumen/{document}/tanda-tangan/{role}', [SignatureDocumentController::class, 'saveSignature'])
+        ->name('signature.save');
+ 
+    Route::get('/dokumen/{document}/pdf', [SignatureDocumentController::class, 'generatePdf'])
+        ->name('signature.pdf');
 
 require __DIR__.'/auth.php';

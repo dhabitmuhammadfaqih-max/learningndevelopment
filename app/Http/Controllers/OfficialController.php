@@ -6,6 +6,7 @@ use App\Models\User;
 use App\Models\Evaluation;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 
 class OfficialController extends Controller
 {
@@ -33,7 +34,7 @@ class OfficialController extends Controller
         return view('official.evaluate', compact('employee', 'peerFeedbacks', 'myEvaluation'));
     }
 
-    public function evaluate(Request $request, $id)
+    public function evaluate(Request $request, $id) 
     {
         $employee = User::where('role', 'karyawan')->findOrFail($id);
 
@@ -49,7 +50,17 @@ class OfficialController extends Controller
             'kerjasama'                   => 'required|numeric|min:0|max:100',
             'feedback'                    => 'required|string|min:10',
             'recommendation'              => 'required|in:perpanjang_kontrak,promosi,kenaikan_gaji,tidak_ada',
+            'signature'                   => 'required|string',
         ]);
+
+        // Pastikan data yang dikirim benar-benar gambar base64 dari canvas
+        if (! preg_match('/^data:image\/png;base64,/', $validated['signature'])) {
+            return back()->withErrors(['signature' => 'Format tanda tangan tidak valid.'])->withInput();
+        }
+
+        $imageContent = base64_decode(substr($validated['signature'], strpos($validated['signature'], ',') + 1));
+        $signaturePath = "signatures/evaluation_{$employee->id}_" . Auth::id() . '_' . time() . '.png';
+        Storage::disk('public')->put($signaturePath, $imageContent);
 
         $score = Evaluation::calculateScore($validated);
 
@@ -68,6 +79,7 @@ class OfficialController extends Controller
             'score'                       => $score,
             'feedback'                    => $validated['feedback'],
             'recommendation'              => $validated['recommendation'],
+            'signature'                   => $signaturePath,
         ]);
 
         return back()->with('success', 'Penilaian berhasil disimpan. Nilai akhir: '.$score);
