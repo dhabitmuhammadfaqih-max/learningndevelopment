@@ -7,6 +7,7 @@ use App\Models\Feedback;
 use App\Models\Evaluation;
 use App\Models\SupervisorFeedback;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
 class AdminController extends Controller
@@ -18,10 +19,41 @@ class AdminController extends Controller
             'karyawan'
         )->get();
 
+        // Semua akun dari semua role, buat ditampilkan & dikelola admin.
+        $accounts = User::orderBy('role')
+            ->orderBy('name')
+            ->get();
+
         return view(
             'admin.dashboard',
-            compact('employees')
+            compact('employees', 'accounts')
         );
+    }
+
+    public function storeAccount(Request $request)
+    {
+        $validated = $request->validate([
+            'name'       => 'required|string|max:255',
+            'username'   => 'required|string|max:100|alpha_dash|unique:users,username',
+            'nik'        => 'required|string|max:50|unique:users,nik',
+            'unit_kerja' => 'nullable|string|max:255',
+            'role'       => 'required|in:karyawan,pejabat,atasan_pejabat,admin',
+        ]);
+
+        User::create([
+            'name'       => $validated['name'],
+            'username'   => $validated['username'],
+            'nik'        => $validated['nik'],
+            'unit_kerja' => $validated['unit_kerja'] ?? null,
+            // Kolom email masih wajib & unik di database, jadi diisi otomatis
+            // dari username (akun ini login pakai username, bukan email).
+            'email'      => $validated['username'] . '@karyawan.local',
+            // Password = NIK, konsisten dengan seluruh akun di sistem ini.
+            'password'   => bcrypt($validated['nik']),
+            'role'       => $validated['role'],
+        ]);
+
+        return back()->with('success', 'Akun berhasil ditambahkan.');
     }
 
     public function show($id)

@@ -219,10 +219,6 @@
     <h1>Dashboard Pejabat</h1>
 
     <div style="display:flex; gap:8px;">
-        <button type="button" class="btn-edit" onclick="openAddModal()">
-            + Tambah Karyawan
-        </button>
-
         <form method="POST" action="{{ route('logout') }}">
             @csrf
             <button type="submit">Logout</button>
@@ -233,44 +229,6 @@
 <p style="color:#555;">
     Selamat datang, <strong>{{ auth()->user()->name }}</strong>
 </p>
-
-<div class="modal-overlay" id="add-modal">
-    <div class="modal-box">
-        <h3>Tambah Karyawan</h3>
-
-        <form method="POST" action="{{ route('official.employee.store') }}">
-            @csrf
-
-            <label for="add-name">Nama Lengkap</label>
-            <input type="text" id="add-name" name="name" value="{{ old('name') }}" required>
-
-            <label for="add-username">Username</label>
-            <input type="text" id="add-username" name="username" value="{{ old('username') }}" required>
-
-            <label for="add-nik">NIK</label>
-            <input type="text" id="add-nik" name="nik" value="{{ old('nik') }}" required>
-            <small style="display:block; color:#888; font-size:11px; margin-top:2px;">
-                NIK ini juga dipakai sebagai password login.
-            </small>
-
-            <label for="add-unit-kerja">Unit Kerja</label>
-            <input type="text" id="add-unit-kerja" name="unit_kerja" value="{{ old('unit_kerja') }}">
-
-            @if($errors->any())
-                <div class="error">
-                    @foreach($errors->all() as $error)
-                        {{ $error }}<br>
-                    @endforeach
-                </div>
-            @endif
-
-            <div class="modal-footer">
-                <button type="button" class="btn-cancel" onclick="closeAddModal()">Batal</button>
-                <button type="submit" class="btn-edit">Simpan</button>
-            </div>
-        </form>
-    </div>
-</div>
 
 @if(session('success'))
     <div class="alert alert-success">{{ session('success') }}</div>
@@ -379,14 +337,6 @@
 @endif
 
 <script>
-    function openAddModal() {
-        document.getElementById('add-modal').classList.add('active');
-    }
-
-    function closeAddModal() {
-        document.getElementById('add-modal').classList.remove('active');
-    }
-
     function openEditModal(id) {
         document.getElementById('edit-modal-' + id).classList.add('active');
     }
@@ -404,17 +354,11 @@
         });
     });
 
-    @if($errors->any())
-        @if(old('_form_employee_id'))
-            document.addEventListener('DOMContentLoaded', function () {
-                var modal = document.getElementById('edit-modal-{{ old('_form_employee_id') }}');
-                if (modal) modal.classList.add('active');
-            });
-        @else
-            document.addEventListener('DOMContentLoaded', function () {
-                document.getElementById('add-modal').classList.add('active');
-            });
-        @endif
+    @if($errors->any() && old('_form_employee_id'))
+        document.addEventListener('DOMContentLoaded', function () {
+            var modal = document.getElementById('edit-modal-{{ old('_form_employee_id') }}');
+            if (modal) modal.classList.add('active');
+        });
     @endif
 </script>
 

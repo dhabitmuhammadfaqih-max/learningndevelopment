@@ -69,9 +69,6 @@ Route::middleware('auth')->group(function () {
         Route::get('/dashboard', [OfficialController::class, 'index'])
             ->name('dashboard');
 
-        Route::post('/karyawan', [OfficialController::class, 'storeEmployee'])
-            ->name('employee.store');
-
         Route::get('/karyawan/{id}', [OfficialController::class, 'show'])
             ->name('employee');
 
@@ -134,6 +131,11 @@ Route::middleware('auth')->group(function () {
                 '/dashboard',
                 [AdminController::class, 'index']
             )->name('dashboard');
+
+            Route::post(
+                '/akun',
+                [AdminController::class, 'storeAccount']
+            )->name('account.store');
 
             Route::get(
                 '/karyawan/{id}',

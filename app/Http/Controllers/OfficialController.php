@@ -39,31 +39,6 @@ class OfficialController extends Controller
         return view('official.evaluate', compact('employee', 'peerFeedbacks', 'myEvaluation'));
     }
 
-    public function storeEmployee(Request $request)
-    {
-        $validated = $request->validate([
-            'name'       => 'required|string|max:255',
-            'username'   => 'required|string|max:100|alpha_dash|unique:users,username',
-            'nik'        => 'required|string|max:50|unique:users,nik',
-            'unit_kerja' => 'nullable|string|max:255',
-        ]);
-
-        User::create([
-            'name'       => $validated['name'],
-            'username'   => $validated['username'],
-            'nik'        => $validated['nik'],
-            'unit_kerja' => $validated['unit_kerja'] ?? null,
-            // Kolom email masih wajib & unik di database, jadi diisi otomatis
-            // dari username (karyawan tidak login/pakai email ini sama sekali).
-            'email'      => $validated['username'] . '@karyawan.local',
-            // Password = NIK karyawan, jadi tidak perlu diinput terpisah.
-            'password'   => bcrypt($validated['nik']),
-            'role'       => 'karyawan',
-        ]);
-
-        return back()->with('success', 'Akun karyawan berhasil ditambahkan.');
-    }
-
     public function updateEmployee(Request $request, $id)
     {
         $employee = User::where('role', 'karyawan')->findOrFail($id);
