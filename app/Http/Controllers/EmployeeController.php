@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\User;
 use App\Models\Feedback;
+use App\Models\Evaluation;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
@@ -66,6 +67,28 @@ class EmployeeController extends Controller
         return back()->with(
             'success',
             'Tanggapan berhasil dikirim.'
+        );
+    }
+
+    public function respondEvaluation(Request $request, Evaluation $evaluation)
+    {
+        // Pastikan karyawan hanya bisa menanggapi penilaian miliknya sendiri.
+        if ($evaluation->employee_id !== Auth::id()) {
+            abort(403);
+        }
+
+        $validated = $request->validate([
+            'employee_response' => 'required|string|min:5',
+        ]);
+
+        $evaluation->update([
+            'employee_response'    => $validated['employee_response'],
+            'employee_response_at' => now(),
+        ]);
+
+        return back()->with(
+            'success',
+            'Tanggapan Anda atas penilaian berhasil dikirim.'
         );
     }
 }

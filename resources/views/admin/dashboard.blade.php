@@ -147,6 +147,31 @@
             color: #991b1b;
         }
 
+        .role-spg {
+            background: #fce7f3;
+            color: #9d174d;
+        }
+
+        /* ===== Badge status PDF ===== */
+        .pdf-badge {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 999px;
+            font-size: 11px;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+
+        .pdf-badge-ready {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .pdf-badge-not-ready {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
         /* ===== Modal Tambah Akun ===== */
         .modal-overlay {
             display: none;
@@ -261,14 +286,36 @@
             <label for="acc-unit-kerja">Unit Kerja</label>
             <input type="text" id="acc-unit-kerja" name="unit_kerja" value="{{ old('unit_kerja') }}">
 
+            <label for="acc-jabatan">Jabatan</label>
+            <input type="text" id="acc-jabatan" name="jabatan" value="{{ old('jabatan') }}">
+
             <label for="acc-role">Role</label>
-            <select id="acc-role" name="role" required>
+            <select id="acc-role" name="role" required onchange="toggleSpgOption()">
                 <option value="">-- Pilih Role --</option>
                 <option value="karyawan" {{ old('role') == 'karyawan' ? 'selected' : '' }}>Karyawan</option>
                 <option value="pejabat" {{ old('role') == 'pejabat' ? 'selected' : '' }}>Pejabat</option>
                 <option value="atasan_pejabat" {{ old('role') == 'atasan_pejabat' ? 'selected' : '' }}>Atasan Pejabat</option>
                 <option value="admin" {{ old('role') == 'admin' ? 'selected' : '' }}>Admin</option>
             </select>
+
+            <div id="acc-spg-wrapper" style="margin-top:8px; display:none;">
+                <label style="display:flex; align-items:center; gap:6px; font-weight:normal;">
+                    <input type="checkbox" id="acc-is-spg" name="is_spg" value="1" {{ old('is_spg') ? 'checked' : '' }}>
+                    Akun ini SPG (tanggapan korelasi/teman bersifat opsional)
+                </label>
+            </div>
+
+            <script>
+                function toggleSpgOption() {
+                    const role = document.getElementById('acc-role').value;
+                    const wrapper = document.getElementById('acc-spg-wrapper');
+                    wrapper.style.display = role === 'karyawan' ? 'block' : 'none';
+                    if (role !== 'karyawan') {
+                        document.getElementById('acc-is-spg').checked = false;
+                    }
+                }
+                document.addEventListener('DOMContentLoaded', toggleSpgOption);
+            </script>
 
             @if($errors->any())
                 <div class="error">
@@ -304,6 +351,7 @@
             <th>Username</th>
             <th>NIK</th>
             <th>Unit Kerja</th>
+            <th>Jabatan</th>
             <th>Role</th>
         </tr>
 
@@ -313,10 +361,14 @@
                 <td>{{ $account->username ?? '-' }}</td>
                 <td>{{ $account->nik ?? '-' }}</td>
                 <td>{{ $account->unit_kerja ?? '-' }}</td>
+                <td>{{ $account->jabatan ?? '-' }}</td>
                 <td>
                     <span class="role-badge role-{{ $account->role }}">
                         {{ ucfirst(str_replace('_', ' ', $account->role)) }}
                     </span>
+                    @if($account->is_spg)
+                        <span class="role-badge role-spg">SPG</span>
+                    @endif
                 </td>
             </tr>
         @endforeach
@@ -335,10 +387,41 @@
     <div class="grid">
 
         @foreach($employees as $employee)
+            @php
+                // Syarat sama persis dengan pengecekan di AdminController::pdf().
+                // Untuk akun dengan flag is_spg, minimal 3 korelasi bersifat opsional.
+                $pdfReady = ($employee->is_spg || $employee->feedbacks_received_count >= 3)
+                    && $employee->evaluations->isNotEmpty()
+                    && $employee->supervisorFeedbacks->isNotEmpty();
+            @endphp
 
             <div class="card">
                 <h3>{{ $employee->name }}</h3>
-                <p>{{ $employee->username }}</p>
+                <p>
+                    {{ $employee->username }}
+                    <span class="role-badge role-{{ $employee->role }}">
+                        {{ strtoupper($employee->role) }}
+                    </span>
+                    @if($employee->is_spg)
+                        <span class="role-badge role-spg">SPG</span>
+                    @endif
+                </p>
+                <p style="margin-top:-12px; font-size:12px;">
+                    Izin {{ $employee->jumlah_izin ?? 0 }} &middot;
+                    Sakit {{ $employee->jumlah_sakit ?? 0 }} &middot;
+                    Alpa {{ $employee->jumlah_alpa ?? 0 }} &middot;
+                    Terlambat {{ $employee->jumlah_terlambat ?? 0 }}
+                    <br>
+                    {{ $employee->contractStatusLabel() }}
+                </p>
+
+                @if($pdfReady)
+                    <span class="pdf-badge pdf-badge-ready">&#10003; Sudah bisa di-print PDF</span>
+                @else
+                    <span class="pdf-badge pdf-badge-not-ready">Belum bisa di-print PDF</span>
+                @endif
+
+                <br>
 
                 <a href="{{ route('admin.employee', $employee->id) }}">
                     Lihat Detail
