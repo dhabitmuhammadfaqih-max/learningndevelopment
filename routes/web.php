@@ -52,6 +52,11 @@ Route::middleware('auth')->group(function () {
                 '/feedback',
                 [EmployeeController::class, 'feedback']
             )->name('feedback');
+
+            Route::post(
+                '/penilaian/{evaluation}/tanggapan',
+                [EmployeeController::class, 'respondEvaluation']
+            )->name('evaluation.respond');
         });
 
 
@@ -75,11 +80,11 @@ Route::middleware('auth')->group(function () {
         Route::post('/karyawan/{id}/nilai', [OfficialController::class, 'evaluate'])
             ->name('evaluate');
 
+        Route::put('/karyawan/{id}/nilai', [OfficialController::class, 'updateEvaluation'])
+            ->name('evaluate.update');
+
         Route::put('/karyawan/{id}', [OfficialController::class, 'updateEmployee'])
             ->name('employee.update');
-
-        Route::delete('/karyawan/{id}', [OfficialController::class, 'destroyEmployee'])
-            ->name('employee.destroy');
 
         // Tambahan: kalau ada yang akses /nilai lewat GET, redirect balik
         Route::get('/karyawan/{id}/nilai', function ($id) {
@@ -141,6 +146,11 @@ Route::middleware('auth')->group(function () {
                 '/karyawan/{id}',
                 [AdminController::class, 'show']
             )->name('employee');
+
+            Route::put(
+                '/karyawan/{id}/kehadiran',
+                [AdminController::class, 'updateAttendance']
+            )->name('employee.attendance.update');
 
             Route::get(
                 '/karyawan/{id}/pdf',

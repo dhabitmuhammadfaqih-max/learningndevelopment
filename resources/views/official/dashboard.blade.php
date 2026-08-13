@@ -125,6 +125,16 @@
             background: #b91c1c;
         }
 
+        .btn-disabled {
+            background: #d1d5db;
+            color: #6b7280;
+            cursor: not-allowed;
+        }
+
+        .btn-disabled:hover {
+            background: #d1d5db;
+        }
+
         .card-actions a,
         .card-actions button {
             padding: 8px 16px;
@@ -248,6 +258,9 @@
                 <strong>{{ $employee->name }}</strong>
                 <small>
                     {{ $employee->username }}
+                    @if($employee->jabatan)
+                        &middot; {{ $employee->jabatan }}
+                    @endif
                     @if($employee->unit_kerja)
                         &middot; {{ $employee->unit_kerja }}
                     @endif
@@ -265,68 +278,29 @@
                     @endif
                 </div>
 
-                <a href="{{ route('official.employee', $employee->id) }}">
-                    Berikan Penilaian
-                </a>
+                @php
+                    $alreadyEvaluated = $employee->evaluations->isNotEmpty();
+                @endphp
+
+                @if($alreadyEvaluated)
+                    <button type="button" class="btn-disabled" disabled>
+                        Berikan Penilaian
+                    </button>
+                @else
+                    <a href="{{ route('official.employee', $employee->id) }}">
+                        Berikan Penilaian
+                    </a>
+                @endif
 
                 <div class="card-actions">
-                    <button type="button" class="btn-edit" onclick="openEditModal({{ $employee->id }})">
-                        Edit
-                    </button>
-
-                    <form method="POST"
-                          action="{{ route('official.employee.destroy', $employee->id) }}"
-                          onsubmit="return confirm('Yakin ingin menghapus data {{ $employee->name }}? Tindakan ini tidak bisa dibatalkan.');">
-                        @csrf
-                        @method('DELETE')
-                        <button type="submit" class="btn-delete">Hapus</button>
-                    </form>
-                </div>
-            </div>
-
-            <div class="modal-overlay" id="edit-modal-{{ $employee->id }}">
-                <div class="modal-box">
-                    <h3>Edit Data Karyawan</h3>
-
-                    <form method="POST" action="{{ route('official.employee.update', $employee->id) }}">
-                        @csrf
-                        @method('PUT')
-                        <input type="hidden" name="_form_employee_id" value="{{ $employee->id }}">
-
-                        <label for="name-{{ $employee->id }}">Nama Lengkap</label>
-                        <input type="text" id="name-{{ $employee->id }}" name="name"
-                               value="{{ old('name', $employee->name) }}" required>
-
-                        <label for="username-{{ $employee->id }}">Username</label>
-                        <input type="text" id="username-{{ $employee->id }}" name="username"
-                               value="{{ old('username', $employee->username) }}" required>
-
-                        <label for="nik-{{ $employee->id }}">NIK</label>
-                        <input type="text" id="nik-{{ $employee->id }}" name="nik"
-                               value="{{ old('nik', $employee->nik) }}" required>
-                        <small style="display:block; color:#888; font-size:11px; margin-top:2px;">
-                            NIK ini juga dipakai sebagai password login. Ubah NIK = password ikut berubah.
-                        </small>
-
-                        <label for="unit-kerja-{{ $employee->id }}">Unit Kerja</label>
-                        <input type="text" id="unit-kerja-{{ $employee->id }}" name="unit_kerja"
-                               value="{{ old('unit_kerja', $employee->unit_kerja) }}">
-
-                        @if($errors->any())
-                            <div class="error">
-                                @foreach($errors->all() as $error)
-                                    {{ $error }}<br>
-                                @endforeach
-                            </div>
-                        @endif
-
-                        <div class="modal-footer">
-                            <button type="button" class="btn-cancel" onclick="closeEditModal({{ $employee->id }})">
-                                Batal
-                            </button>
-                            <button type="submit" class="btn-edit">Simpan</button>
-                        </div>
-                    </form>
+                    @if($alreadyEvaluated)
+                        <button type="button" class="btn-edit"
+                                data-url="{{ route('official.employee', $employee->id) }}"
+                                data-locked="{{ $employee->supervisor_feedbacks_count > 0 ? '1' : '0' }}"
+                                onclick="handleEditClick(this)">
+                            Edit Penilaian
+                        </button>
+                    @endif
                 </div>
             </div>
 
@@ -337,29 +311,14 @@
 @endif
 
 <script>
-    function openEditModal(id) {
-        document.getElementById('edit-modal-' + id).classList.add('active');
+    function handleEditClick(btn) {
+        if (btn.dataset.locked === '1') {
+            alert('Penilaian ini sudah tidak bisa di edit');
+            return;
+        }
+
+        window.location.href = btn.dataset.url;
     }
-
-    function closeEditModal(id) {
-        document.getElementById('edit-modal-' + id).classList.remove('active');
-    }
-
-    // Tutup modal saat klik area gelap di luar box
-    document.querySelectorAll('.modal-overlay').forEach(function (overlay) {
-        overlay.addEventListener('click', function (e) {
-            if (e.target === overlay) {
-                overlay.classList.remove('active');
-            }
-        });
-    });
-
-    @if($errors->any() && old('_form_employee_id'))
-        document.addEventListener('DOMContentLoaded', function () {
-            var modal = document.getElementById('edit-modal-{{ old('_form_employee_id') }}');
-            if (modal) modal.classList.add('active');
-        });
-    @endif
 </script>
 
 </body>

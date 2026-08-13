@@ -63,6 +63,51 @@
             color: #999;
         }
 
+        table.komponen {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 10px 0;
+        }
+
+        table.komponen th {
+            text-align: left;
+            font-size: 13px;
+            color: #777;
+            padding: 6px 8px;
+            border-bottom: 2px solid #eee;
+        }
+
+        table.komponen td {
+            padding: 8px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        table.komponen td.label {
+            font-weight: 500;
+        }
+
+        table.komponen td.bobot {
+            color: #777;
+            font-size: 13px;
+            white-space: nowrap;
+        }
+
+        .total-box {
+            margin-top: 10px;
+            padding: 14px 16px;
+            background: #111;
+            color: white;
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .total-box .angka {
+            font-size: 24px;
+            font-weight: bold;
+        }
+
         textarea {
             width: 100%;
             max-width: 500px;
@@ -209,11 +254,32 @@
 
         <p><strong>Pejabat:</strong> {{ $evaluation->official->name }}</p>
 
-        <div class="score">{{ $evaluation->score }}/100</div>
+        <table class="komponen">
+            <tr><th>Komponen</th><th>Bobot</th><th>Nilai</th></tr>
+            @foreach (\App\Models\Evaluation::WEIGHTS as $key => $bobot)
+                <tr>
+                    <td class="label">{{ \App\Models\Evaluation::LABELS[$key] }}</td>
+                    <td class="bobot">{{ rtrim(rtrim(number_format($bobot, 1), '0'), '.') }}%</td>
+                    <td>{{ $evaluation->$key }}</td>
+                </tr>
+            @endforeach
+        </table>
 
-        <p>{{ $evaluation->feedback }}</p>
+        <div class="total-box">
+            <span>Nilai Akhir</span>
+            <span class="angka">{{ $evaluation->score }}/100</span>
+        </div>
 
-        <span class="badge">{{ $evaluation->recommendation }}</span>
+        <p style="margin-top:12px;">{{ $evaluation->feedback }}</p>
+
+        <span class="badge">{{ $evaluation->recommendationLabel() }}</span>
+
+        @if($evaluation->kenaikan_gaji_amount)
+            <p style="margin-top:8px;">
+                <strong>Nominal Kenaikan Gaji:</strong>
+                Rp {{ number_format($evaluation->kenaikan_gaji_amount, 0, ',', '.') }}
+            </p>
+        @endif
 
     @else
 

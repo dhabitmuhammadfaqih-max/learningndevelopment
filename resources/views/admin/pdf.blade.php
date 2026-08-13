@@ -161,6 +161,37 @@
             max-width: 100%;
         }
 
+        /* Kolom korelasi bisa memuat lebih dari satu tanda tangan
+           (satu per pemberi tanggapan korelasi). */
+        .ttd-korelasi-list {
+            height: 50px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: row;
+            justify-content: center;
+            align-items: flex-start;
+            gap: 2px;
+        }
+
+        .ttd-korelasi-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 33%;
+        }
+
+        .ttd-korelasi-item img {
+            height: 28px;
+            max-width: 100%;
+        }
+
+        .ttd-korelasi-item span {
+            font-size: 6.5px;
+            font-weight: normal;
+            line-height: 1.1;
+            text-align: center;
+        }
+
         .ttd-name {
             display: block;
             border-top: 1px solid #000;
@@ -260,7 +291,7 @@
             </tr>
             <tr>
                 <td class="label">JABATAN</td><td class="colon">:</td>
-                <td>{{ ucfirst(str_replace('_', ' ', $employee->role)) }}</td>
+                <td>{{ $employee->jabatan ?? '-' }}</td>
                 <td class="label">UNIT KERJA</td><td class="colon">:</td>
                 <td>{{ $employee->unit_kerja ?? '-' }}</td>
             </tr>
@@ -281,7 +312,7 @@
             </tr>
             <tr>
                 <td class="label">JABATAN</td><td class="colon">:</td>
-                <td>{{ $evaluation->official->role ?? '-' }}</td>
+                <td>{{ $evaluation->official->jabatan ?? '-' }}</td>
                 <td class="label">UNIT KERJA</td><td class="colon">:</td>
                 <td>{{ $evaluation->official->unit_kerja ?? '-' }}</td>
             </tr>
@@ -377,6 +408,9 @@
         <td style="width:60%; vertical-align: top; border:1px solid #000; padding:6px;">
             <strong>REKOMENDASI / HASIL PENILAIAN:</strong><br>
             {{ $evaluation->recommendationLabel() ?? 'Lulus Probation' }}
+            @if($evaluation->kenaikan_gaji_amount)
+                <br>Nominal Kenaikan Gaji: Rp {{ number_format($evaluation->kenaikan_gaji_amount, 0, ',', '.') }}
+            @endif
         </td>
         <td style="width:40%; vertical-align: top; border:1px solid #000; padding:6px; border-left:none;">
             <strong>PERINGKAT / NILAI AKHIR:</strong><br>
@@ -409,18 +443,18 @@
             </td>
             <td>
                 KORELASI KERJA
-                <div class="ttd-space">
-                    @if(!empty($signatures['korelasi']))
-                        <img src="{{ $signatures['korelasi'] }}" class="ttd-signature-img">
-                    @endif
+                <div class="ttd-korelasi-list">
+                    @forelse($signatures['korelasi'] as $ttd)
+                        <div class="ttd-korelasi-item">
+                            @if(!empty($ttd['signature']))
+                                <img src="{{ $ttd['signature'] }}">
+                            @endif
+                            <span>{{ $ttd['nama'] }}</span>
+                        </div>
+                    @empty
+                        &nbsp;
+                    @endforelse
                 </div>
-                <span class="ttd-name">
-                    @if(isset($feedbacks) && $feedbacks->count() > 0)
-                        {{ $feedbacks->first()->reviewer->name ?? '-' }}
-                    @else
-                        -
-                    @endif
-                </span>
             </td>
             <td>
                 PEJABAT YANG MENILAI

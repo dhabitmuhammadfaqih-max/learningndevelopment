@@ -17,15 +17,48 @@ class User extends Authenticatable
         'username',
         'nik',
         'unit_kerja',
+        'jabatan',
         'email',
         'password',
         'role',
+        'is_spg',
+        'jumlah_izin',
+        'jumlah_sakit',
+        'jumlah_alpa',
+        'jumlah_terlambat',
+        'contract_status',
     ];
 
     protected $hidden = [
         'password',
         'remember_token',
     ];
+
+    protected $casts = [
+        'is_spg' => 'boolean',
+    ];
+
+    // Kolom jumlah kehadiran yang bisa diisi admin (masing-masing kategori
+    // dihitung terpisah, bukan satu status tunggal).
+    public const ATTENDANCE_COUNTERS = [
+        'jumlah_izin'      => 'Izin',
+        'jumlah_sakit'     => 'Sakit',
+        'jumlah_alpa'      => 'Alpa',
+        'jumlah_terlambat' => 'Terlambat',
+    ];
+
+    // Pilihan status kontrak yang bisa diberikan admin.
+    public const CONTRACT_STATUSES = [
+        'harian'  => 'Harian',
+        'bulanan' => 'Bulanan',
+        'tahunan' => 'Tahunan',
+        'tetap'   => 'Tetap',
+    ];
+
+    public function contractStatusLabel(): string
+    {
+        return self::CONTRACT_STATUSES[$this->contract_status] ?? '-';
+    }
 
     public function feedbacksGiven()
     {

@@ -174,12 +174,50 @@
 
         <p>
             <strong>Rekomendasi:</strong>
-            {{ $myEvaluation->recommendation }}
+            {{ $myEvaluation->recommendationLabel() }}
         </p>
+
+        @if($myEvaluation->kenaikan_gaji_amount)
+            <p>
+                <strong>Nominal Kenaikan Gaji:</strong>
+                Rp {{ number_format($myEvaluation->kenaikan_gaji_amount, 0, ',', '.') }}
+            </p>
+        @endif
 
         <p>
             {{ $myEvaluation->feedback }}
         </p>
+
+        <hr>
+
+        <h3>Tanggapan Saya Atas Penilaian Ini</h3>
+
+        @if($myEvaluation->employee_response)
+
+            <p>{{ $myEvaluation->employee_response }}</p>
+            <p class="signature-hint">
+                Dikirim {{ $myEvaluation->employee_response_at?->translatedFormat('d M Y H:i') }}
+            </p>
+
+        @else
+
+            <form method="POST"
+                  action="{{ route('employee.evaluation.respond', $myEvaluation->id) }}">
+                @csrf
+
+                <textarea
+                    name="employee_response"
+                    placeholder="Tulis tanggapan Anda atas penilaian ini..."
+                    minlength="5"
+                    required
+                >{{ old('employee_response') }}</textarea>
+
+                <br><br>
+
+                <button type="submit">Kirim Tanggapan</button>
+            </form>
+
+        @endif
 
     @else
 

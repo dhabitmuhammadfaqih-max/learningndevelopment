@@ -51,6 +51,37 @@
             color: #999;
         }
 
+        /* ===== Legenda skala I/A/B/C/D ===== */
+        .legenda {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+
+        .legenda-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 10px;
+            background: #f5f5f5;
+            border-radius: 6px;
+            font-size: 12px;
+        }
+
+        .legenda-huruf {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #111;
+            color: white;
+            font-weight: bold;
+            font-size: 11px;
+        }
+
         table.komponen {
             width: 100%;
             border-collapse: collapse;
@@ -72,6 +103,13 @@
 
         table.komponen td.label {
             font-weight: 500;
+        }
+
+        table.komponen td.label .deskripsi {
+            font-weight: normal;
+            font-size: 11.5px;
+            color: #888;
+            margin-top: 3px;
         }
 
         table.komponen td.bobot {
@@ -130,6 +168,47 @@
 
         .field {
             margin-top: 16px;
+        }
+
+        /* ===== Rekomendasi (checkbox) ===== */
+        .rekomendasi-options {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px 20px;
+        }
+
+        .rekomendasi-options label {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-weight: normal;
+            margin-bottom: 0;
+        }
+
+        .rekomendasi-options input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+        }
+
+        #kenaikan-gaji-wrap {
+            display: none;
+            max-width: 280px;
+        }
+
+        #kenaikan-gaji-wrap input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            font-family: Arial;
+            font-size: 14px;
+            box-sizing: border-box;
+        }
+
+        #kenaikan-gaji-wrap .hint {
+            font-size: 12px;
+            color: #999;
+            margin-top: 4px;
         }
 
         button {
@@ -223,6 +302,11 @@
             color: #991b1b;
         }
 
+        .alert-info {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+
         .alert-error ul {
             margin: 0;
             padding-left: 18px;
@@ -246,6 +330,10 @@
     <div class="alert alert-success">{{ session('success') }}</div>
 @endif
 
+@if(session('error'))
+    <div class="alert alert-error">{{ session('error') }}</div>
+@endif
+
 @if($errors->any())
     <div class="alert alert-error">
         <ul>
@@ -255,6 +343,34 @@
         </ul>
     </div>
 @endif
+
+
+<div class="card">
+    <h2>Data Kehadiran &amp; Kontrak</h2>
+
+    <table class="komponen">
+        <tr>
+            <td class="label">Izin</td>
+            <td>{{ $employee->jumlah_izin ?? 0 }}</td>
+        </tr>
+        <tr>
+            <td class="label">Sakit</td>
+            <td>{{ $employee->jumlah_sakit ?? 0 }}</td>
+        </tr>
+        <tr>
+            <td class="label">Alpa</td>
+            <td>{{ $employee->jumlah_alpa ?? 0 }}</td>
+        </tr>
+        <tr>
+            <td class="label">Terlambat</td>
+            <td>{{ $employee->jumlah_terlambat ?? 0 }}</td>
+        </tr>
+        <tr>
+            <td class="label">Status Kontrak</td>
+            <td>{{ $employee->contractStatusLabel() }}</td>
+        </tr>
+    </table>
+</div>
 
 
 <div class="card">
@@ -278,14 +394,37 @@
 <div class="card">
     <h2>Berikan Penilaian</h2>
 
-    @if($myEvaluation)
+    {{-- Legenda skala index penilaian --}}
+    <div class="legenda">
+        @foreach (\App\Models\Evaluation::SCALE as $huruf => $range)
+            <div class="legenda-item">
+                <span class="legenda-huruf">{{ $huruf }}</span>
+                <span>{{ $range['min'] }}-{{ $range['max'] }} ({{ $range['label'] }})</span>
+            </div>
+        @endforeach
+    </div>
 
-        {{-- Sudah pernah dinilai: tampilkan hasilnya, tidak bisa dinilai ulang --}}
+    @php
+        $isLocked = $myEvaluation && $evaluationLocked;
+        $isEdit = $myEvaluation && ! $evaluationLocked;
+    @endphp
+
+    @if($isLocked)
+
+        {{-- Sudah dinilai DAN atasan pejabat sudah menanggapi: terkunci, tidak bisa diedit --}}
+        <div class="alert alert-info">
+            Nilai ini sudah dikunci karena atasan pejabat sudah mengirim tanggapan
+            untuk karyawan ini.
+        </div>
+
         <table class="komponen">
             <tr><th>Komponen</th><th>Bobot</th><th>Nilai</th></tr>
             @foreach (\App\Models\Evaluation::WEIGHTS as $key => $bobot)
                 <tr>
-                    <td class="label">{{ \App\Models\Evaluation::LABELS[$key] }}</td>
+                    <td class="label">
+                        {{ \App\Models\Evaluation::LABELS[$key] }}
+                        <div class="deskripsi">{{ \App\Models\Evaluation::DESCRIPTIONS[$key] }}</div>
+                    </td>
                     <td class="bobot">{{ rtrim(rtrim(number_format($bobot, 1), '0'), '.') }}%</td>
                     <td>{{ $myEvaluation->$key }}</td>
                 </tr>
@@ -305,6 +444,9 @@
         <div class="field">
             <label>Rekomendasi</label>
             <p>{{ $myEvaluation->recommendationLabel() }}</p>
+            @if($myEvaluation->kenaikan_gaji_amount)
+                <p>Nominal Kenaikan Gaji: Rp {{ number_format($myEvaluation->kenaikan_gaji_amount, 0, ',', '.') }}</p>
+            @endif
         </div>
 
         @if ($myEvaluation->signature)
@@ -314,11 +456,30 @@
             </div>
         @endif
 
+        @if ($myEvaluation->employee_response)
+            <div class="field">
+                <label>Tanggapan Karyawan</label>
+                <p>{{ $myEvaluation->employee_response }}</p>
+            </div>
+        @endif
+
     @else
 
-        <form method="POST" action="{{ route('official.evaluate', $employee->id) }}" id="form-penilaian">
+        @if($isEdit)
+            <div class="alert alert-info">
+                Anda masih bisa mengubah nilai ini selama atasan pejabat belum
+                mengirim tanggapan untuk karyawan ini.
+            </div>
+        @endif
+
+        <form method="POST"
+              action="{{ $isEdit ? route('official.evaluate.update', $employee->id) : route('official.evaluate', $employee->id) }}"
+              id="form-penilaian">
 
             @csrf
+            @if($isEdit)
+                @method('PUT')
+            @endif
 
             <table class="komponen">
                 <tr>
@@ -329,7 +490,10 @@
 
                 @foreach (\App\Models\Evaluation::WEIGHTS as $key => $bobot)
                     <tr>
-                        <td class="label">{{ \App\Models\Evaluation::LABELS[$key] }}</td>
+                        <td class="label">
+                            {{ \App\Models\Evaluation::LABELS[$key] }}
+                            <div class="deskripsi">{{ \App\Models\Evaluation::DESCRIPTIONS[$key] }}</div>
+                        </td>
                         <td class="bobot">{{ rtrim(rtrim(number_format($bobot, 1), '0'), '.') }}%</td>
                         <td>
                             <input
@@ -340,7 +504,7 @@
                                 step="1"
                                 class="komponen-input"
                                 data-bobot="{{ $bobot }}"
-                                value="{{ old($key, 0) }}"
+                                value="{{ old($key, $isEdit ? $myEvaluation->$key : 0) }}"
                                 required
                             >
                         </td>
@@ -355,38 +519,86 @@
 
             <div class="field">
                 <label>Tanggapan</label>
-                <textarea name="feedback" required minlength="10">{{ old('feedback') }}</textarea>
+                <textarea name="feedback" required minlength="10">{{ old('feedback', $isEdit ? $myEvaluation->feedback : '') }}</textarea>
                 @error('feedback')
                     <div class="field-error">{{ $message }}</div>
                 @enderror
             </div>
 
+            @php
+                $selectedRecommendations = old('recommendation', $isEdit ? $myEvaluation->recommendationList() : []);
+            @endphp
+
             <div class="field">
-                <label>Rekomendasi</label>
-                <select name="recommendation" required>
-                    <option value="">-- Pilih Rekomendasi --</option>
-                    <option value="perpanjang_kontrak" @selected(old('recommendation') === 'perpanjang_kontrak')>Perpanjang Kontrak</option>
-                    <option value="promosi" @selected(old('recommendation') === 'promosi')>Promosi</option>
-                    <option value="kenaikan_gaji" @selected(old('recommendation') === 'kenaikan_gaji')>Kenaikan Gaji</option>
-                    <option value="tidak_ada" @selected(old('recommendation') === 'tidak_ada')>Tidak Ada</option>
-                </select>
+                <label>Rekomendasi (bisa pilih lebih dari satu)</label>
+
+                <div class="rekomendasi-options">
+                    @foreach (\App\Models\Evaluation::RECOMMENDATIONS as $value => $recLabel)
+                        <label>
+                            <input
+                                type="checkbox"
+                                name="recommendation[]"
+                                value="{{ $value }}"
+                                class="rekomendasi-checkbox"
+                                {{ in_array($value, $selectedRecommendations) ? 'checked' : '' }}
+                            >
+                            {{ $recLabel }}
+                        </label>
+                    @endforeach
+                </div>
+
                 @error('recommendation')
                     <div class="field-error">{{ $message }}</div>
                 @enderror
+                @error('recommendation.*')
+                    <div class="field-error">{{ $message }}</div>
+                @enderror
+
+                <div class="field" id="kenaikan-gaji-wrap">
+                    <label>Nominal Kenaikan Gaji</label>
+                    <input
+                        type="number"
+                        name="kenaikan_gaji_amount"
+                        min="1"
+                        max="{{ \App\Models\Evaluation::KENAIKAN_GAJI_MAX }}"
+                        value="{{ old('kenaikan_gaji_amount', $isEdit ? $myEvaluation->kenaikan_gaji_amount : '') }}"
+                    >
+                    <div class="hint">
+                        Maksimal Rp{{ number_format(\App\Models\Evaluation::KENAIKAN_GAJI_MAX, 0, ',', '.') }}
+                    </div>
+                    @error('kenaikan_gaji_amount')
+                        <div class="field-error">{{ $message }}</div>
+                    @enderror
+                </div>
             </div>
 
             <div class="field signature-wrap">
                 <label>Tanda Tangan Penilai</label>
                 <canvas id="signature-pad"></canvas>
                 <div class="signature-actions">
-                    <span class="signature-hint">Gambar tanda tangan di kotak di atas</span>
+                    <span class="signature-hint">
+                        @if($isEdit)
+                            Kosongkan jika tidak ingin mengganti tanda tangan sebelumnya
+                        @else
+                            Gambar tanda tangan di kotak di atas
+                        @endif
+                    </span>
                     <button type="button" class="signature-clear" id="btn-clear-signature">Hapus &amp; ulangi</button>
                 </div>
                 {{-- Diisi otomatis oleh JS sebelum form dikirim --}}
                 <input type="hidden" name="signature" id="signature-input">
+                @error('signature')
+                    <div class="field-error">{{ $message }}</div>
+                @enderror
+
+                @if($isEdit && $myEvaluation->signature)
+                    <img src="{{ Storage::disk('public')->url($myEvaluation->signature) }}" class="signature-saved" style="margin-top:10px;">
+                @endif
             </div>
 
-            <button type="submit" id="btn-submit">Simpan Penilaian</button>
+            <button type="submit" id="btn-submit">
+                {{ $isEdit ? 'Perbarui Penilaian' : 'Simpan Penilaian' }}
+            </button>
 
         </form>
 
@@ -417,6 +629,38 @@
     });
 
     hitungTotal();
+
+    // ---- Tampilkan input nominal kenaikan gaji hanya jika dicentang ----
+    const kenaikanGajiCheckbox = document.querySelector('.rekomendasi-checkbox[value="kenaikan_gaji"]');
+    const kenaikanGajiWrap = document.getElementById('kenaikan-gaji-wrap');
+    const kenaikanGajiInput = kenaikanGajiWrap ? kenaikanGajiWrap.querySelector('input[name="kenaikan_gaji_amount"]') : null;
+
+    function toggleKenaikanGaji() {
+        if (!kenaikanGajiCheckbox || !kenaikanGajiWrap) return;
+
+        if (kenaikanGajiCheckbox.checked) {
+            kenaikanGajiWrap.style.display = 'block';
+        } else {
+            kenaikanGajiWrap.style.display = 'none';
+            if (kenaikanGajiInput) {
+                kenaikanGajiInput.value = '';
+            }
+        }
+    }
+
+    if (kenaikanGajiCheckbox) {
+        kenaikanGajiCheckbox.addEventListener('change', toggleKenaikanGaji);
+        toggleKenaikanGaji();
+    }
+
+    if (kenaikanGajiInput) {
+        kenaikanGajiInput.addEventListener('input', function () {
+            const max = parseInt(kenaikanGajiInput.max, 10);
+            if (parseInt(kenaikanGajiInput.value, 10) > max) {
+                kenaikanGajiInput.value = max;
+            }
+        });
+    }
 
     // ---- Signature pad ----
     const canvas = document.getElementById('signature-pad');
@@ -484,14 +728,17 @@
 
         const form = document.getElementById('form-penilaian');
         const signatureInput = document.getElementById('signature-input');
+        const isEditForm = {{ $isEdit ? 'true' : 'false' }};
 
         form.addEventListener('submit', function (e) {
-            if (!hasStroke) {
+            if (!hasStroke && !isEditForm) {
                 e.preventDefault();
                 alert('Tanda tangan wajib diisi sebelum menyimpan penilaian.');
                 return;
             }
-            signatureInput.value = canvas.toDataURL('image/png');
+            if (hasStroke) {
+                signatureInput.value = canvas.toDataURL('image/png');
+            }
         });
     }
 </script>

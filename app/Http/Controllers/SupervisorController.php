@@ -14,10 +14,7 @@ class SupervisorController extends Controller
 {
     public function index()
     {
-        $employees = User::where(
-            'role',
-            'karyawan'
-        )->get();
+        $employees = User::where('role', 'karyawan')->get();
 
         return view(
             'supervisor.dashboard',
