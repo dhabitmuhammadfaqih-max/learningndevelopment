@@ -220,6 +220,23 @@
         .btn-cancel:hover {
             background: #d1d5db;
         }
+        .status-badge {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 999px;
+            font-size: 11px;
+            margin-left: 6px;
+        }
+
+        .status-sudah {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .status-belum {
+            background: #f3f4f6;
+            color: #6b7280;
+        }
     </style>
 </head>
 
@@ -229,6 +246,11 @@
     <h1>Dashboard Pejabat</h1>
 
     <div style="display:flex; gap:8px;">
+        <a href="{{ route('official.my-evaluations') }}"
+           style="padding:10px 20px; background:#2563eb; color:white; border-radius:5px; text-decoration:none; display:inline-block;">
+            Lihat Nilai Saya
+        </a>
+
         <form method="POST" action="{{ route('logout') }}">
             @csrf
             <button type="submit">Logout</button>
@@ -244,11 +266,54 @@
     <div class="alert alert-success">{{ session('success') }}</div>
 @endif
 
+@if($pejabatBinaan->isNotEmpty())
+
+    <h2 style="margin-top:24px;">Pejabat yang Harus Anda Nilai</h2>
+
+    <div class="grid">
+
+        @foreach($pejabatBinaan as $pejabat)
+
+            <div class="card">
+                <strong>{{ $pejabat->name }}</strong>
+                <small>
+                    {{ $pejabat->username }}
+                    @if($pejabat->jabatan)
+                        &middot; {{ $pejabat->jabatan }}
+                    @endif
+                    @if($pejabat->unit_kerja)
+                        &middot; {{ $pejabat->unit_kerja }}
+                    @endif
+                </small>
+
+                <div class="badges">
+                    @if($pejabat->evaluated_count > 0)
+                        <span class="status-badge status-sudah">&#10003; Sudah Dinilai</span>
+                    @else
+                        <span class="status-badge status-belum">Belum Dinilai</span>
+                    @endif
+                </div>
+
+                <a href="{{ route('supervisor.official', $pejabat->id) }}">
+                    Nilai Pejabat
+                </a>
+            </div>
+
+        @endforeach
+
+    </div>
+
+@endif
+
 @if($employees->isEmpty())
 
     <p class="empty">Belum ada data karyawan.</p>
 
 @else
+
+    @if($pejabatBinaan->isNotEmpty())
+        <h2 style="margin-top:24px;">Karyawan</h2>
+    @endif
 
     <div class="grid">
 

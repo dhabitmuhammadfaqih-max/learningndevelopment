@@ -21,7 +21,35 @@ class OfficialController extends Controller
             }])
             ->get();
 
-        return view('official.dashboard', compact('employees'));
+        // Pejabat lain yang secara khusus ditugaskan untuk dinilai oleh
+        // pejabat yang sedang login (users.supervisor_id bisa menunjuk ke
+        // akun pejabat, bukan cuma atasan_pejabat).
+        $pejabatBinaan = User::where('role', 'pejabat')
+            ->where('supervisor_id', Auth::id())
+            ->withCount(
+                ['officialEvaluations as evaluated_count' => function ($query) {
+                    $query->where('supervisor_id', Auth::id());
+                }]
+            )
+            ->get();
+
+        return view('official.dashboard', compact('employees', 'pejabatBinaan'));
+    }
+
+    /**
+     * Halaman "Nilai Saya": menampilkan seluruh hasil penilaian yang
+     * diterima pejabat yang sedang login dari atasan pejabatnya,
+     * lengkap per-komponen (bukan cuma total nilai).
+     */
+    public function myEvaluations()
+    {
+        $myOfficialEvaluations = Auth::user()
+            ->officialEvaluations()
+            ->with('supervisor')
+            ->latest()
+            ->get();
+
+        return view('official.my-evaluations', compact('myOfficialEvaluations'));
     }
 
     public function show($id)

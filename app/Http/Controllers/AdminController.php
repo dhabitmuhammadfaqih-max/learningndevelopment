@@ -8,10 +8,17 @@ use App\Models\Evaluation;
 use App\Models\SupervisorFeedback;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
 
 class AdminController extends Controller
 {
+    // Role yang boleh ditugaskan sebagai "Atasan Penilai" untuk akun
+    // pejabat. Awalnya hanya atasan_pejabat; sekarang pejabat & admin
+    // juga boleh ditunjuk sebagai penilai pejabat lain.
+    private const EVALUATOR_ROLES = ['pejabat', 'atasan_pejabat', 'admin'];
+
     public function index()
     {
         // withCount/with dipakai supaya tiap kartu karyawan bisa menampilkan
@@ -31,11 +38,31 @@ class AdminController extends Controller
         // Semua akun dari semua role, buat ditampilkan & dikelola admin.
         $accounts = User::orderBy('role')
             ->orderBy('name')
+            ->with('supervisor')
+            ->get();
+
+        // Daftar akun yang boleh jadi "Atasan Penilai" untuk dropdown saat
+        // tambah/edit akun dengan role pejabat. Sekarang mencakup role
+        // pejabat/atasan_pejabat/admin, bukan hanya atasan_pejabat.
+        $atasanList = User::whereIn('role', self::EVALUATOR_ROLES)
+            ->orderBy('name')
+            ->get();
+
+        // Pejabat yang secara khusus ditugaskan untuk dinilai oleh admin
+        // yang sedang login (users.supervisor_id bisa menunjuk ke akun
+        // admin sekarang, bukan cuma atasan_pejabat).
+        $pejabatBinaan = User::where('role', 'pejabat')
+            ->where('supervisor_id', Auth::id())
+            ->withCount(
+                ['officialEvaluations as evaluated_count' => function ($query) {
+                    $query->where('supervisor_id', Auth::id());
+                }]
+            )
             ->get();
 
         return view(
             'admin.dashboard',
-            compact('employees', 'accounts')
+            compact('employees', 'accounts', 'atasanList', 'pejabatBinaan')
         );
     }
 
@@ -49,6 +76,10 @@ class AdminController extends Controller
             'jabatan'    => 'nullable|string|max:255',
             'role'       => 'required|in:karyawan,pejabat,atasan_pejabat,admin',
             'is_spg'     => 'nullable|boolean',
+            'supervisor_id' => [
+                'nullable',
+                Rule::exists('users', 'id')->whereIn('role', self::EVALUATOR_ROLES),
+            ],
         ]);
 
         User::create([
@@ -60,6 +91,9 @@ class AdminController extends Controller
             // "SPG" bukan lagi role sendiri, melainkan status tambahan yang
             // hanya berlaku untuk role "karyawan" (lihat catatan di index()).
             'is_spg'     => $validated['role'] === 'karyawan' && ! empty($validated['is_spg']),
+            // supervisor_id hanya bermakna untuk role "pejabat" — dipaksa
+            // null untuk role lain supaya tidak ada data nyasar.
+            'supervisor_id' => $validated['role'] === 'pejabat' ? ($validated['supervisor_id'] ?? null) : null,
             // Kolom email masih wajib & unik di database, jadi diisi otomatis
             // dari username (akun ini login pakai username, bukan email).
             'email'      => $validated['username'] . '@karyawan.local',
@@ -69,6 +103,52 @@ class AdminController extends Controller
         ]);
 
         return back()->with('success', 'Akun berhasil ditambahkan.');
+    }
+
+    public function updateAccount(Request $request, $id)
+    {
+        $account = User::findOrFail($id);
+
+        $validated = $request->validate([
+            'name'       => 'required|string|max:255',
+            'username'   => 'required|string|max:100|alpha_dash|unique:users,username,' . $account->id,
+            'nik'        => 'required|string|max:50|unique:users,nik,' . $account->id,
+            'unit_kerja' => 'nullable|string|max:255',
+            'jabatan'    => 'nullable|string|max:255',
+            'role'       => 'required|in:karyawan,pejabat,atasan_pejabat,admin',
+            'is_spg'     => 'nullable|boolean',
+            'supervisor_id' => [
+                'nullable',
+                Rule::exists('users', 'id')->whereIn('role', self::EVALUATOR_ROLES),
+            ],
+        ]);
+
+        // Pejabat tidak boleh jadi atasannya sendiri.
+        if ($validated['role'] === 'pejabat' && (int) ($validated['supervisor_id'] ?? 0) === $account->id) {
+            return back()->withErrors(['supervisor_id' => 'Pejabat tidak bisa ditugaskan sebagai atasannya sendiri.'])->withInput();
+        }
+
+        $account->update([
+            'name'       => $validated['name'],
+            'username'   => $validated['username'],
+            'nik'        => $validated['nik'],
+            'unit_kerja' => $validated['unit_kerja'] ?? null,
+            'jabatan'    => $validated['jabatan'] ?? null,
+            'is_spg'     => $validated['role'] === 'karyawan' && ! empty($validated['is_spg']),
+            'supervisor_id' => $validated['role'] === 'pejabat' ? ($validated['supervisor_id'] ?? null) : null,
+            'role'       => $validated['role'],
+        ]);
+
+        // Kalau akun ini sebelumnya jadi atasan/penilai bagi pejabat lain,
+        // tapi role-nya diganti ke role yang tidak lagi boleh jadi penilai
+        // (mis. jadi karyawan), lepaskan penugasan tsb supaya tidak ada
+        // pejabat yang "atasan penilainya" tertinggal ke akun yang sudah
+        // tidak berhak menilai.
+        if (! in_array($validated['role'], self::EVALUATOR_ROLES, true)) {
+            User::where('supervisor_id', $account->id)->update(['supervisor_id' => null]);
+        }
+
+        return back()->with('success', 'Akun berhasil diperbarui.');
     }
 
     public function updateAttendance(Request $request, $id)
