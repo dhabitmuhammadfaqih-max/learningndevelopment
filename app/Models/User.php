@@ -7,6 +7,7 @@ use Illuminate\Notifications\Notifiable;
 use App\Models\Evaluation;
 use App\Models\Feedback;
 use App\Models\SupervisorFeedback;
+use App\Models\OfficialEvaluation;
 
 class User extends Authenticatable
 {
@@ -22,6 +23,7 @@ class User extends Authenticatable
         'password',
         'role',
         'is_spg',
+        'supervisor_id',
         'jumlah_izin',
         'jumlah_sakit',
         'jumlah_alpa',
@@ -97,6 +99,37 @@ class User extends Authenticatable
         return $this->hasMany(
             SupervisorFeedback::class,
             'employee_id'
+        );
+    }
+
+    // Atasan pejabat yang ditugaskan ke akun ini (hanya bermakna untuk role "pejabat").
+    public function supervisor()
+    {
+        return $this->belongsTo(User::class, 'supervisor_id');
+    }
+
+    // Daftar pejabat yang berada di bawah bimbingan akun ini (hanya bermakna
+    // untuk role "atasan_pejabat").
+    public function pejabatBinaan()
+    {
+        return $this->hasMany(User::class, 'supervisor_id');
+    }
+
+    // Penilaian yang diterima akun ini sebagai pejabat.
+    public function officialEvaluations()
+    {
+        return $this->hasMany(
+            OfficialEvaluation::class,
+            'official_id'
+        );
+    }
+
+    // Penilaian yang diberikan akun ini sebagai atasan_pejabat.
+    public function officialEvaluationsGiven()
+    {
+        return $this->hasMany(
+            OfficialEvaluation::class,
+            'supervisor_id'
         );
     }
 }

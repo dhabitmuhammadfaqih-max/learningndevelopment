@@ -74,6 +74,9 @@ Route::middleware('auth')->group(function () {
         Route::get('/dashboard', [OfficialController::class, 'index'])
             ->name('dashboard');
 
+        Route::get('/nilai-saya', [OfficialController::class, 'myEvaluations'])
+            ->name('my-evaluations');
+
         Route::get('/karyawan/{id}', [OfficialController::class, 'show'])
             ->name('employee');
 
@@ -120,6 +123,39 @@ Route::middleware('auth')->group(function () {
             )->name('feedback');
         });
 
+    /*
+    |--------------------------------------------------------------------------
+    | PENILAIAN PEJABAT (oleh atasan penilai: pejabat/atasan_pejabat/admin)
+    |--------------------------------------------------------------------------
+    | Dulu hanya role atasan_pejabat yang bisa menilai pejabat. Sekarang
+    | siapa pun yang ditugaskan lewat users.supervisor_id boleh menilai,
+    | selama role-nya pejabat/atasan_pejabat/admin (dicek di sini via
+    | middleware, lalu dicek lagi per-akun di SupervisorController).
+    | Tetap pakai prefix 'atasan' & nama 'supervisor.' supaya konsisten
+    | dengan route yang sudah dipakai di view (route('supervisor.official', ...)).
+    */
+
+    Route::middleware('role:pejabat,atasan_pejabat,admin')
+        ->prefix('atasan')
+        ->name('supervisor.')
+        ->group(function () {
+
+            Route::get(
+                '/pejabat/{id}',
+                [SupervisorController::class, 'showOfficial']
+            )->name('official');
+
+            Route::post(
+                '/pejabat/{id}/nilai',
+                [SupervisorController::class, 'evaluateOfficial']
+            )->name('official.evaluate');
+
+            Route::put(
+                '/pejabat/{id}/nilai',
+                [SupervisorController::class, 'updateOfficialEvaluation']
+            )->name('official.evaluate.update');
+        });
+
 
     /*
     |--------------------------------------------------------------------------
@@ -141,6 +177,11 @@ Route::middleware('auth')->group(function () {
                 '/akun',
                 [AdminController::class, 'storeAccount']
             )->name('account.store');
+
+            Route::put(
+                '/akun/{id}',
+                [AdminController::class, 'updateAccount']
+            )->name('account.update');
 
             Route::get(
                 '/karyawan/{id}',
