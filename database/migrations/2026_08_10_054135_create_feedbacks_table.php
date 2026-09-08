@@ -11,12 +11,12 @@ return new class extends Migration
         Schema::create('feedbacks', function (Blueprint $table) {
             $table->id();
 
-            // Karyawan yang dinilai
+            // Pegawai yang dinilai
             $table->foreignId('employee_id')
                 ->constrained('users')
                 ->cascadeOnDelete();
 
-            // Karyawan yang memberikan tanggapan
+            // Pegawai yang memberikan tanggapan
             $table->foreignId('reviewer_id')
                 ->constrained('users')
                 ->cascadeOnDelete();

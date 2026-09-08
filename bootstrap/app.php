@@ -15,6 +15,21 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'role' => \App\Http\Middleware\RoleMiddleware::class,
         ]);
+
+        // Percayai header X-Forwarded-* dari SEMUA proxy di depan aplikasi
+        // (ngrok saat development/testing, dan nanti reverse proxy Nginx
+        // di production) - supaya Laravel tahu request aslinya HTTPS
+        // walau di internal diteruskan sebagai HTTP biasa. Tanpa ini,
+        // asset()/@vite()/route() akan generate URL http:// meski
+        // browser sudah mengakses lewat https://, yang menyebabkan
+        // CSS/JS diblokir browser (mixed content).
+        $middleware->trustProxies(
+            at: '*',
+            headers: Request::HEADER_X_FORWARDED_FOR
+                | Request::HEADER_X_FORWARDED_HOST
+                | Request::HEADER_X_FORWARDED_PORT
+                | Request::HEADER_X_FORWARDED_PROTO
+        );
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

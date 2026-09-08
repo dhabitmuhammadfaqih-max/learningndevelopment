@@ -9,10 +9,10 @@ class SignatureDocument extends Model
     protected $fillable = [
         'nomor_dokumen',
         'judul',
-        'karyawan_nama',
-        'karyawan_jabatan',
-        'karyawan_signature',
-        'karyawan_signed_at',
+        'pegawai_nama',
+        'pegawai_jabatan',
+        'pegawai_signature',
+        'pegawai_signed_at',
         'pejabat_nama',
         'pejabat_jabatan',
         'pejabat_signature',
@@ -25,7 +25,7 @@ class SignatureDocument extends Model
     ];
 
     protected $casts = [
-        'karyawan_signed_at' => 'datetime',
+        'pegawai_signed_at' => 'datetime',
         'pejabat_signed_at' => 'datetime',
         'atasan_signed_at' => 'datetime',
     ];
@@ -34,7 +34,7 @@ class SignatureDocument extends Model
      * Urutan resmi penanda tangan. Urutan ini menentukan giliran
      * siapa yang boleh menandatangani berikutnya.
      */
-    public const ROLES = ['karyawan', 'pejabat', 'atasan'];
+    public const ROLES = ['pegawai', 'pejabat', 'atasan'];
 
     /**
      * Role berikutnya yang berhak menandatangani, atau null jika

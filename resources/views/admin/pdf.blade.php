@@ -24,7 +24,7 @@
         }
 
         .header-logo {
-            width: 20%;
+            width: 30%;
             text-align: center;
             font-size: 9px;
             font-weight: bold;
@@ -40,14 +40,22 @@
 
         .header-meta {
             width: 30%;
-            font-size: 9px;
+            font-size: 10px;
             padding: 0 !important;
+        }
+
+        .header-meta table {
+            width: 100%;
         }
 
         .header-meta table td {
             border: none;
             border-bottom: 1px solid #000;
-            padding: 2px 5px;
+            padding: 3px 6px;
+        }
+
+        .header-meta table td:first-child {
+            width: 45%;
         }
 
         .header-meta table tr:last-child td {
@@ -63,20 +71,18 @@
 
         .periode {
             text-align: center;
-            font-weight: bold;
             margin-bottom: 8px;
         }
 
         /* ===== Box Identitas ===== */
         .identitas-box {
             border: 1px solid #000;
-            margin-bottom: -1px; /* Overlap border agar tidak double */
+            margin-bottom: -1px;
         }
 
         .identitas-title {
             text-align: center;
             font-weight: bold;
-            background: #eee;
             border-bottom: 1px solid #000;
             padding: 3px;
             font-size: 10px;
@@ -101,102 +107,29 @@
             width: 10px;
         }
 
-        /* ===== Tabel Faktor Penilaian ===== */
-        .faktor-table {
-            margin-top: 10px;
-        }
-
-        .faktor-table th,
-        .faktor-table td {
-            border: 1px solid #000;
-            padding: 3px 4px;
-            text-align: center;
-            font-size: 9px;
-        }
-
-        .faktor-table th {
-            background: #eee;
-            font-weight: bold;
-        }
-
-        .faktor-table td.nama-faktor {
-            text-align: left;
-        }
-
-        .faktor-table tr.total-row td {
-            font-weight: bold;
-            background: #f5f5f5;
-        }
-
-        /* ===== Box Keterangan / Hasil Penilaian ===== */
-        .hasil-box {
-            margin-top: 10px;
-            border: 1px solid #000;
-            padding: 6px;
-            font-size: 10px;
-        }
-
-        /* ===== 5 Tanda Tangan Table ===== */
+        /* ===== Tanda Tangan ===== */
         .ttd-container {
             margin-top: 20px;
             width: 100%;
         }
 
-        .ttd-table td {
-            width: 20%; /* Split rata 5 Kolom */
-            border: 1px solid #000;
-            text-align: center;
-            vertical-align: top;
-            padding: 4px 2px;
-            font-size: 8.5px;
-            font-weight: bold;
-        }
-
-        .ttd-space {
-            height: 50px; /* Space area tanda tangan */
-        }
-
         .ttd-signature-img {
-            height: 46px;
+            height: 42px;
             max-width: 100%;
-        }
-
-        /* Kolom korelasi bisa memuat lebih dari satu tanda tangan
-           (satu per pemberi tanggapan korelasi). */
-        .ttd-korelasi-list {
-            height: 50px;
-            overflow: hidden;
-            display: flex;
-            flex-direction: row;
-            justify-content: center;
-            align-items: flex-start;
-            gap: 2px;
-        }
-
-        .ttd-korelasi-item {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            width: 33%;
-        }
-
-        .ttd-korelasi-item img {
-            height: 28px;
-            max-width: 100%;
-        }
-
-        .ttd-korelasi-item span {
-            font-size: 6.5px;
-            font-weight: normal;
-            line-height: 1.1;
-            text-align: center;
         }
 
         .ttd-name {
-            display: block;
-            border-top: 1px solid #000;
-            padding-top: 3px;
-            margin: 0 4px;
+            display: inline-block;
+            border-bottom: 1px solid #000;
+            padding: 0 6px 1px 6px;
+            margin: 0 auto;
+            font-weight: normal;
+        }
+
+        /* ===== Highlight rekomendasi ===== */
+        .rekomendasi-highlight {
+            color: #ff0000;
+            font-weight: bold;
         }
 
         /* ===== Halaman 2: Catatan ===== */
@@ -211,7 +144,6 @@
         .catatan-header {
             text-align: center;
             font-weight: bold;
-            background: #eee;
             border-bottom: 1px solid #000;
             padding: 4px;
         }
@@ -231,11 +163,8 @@
         }
 
         .komentar {
-            border: 1px solid #ddd;
-            background: #fafafa;
             padding: 6px 8px;
             margin-bottom: 6px;
-            border-radius: 3px;
         }
 
         .komentar .nama {
@@ -249,6 +178,38 @@
             color: #888;
             font-style: italic;
         }
+
+        .korelasi-grid {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .korelasi-cell {
+            width: 50%;
+            vertical-align: top;
+            padding: 4px 8px;
+            border: none;
+        }
+
+        .korelasi-text {
+            font-size: 9px;
+            line-height: 1.4;
+        }
+
+        .korelasi-ttd {
+            text-align: right;
+            margin-top: 4px;
+        }
+
+        .korelasi-ttd img {
+            height: 45px;
+        }
+
+        .korelasi-ttd .nama {
+            display: block;
+            font-weight: bold;
+            font-size: 9px;
+        }
     </style>
 </head>
 <body>
@@ -257,6 +218,7 @@
 <table class="header-table">
     <tr>
         <td class="header-logo">
+            <img src="{{ public_path('images/logo-dagsap.png') }}" alt="Logo Dagsap" style="height:45px; margin-bottom:2px;"><br>
             PT. DAGSAP ENDURA EATORE
         </td>
         <td class="header-title">
@@ -284,15 +246,23 @@
     <div class="identitas-body">
         <table>
             <tr>
-                <td class="label">NAMA</td><td class="colon">:</td>
+                <td class="label">NAMA</td>
+                <td class="colon">:</td>
                 <td>{{ $employee->name }}</td>
-                <td class="label">NIK</td><td class="colon">:</td>
+            </tr>
+            <tr>
+                <td class="label">NIK</td>
+                <td class="colon">:</td>
                 <td>{{ $employee->nik ?? '-' }}</td>
             </tr>
             <tr>
-                <td class="label">JABATAN</td><td class="colon">:</td>
+                <td class="label">JABATAN</td>
+                <td class="colon">:</td>
                 <td>{{ $employee->jabatan ?? '-' }}</td>
-                <td class="label">UNIT KERJA</td><td class="colon">:</td>
+            </tr>
+            <tr>
+                <td class="label">UNIT KERJA</td>
+                <td class="colon">:</td>
                 <td>{{ $employee->unit_kerja ?? '-' }}</td>
             </tr>
         </table>
@@ -305,15 +275,23 @@
     <div class="identitas-body">
         <table>
             <tr>
-                <td class="label">NAMA</td><td class="colon">:</td>
+                <td class="label">NAMA</td>
+                <td class="colon">:</td>
                 <td>{{ $evaluation->official->name ?? '-' }}</td>
-                <td class="label">NIK</td><td class="colon">:</td>
+            </tr>
+            <tr>
+                <td class="label">NIK</td>
+                <td class="colon">:</td>
                 <td>{{ $evaluation->official->nik ?? '-' }}</td>
             </tr>
             <tr>
-                <td class="label">JABATAN</td><td class="colon">:</td>
+                <td class="label">JABATAN</td>
+                <td class="colon">:</td>
                 <td>{{ $evaluation->official->jabatan ?? '-' }}</td>
-                <td class="label">UNIT KERJA</td><td class="colon">:</td>
+            </tr>
+            <tr>
+                <td class="label">UNIT KERJA</td>
+                <td class="colon">:</td>
                 <td>{{ $evaluation->official->unit_kerja ?? '-' }}</td>
             </tr>
         </table>
@@ -354,127 +332,239 @@
     };
 
     $totalBobot = 0;
+
+    $jumlahIzin           = (int) ($employee->jumlah_izin      ?? 0);
+    $jumlahSakit          = (int) ($employee->jumlah_sakit      ?? 0);
+    $jumlahAlpa           = (int) ($employee->jumlah_alpa       ?? 0);
+    $jumlahTerlambat      = (int) ($employee->jumlah_terlambat  ?? 0);
+    $jumlahKetidakhadiran = $jumlahIzin + $jumlahSakit + $jumlahAlpa + $jumlahTerlambat;
 @endphp
 
-<!-- TABEL FAKTOR PENILAIAN -->
-<table class="faktor-table">
-    <tr>
-        <th rowspan="2" style="width:3%;">NO</th>
-        <th rowspan="2" style="width:32%;">FAKTOR PENILAIAN</th>
-        <th rowspan="2" style="width:7%;">INDEX</th>
-        <th colspan="5">SKOR</th>
-        <th rowspan="2" style="width:8%;">NILAI</th>
-    </tr>
-    <tr>
-        <th style="width:8%;">I<br>90-100</th>
-        <th style="width:8%;">A<br>80-89</th>
-        <th style="width:8%;">B<br>65-79</th>
-        <th style="width:8%;">C<br>50-64</th>
-        <th style="width:8%;">D<br>35-49</th>
+{{--
+    SATU TABEL BESAR dengan colgroup yang sama persis di semua baris:
+    Col 1  : NO           3%
+    Col 2  : FAKTOR       29%
+    Col 3  : INDEX        7%
+    Col 4  : I / Sakit    8%
+    Col 5  : A / Ijin     8%
+    Col 6  : B / Alpa     8%  (di ketidakhadiran, col 6+7 gabung = Alpa)
+    Col 7  : C / —        8%
+    Col 8  : D / Terlambat 8%
+    Col 9  : NILAI/Jumlah  8%
+    Col 10 : KETERANGAN   13%
+--}}
+<table style="width:100%; border-collapse:collapse; table-layout:auto; margin-top:10px;">
+
+    {{-- Header baris 1 --}}
+    <tr style="font-size:9px; text-align:center;">
+        <th rowspan="2" style="border:1px solid #000; padding:3px 1px; font-weight:normal;">NO</th>
+        <th rowspan="2" style="border:1px solid #000; padding:3px; text-align:left; font-weight:normal;">FAKTOR PENILAIAN</th>
+        <th rowspan="2" style="border:1px solid #000; padding:3px; font-weight:normal;">INDEX</th>
+        <th style="border:1px solid #000; padding:3px; font-weight:normal;">I</th>
+        <th style="border:1px solid #000; padding:3px; font-weight:normal;">A</th>
+        <th style="border:1px solid #000; padding:3px; font-weight:normal;">B</th>
+        <th style="border:1px solid #000; padding:3px; font-weight:normal;">C</th>
+        <th style="border:1px solid #000; padding:3px; font-weight:normal;">D</th>
+        <th rowspan="2" style="border:1px solid #000; padding:3px; font-weight:normal;">NILAI</th>
+        <th rowspan="2" style="border:1px solid #000; padding:3px; font-weight:normal;">KETERANGAN</th>
     </tr>
 
+    {{-- Header baris 2 --}}
+    <tr style="font-size:9px; text-align:center;">
+        <th style="border:1px solid #000; padding:3px; font-weight:normal;">90 - 100</th>
+        <th style="border:1px solid #000; padding:3px; font-weight:normal;">80 - 89</th>
+        <th style="border:1px solid #000; padding:3px; font-weight:normal;">65 - 79</th>
+        <th style="border:1px solid #000; padding:3px; font-weight:normal;">50 - 64</th>
+        <th style="border:1px solid #000; padding:3px; font-weight:normal;">35 - 49</th>
+    </tr>
+
+    {{-- Baris data faktor penilaian --}}
     @foreach ($komponen as $key => $label)
         @php
-            $nilaiMentah = $evaluation->$key ?? 0;
-            $bobotItem = $bobot[$key];
-            $totalBobot += $bobotItem;
-            $kolom = $kolomIndex($nilaiMentah);
-            $nilaiTertimbang = round($nilaiMentah * ($bobotItem / 100), 2);
+            $nilaiMentah     = $evaluation->$key ?? 0;
+            $bobotItem       = $bobot[$key];
+            $totalBobot     += $bobotItem;
+            $kolom           = $kolomIndex($nilaiMentah);
+            $nilaiTertimbang = round($nilaiMentah * ($bobotItem / 100));
         @endphp
-        <tr>
-            <td>{{ $loop->iteration }}</td>
-            <td class="nama-faktor">{{ $label }}</td>
-            <td>{{ rtrim(rtrim(number_format($bobotItem, 1), '0'), '.') }}%</td>
-            <td>{{ $kolom === 'I' ? $nilaiMentah : '' }}</td>
-            <td>{{ $kolom === 'A' ? $nilaiMentah : '' }}</td>
-            <td>{{ $kolom === 'B' ? $nilaiMentah : '' }}</td>
-            <td>{{ $kolom === 'C' ? $nilaiMentah : '' }}</td>
-            <td>{{ $kolom === 'D' ? $nilaiMentah : '' }}</td>
-            <td>{{ $nilaiTertimbang }}</td>
+        <tr style="font-size:9px; text-align:center;">
+            <td style="border:1px solid #000; padding:3px 1px;">{{ $loop->iteration }}</td>
+            <td style="border:1px solid #000; padding:3px; text-align:left;">{{ $label }}</td>
+            <td style="border:1px solid #000; padding:3px;">{{ rtrim(rtrim(number_format($bobotItem, 1), '0'), '.') }}%</td>
+            <td style="border:1px solid #000; padding:3px;">{{ $kolom === 'I' ? $nilaiMentah : '' }}</td>
+            <td style="border:1px solid #000; padding:3px;">{{ $kolom === 'A' ? $nilaiMentah : '' }}</td>
+            <td style="border:1px solid #000; padding:3px;">{{ $kolom === 'B' ? $nilaiMentah : '' }}</td>
+            <td style="border:1px solid #000; padding:3px;">{{ $kolom === 'C' ? $nilaiMentah : '' }}</td>
+            <td style="border:1px solid #000; padding:3px;">{{ $kolom === 'D' ? $nilaiMentah : '' }}</td>
+            <td style="border:1px solid #000; padding:3px;">{{ $nilaiTertimbang }}</td>
+            <td style="border:1px solid #000; padding:3px;"></td>
         </tr>
     @endforeach
 
-    <tr class="total-row">
-        <td colspan="2">TOTAL</td>
-        <td>{{ rtrim(rtrim(number_format($totalBobot, 1), '0'), '.') }}%</td>
-        <td colspan="5"></td>
-        <td>{{ $evaluation->score ?? 0 }}</td>
+    {{-- Baris TOTAL --}}
+    <tr style="font-size:9px; text-align:center;">
+        <td colspan="2" style="border:1px solid #000; padding:3px; text-align:left; padding-left:6px;">TOTAL</td>
+        <td style="border:1px solid #000; padding:3px;">{{ rtrim(rtrim(number_format($totalBobot, 1), '0'), '.') }}%</td>
+        <td style="border:1px solid #000; padding:3px;"></td>
+        <td style="border:1px solid #000; padding:3px;"></td>
+        <td style="border:1px solid #000; padding:3px;"></td>
+        <td style="border:1px solid #000; padding:3px;"></td>
+        <td style="border:1px solid #000; padding:3px;"></td>
+        <td style="border:1px solid #000; padding:3px;">{{ $evaluation->score ?? 0 }}</td>
+        <td style="border:1px solid #000; padding:3px;"></td>
     </tr>
+
+    {{-- Baris KETIDAK HADIRAN: header sub-kolom --}}
+    <tr style="font-size:9px; text-align:center;">
+        <td colspan="3" rowspan="2" style="border:1px solid #000; padding:3px 6px; text-align:center; vertical-align:middle;">KETIDAK HADIRAN</td>
+        <td style="border:1px solid #000; padding:2px;">Sakit (S)</td>
+        <td style="border:1px solid #000; padding:2px;">Ijin (I)</td>
+        <td style="border:1px solid #000; padding:2px;">Alpa (A)</td>
+        <td style="border:1px solid #000; padding:2px;">Terlambat (T)</td>
+        <td colspan="2" style="border:1px solid #000; padding:2px;">Jumlah</td>
+        <td rowspan="2" style="border:1px solid #000; padding:3px;"></td>
+    </tr>
+    {{-- Baris KETIDAK HADIRAN: nilai --}}
+    <tr style="font-size:9px; text-align:center;">
+        <td style="border:1px solid #000; padding:6px 2px;">{{ $jumlahSakit }}</td>
+        <td style="border:1px solid #000; padding:6px 2px;">{{ $jumlahIzin }}</td>
+        <td style="border:1px solid #000; padding:6px 2px;">{{ $jumlahAlpa }}</td>
+        <td style="border:1px solid #000; padding:6px 2px;">{{ $jumlahTerlambat }}</td>
+        <td colspan="2" style="border:1px solid #000; border-top:none; padding:6px 2px;">{{ $jumlahKetidakhadiran }}</td>
+    </tr>
+
+    {{-- Baris JUMLAH PENGURANG --}}
+    <tr style="font-size:9px;">
+        <td colspan="3" style="border:1px solid #000; padding:3px 6px; text-align:center; vertical-align:middle;">JUMLAH PENGURANG</td>
+        <td style="border:1px solid #000; padding:8px 3px;"></td>
+        <td style="border:1px solid #000; padding:8px 3px;"></td>
+        <td style="border:1px solid #000; padding:8px 3px;"></td>
+        <td style="border:1px solid #000; padding:8px 3px;"></td>
+        <td colspan="2" style="border:1px solid #000; padding:8px 3px;"></td>
+        <td style="border:1px solid #000; padding:8px 3px;"></td>
+    </tr>
+
+    {{-- Baris PERINGKAT PENILAIAN: header HASIL-PENILAIAN --}}
+    <tr style="font-size:9px; text-align:center;">
+        <td colspan="3" rowspan="3" style="border:1px solid #000; padding:3px 6px; text-align:center; vertical-align:middle;">PERINGKAT PENILAIAN</td>
+        <td colspan="5" style="border:1px solid #000; border-bottom:none; padding:2px;">HASIL - PENILAIAN</td>
+        <td colspan="2" rowspan="3" style="border:1px solid #000; padding:3px;"></td>
+    </tr>
+    {{-- Baris PERINGKAT PENILAIAN: label I A B C D --}}
+    <tr style="font-size:9px; text-align:center;">
+        <td style="border:1px solid #000; padding:2px;">I</td>
+        <td style="border:1px solid #000; padding:2px;">A</td>
+        <td style="border:1px solid #000; padding:2px;">B</td>
+        <td style="border:1px solid #000; padding:2px;">C</td>
+        <td style="border:1px solid #000; padding:2px;">D</td>
+    </tr>
+    {{-- Baris PERINGKAT PENILAIAN: nilai kosong --}}
+    <tr style="font-size:9px; text-align:center;">
+        <td style="border:1px solid #000; border-top:none; padding:8px 2px;"></td>
+        <td style="border:1px solid #000; border-top:none; padding:8px 2px;"></td>
+        <td style="border:1px solid #000; border-top:none; padding:8px 2px;"></td>
+        <td style="border:1px solid #000; border-top:none; padding:8px 2px;"></td>
+        <td style="border:1px solid #000; border-top:none; padding:8px 2px;"></td>
+    </tr>
+
 </table>
 
-<!-- REKOMENDASI & NILAI AKHIR -->
-<table style="margin-top:10px;">
-    <tr>
-        <td style="width:60%; vertical-align: top; border:1px solid #000; padding:6px;">
-            <strong>REKOMENDASI / HASIL PENILAIAN:</strong><br>
-            {{ $evaluation->recommendationLabel() ?? 'Lulus Probation' }}
-            @if($evaluation->kenaikan_gaji_amount)
-                <br>Nominal Kenaikan Gaji: Rp {{ number_format($evaluation->kenaikan_gaji_amount, 0, ',', '.') }}
-            @endif
-        </td>
-        <td style="width:40%; vertical-align: top; border:1px solid #000; padding:6px; border-left:none;">
-            <strong>PERINGKAT / NILAI AKHIR:</strong><br>
-            <span style="font-size: 14px; font-weight: bold;">{{ $evaluation->score ?? 0 }} / 100</span>
-        </td>
-    </tr>
-</table>
-
-<!-- 5 KOLOM TANDA TANGAN -->
+<!-- TANDA TANGAN -->
 <div class="ttd-container">
-    <table class="ttd-table">
+    <table style="width:100%; border-collapse:collapse; table-layout:fixed;">
+
+        {{-- Row 1: Label judul --}}
         <tr>
-            <td>
+            <td style="width:33.33%; text-align:center; font-weight:bold; font-size:9px; padding:4px 8px 0 8px;">
                 ATASAN PENILAI
-                <div class="ttd-space">
-                    @if(!empty($signatures['atasan']))
-                        <img src="{{ $signatures['atasan'] }}" class="ttd-signature-img">
-                    @endif
-                </div>
-                <span class="ttd-name">
-                    {{ $supervisorFeedback->supervisor->name ?? 'Ishana Mahisa' }}
-                </span>
             </td>
-            <td>
-                DIVISI HRD & GA
-                <div class="ttd-space"></div>
-                <span class="ttd-name">
-                    {{ $hrd->name ?? '-' }}
-                </span>
-            </td>
-            <td>
-                KORELASI KERJA
-                <div class="ttd-korelasi-list">
-                    @forelse($signatures['korelasi'] as $ttd)
-                        <div class="ttd-korelasi-item">
-                            @if(!empty($ttd['signature']))
-                                <img src="{{ $ttd['signature'] }}">
-                            @endif
-                            <span>{{ $ttd['nama'] }}</span>
-                        </div>
-                    @empty
-                        &nbsp;
-                    @endforelse
-                </div>
-            </td>
-            <td>
-                PEJABAT YANG MENILAI
-                <div class="ttd-space">
-                    @if(!empty($signatures['pejabat']))
-                        <img src="{{ $signatures['pejabat'] }}" class="ttd-signature-img">
-                    @endif
-                </div>
-                <span class="ttd-name">
-                    {{ $evaluation->official->name ?? 'Irawati Tjaturini' }}
-                </span>
-            </td>
-            <td>
+            <td style="width:33.33%; text-align:center; font-weight:bold; font-size:9px; padding:4px 8px 0 8px;">
                 PEGAWAI YANG DINILAI
-                <div class="ttd-space"></div>
-                <span class="ttd-name">
-                    {{ $employee->name }}
-                </span>
+            </td>
+            <td style="width:33.33%; text-align:center; font-weight:bold; font-size:9px; padding:4px 8px 0 8px;">
+                PEJABAT YANG MENILAI
             </td>
         </tr>
+
+        {{-- Row 2: Area tanda tangan --}}
+        <tr>
+            <td style="text-align:center; height:56px; vertical-align:bottom; padding:0 8px;">
+                @if(!empty($signatures['atasan']))
+                    <img src="{{ $signatures['atasan'] }}" class="ttd-signature-img">
+                @endif
+            </td>
+            <td style="text-align:center; height:56px; vertical-align:bottom; padding:0 8px;">
+                @if(!empty($signatures['pegawai']))
+                    <img src="{{ $signatures['pegawai'] }}" class="ttd-signature-img">
+                @endif
+            </td>
+            <td style="text-align:center; height:56px; vertical-align:bottom; padding:0 8px;">
+                @if(!empty($signatures['pejabat']))
+                    <img src="{{ $signatures['pejabat'] }}" class="ttd-signature-img">
+                @endif
+            </td>
+        </tr>
+
+        {{-- Row 3: Nama (underline) --}}
+        <tr>
+            <td style="text-align:center; padding:2px 8px;">
+                <span class="ttd-name">
+                    @if($atasanEvaluation)
+                        {{ $atasanEvaluation->official->name ?? 'Ishana Mahisa' }}
+                    @elseif($atasanFeedback)
+                        {{ $atasanFeedback->supervisor->name ?? 'Ishana Mahisa' }}
+                    @else
+                        Ishana Mahisa
+                    @endif
+                </span>
+            </td>
+            <td style="text-align:center; padding:2px 8px;">
+                <span class="ttd-name">{{ $employee->name }}</span>
+            </td>
+            <td style="text-align:center; padding:2px 8px;">
+                <span class="ttd-name">{{ $evaluation->official->name ?? 'Irawati Tjaturini' }}</span>
+            </td>
+        </tr>
+
+        {{-- Row 4: Keterangan jabatan --}}
+        <tr>
+            <td style="text-align:center; font-weight:bold; font-size:9px; padding:2px 8px 0 8px;">
+                DIVISI HRD &amp; GA
+            </td>
+            <td></td>
+            <td style="text-align:center; font-weight:bold; font-size:9px; padding:2px 8px 0 8px;">
+                KORELASI KERJA
+            </td>
+        </tr>
+
+        {{-- Row 5: Spasi --}}
+        <tr>
+            <td colspan="3" style="height:40px;"></td>
+        </tr>
+
+        {{-- Row 6: Area tanda tangan bawah --}}
+        <tr>
+            <td style="text-align:center; height:46px; vertical-align:bottom; padding:0 8px;">
+                @if(!empty($signatures['hrd']))
+                    <img src="{{ $signatures['hrd'] }}" class="ttd-signature-img">
+                @endif
+            </td>
+            <td></td>
+            <td style="text-align:center; height:46px; vertical-align:bottom; padding:0 8px;">
+            </td>
+        </tr>
+
+        {{-- Row 7: Garis nama --}}
+        <tr>
+            <td style="text-align:center; padding:0 8px;">
+                <span style="display:inline-block; border-bottom:1px solid #000; min-width:140px; padding-bottom:1px;">&nbsp;</span>
+            </td>
+            <td></td>
+            <td style="text-align:center; padding:0 8px;">
+                <span style="display:inline-block; border-bottom:1px solid #000; min-width:140px; padding-bottom:1px;">&nbsp;</span>
+            </td>
+        </tr>
+
     </table>
 </div>
 
@@ -484,50 +574,140 @@
 <div class="catatan-box">
     <div class="catatan-header">CATATAN</div>
 
+    {{-- 1. Keberatan dari pegawai yang dinilai --}}
     <div class="catatan-item">
         <h4>1. KEBERATAN YANG DINILAI</h4>
-        <p class="empty">-</p>
+        @if ($evaluation && $evaluation->employee_response)
+            <div class="komentar">
+                {!! nl2br(e($evaluation->employee_response)) !!}
+            </div>
+        @endif
+        <div class="korelasi-ttd">
+            @if(!empty($signatures['pegawai']))
+                <img src="{{ $signatures['pegawai'] }}" class="ttd-signature-img">
+            @endif
+            <span class="nama">( {{ $employee->name }} )</span>
+        </div>
     </div>
 
+    {{-- 2. Tanggapan dari Pejabat Yang Menilai (Penilai) --}}
     <div class="catatan-item">
         <h4>2. TANGGAPAN PENILAI</h4>
         @if ($evaluation && $evaluation->feedback)
             <div class="komentar">
                 {!! nl2br(e($evaluation->feedback)) !!}
-                <span class="nama">( {{ $evaluation->official->name ?? '-' }} )</span>
             </div>
-        @else
-            <p class="empty">Belum ada tanggapan.</p>
+        @elseif (!$evaluation && $employee->penilaianUtamaManual())
+            <div class="komentar">&nbsp;</div>
         @endif
+        @if ($evaluation && $evaluation->recommendationLabel() !== 'Tidak Ada')
+            <p class="rekomendasi-highlight">{{ $evaluation->recommendationLabel() }}</p>
+        @endif
+        <div class="korelasi-ttd">
+            @if(!empty($signatures['pejabat']))
+                <img src="{{ $signatures['pejabat'] }}" class="ttd-signature-img">
+            @endif
+            <span class="nama">( {{ $evaluation->official->name ?? ($employee->supervisor->name ?? '-') }} )</span>
+        </div>
     </div>
 
+    {{-- 3. Tanggapan Atasan Penilai --}}
     <div class="catatan-item">
         <h4>3. TANGGAPAN ATASAN PENILAI</h4>
-        @if ($supervisorFeedback && $supervisorFeedback->feedback)
+        @php
+            // Rekomendasi FINAL yang ditampilkan di PDF diambil dari
+            // Atasan Penilai (bukan dari Penilai di bagian 2 di atas) -
+            // Atasan Evaluation diprioritaskan kalau ada (jarang dipakai,
+            // lihat $atasanEvaluation di HrdController::pdf()), kalau
+            // tidak baru fallback ke SupervisorFeedback ($atasanFeedback,
+            // jalur normal).
+            $finalRecommendationLabel = null;
+            if ($atasanEvaluation && $atasanEvaluation->recommendationLabel() !== 'Tidak Ada') {
+                $finalRecommendationLabel = $atasanEvaluation->recommendationLabel();
+            } elseif ($atasanFeedback && $atasanFeedback->recommendationLabel() !== 'Tidak Ada') {
+                $finalRecommendationLabel = $atasanFeedback->recommendationLabel();
+            }
+        @endphp
+        @if ($atasanEvaluation && $atasanEvaluation->feedback)
             <div class="komentar">
-                {!! nl2br(e($supervisorFeedback->feedback)) !!}
-                <span class="nama">( {{ $supervisorFeedback->supervisor->name ?? '-' }} )</span>
+                {!! nl2br(e($atasanEvaluation->feedback)) !!}
+            </div>
+            @if ($finalRecommendationLabel)
+                <p class="rekomendasi-highlight">{{ $finalRecommendationLabel }}</p>
+            @endif
+            <div class="korelasi-ttd">
+                @if(!empty($signatures['atasan']))
+                    <img src="{{ $signatures['atasan'] }}" class="ttd-signature-img">
+                @endif
+                <span class="nama">( {{ $atasanEvaluation->official->name ?? '-' }} )</span>
+            </div>
+        @elseif ($atasanFeedback && $atasanFeedback->feedback)
+            <div class="komentar">
+                {!! nl2br(e($atasanFeedback->feedback)) !!}
+            </div>
+            @if ($finalRecommendationLabel)
+                <p class="rekomendasi-highlight">{{ $finalRecommendationLabel }}</p>
+            @endif
+            <div class="korelasi-ttd">
+                @if(!empty($signatures['atasan']))
+                    <img src="{{ $signatures['atasan'] }}" class="ttd-signature-img">
+                @endif
+                <span class="nama">( {{ $atasanFeedback->supervisor->name ?? '-' }} )</span>
+            </div>
+        @elseif ($employee->tanggapanAtasanManual())
+            @if ($finalRecommendationLabel)
+                <p class="rekomendasi-highlight">{{ $finalRecommendationLabel }}</p>
+            @endif
+            <div class="komentar">&nbsp;</div>
+            <div class="korelasi-ttd">
+                <span class="nama">( {{ $employee->atasanPejabat->name ?? 'Ishana Mahisa' }} )</span>
             </div>
         @else
-            <p class="empty">Belum ada tanggapan.</p>
+            @if ($finalRecommendationLabel)
+                <p class="rekomendasi-highlight">{{ $finalRecommendationLabel }}</p>
+            @endif
+            <div class="korelasi-ttd">
+                <span class="nama">( Ishana Mahisa )</span>
+            </div>
         @endif
     </div>
 
+    {{-- 4. Tanggapan Korelasi (2 kolom, tiap orang dengan tanda tangan) --}}
     <div class="catatan-item">
         <h4>4. TANGGAPAN KORELASI</h4>
-        @forelse ($feedbacks as $feedback)
-            <div class="komentar">
-                {{ $feedback->feedback }}
-                <span class="nama">( {{ $feedback->reviewer->name }} )</span>
-            </div>
-        @empty
+        @if ($feedbacks->count())
+            <table class="korelasi-grid">
+                @foreach ($feedbacks->values()->chunk(2) as $row)
+                    <tr>
+                        @foreach ($row as $idx => $feedback)
+                            @php
+                                $korelasiSig = $signatures['korelasi'][$idx]['signature'] ?? null;
+                            @endphp
+                            <td class="korelasi-cell">
+                                <div class="korelasi-text">{{ $feedback->feedback }}</div>
+                                <div class="korelasi-ttd">
+                                    @if(!empty($korelasiSig))
+                                        <img src="{{ $korelasiSig }}">
+                                    @endif
+                                    <span class="nama">( {{ $feedback->reviewer->name ?? '-' }} )</span>
+                                </div>
+                            </td>
+                        @endforeach
+                        @if ($row->count() < 2)
+                            <td class="korelasi-cell">&nbsp;</td>
+                        @endif
+                    </tr>
+                @endforeach
+            </table>
+        @else
             <p class="empty">Belum ada tanggapan dari korelasi.</p>
-        @endforelse
+        @endif
     </div>
 
+    {{-- 5. Hukuman yang pernah diberikan --}}
     <div class="catatan-item">
         <h4>5. HUKUMAN YANG PERNAH DIBERIKAN</h4>
-        <p>A. TEGURAN LISAN/TERTULIS : -</p>
+        <p>A. TEGURAN LISAN/TERTULIS : {{ $evaluation?->teguran ?? '-' }}</p>
         <p>B. HUKUMAN ADMINISTRASI : -</p>
     </div>
 </div>

@@ -10,7 +10,7 @@ return new class extends Migration
     {
         if (! Schema::hasColumn('evaluations', 'employee_response')) {
             Schema::table('evaluations', function (Blueprint $table) {
-                // Tanggapan karyawan atas penilaian yang diberikan pejabat.
+                // Tanggapan pegawai atas penilaian yang diberikan pejabat.
                 $table->text('employee_response')->nullable()->after('signature');
                 $table->timestamp('employee_response_at')->nullable()->after('employee_response');
             });

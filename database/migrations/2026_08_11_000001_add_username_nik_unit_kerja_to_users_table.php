@@ -14,7 +14,7 @@ return new class extends Migration
             }
 
             if (! Schema::hasColumn('users', 'nik')) {
-                // NIK dipakai juga sebagai password login karyawan.
+                // NIK dipakai juga sebagai password login pegawai.
                 $table->string('nik')->nullable()->unique()->after('username');
             }
 
@@ -27,7 +27,7 @@ return new class extends Migration
         // Mengubah nullability kolom di tabel yang punya kolom enum (users.role)
         // butuh Doctrine DBAL dan sering gagal di SQLite. Supaya migration ini
         // aman dijalankan di environment mana pun, kita biarkan "email" tetap
-        // wajib & unik — akun karyawan akan diberi email placeholder otomatis
+        // wajib & unik — akun pegawai akan diberi email placeholder otomatis
         // dari username (lihat OfficialController::storeEmployee).
     }
 

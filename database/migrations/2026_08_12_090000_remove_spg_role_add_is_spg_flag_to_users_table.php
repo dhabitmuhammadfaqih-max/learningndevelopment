@@ -17,11 +17,11 @@ return new class extends Migration
             }
         });
 
-        // Akun yang sebelumnya berrole "spg" jadi role "karyawan" biasa,
+        // Akun yang sebelumnya berrole "spg" jadi role "pegawai" biasa,
         // tapi ditandai is_spg = true supaya perilakunya (korelasi opsional)
         // tetap sama seperti sebelumnya.
         DB::table('users')->where('role', 'spg')->update([
-            'role'   => 'karyawan',
+            'role'   => 'pegawai',
             'is_spg' => true,
         ]);
 

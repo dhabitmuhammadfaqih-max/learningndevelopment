@@ -32,7 +32,7 @@ class SignatureDocumentController extends Controller
         return view('signature.create', [
             'document' => $document,
             'roles' => [
-                'karyawan' => ['label' => 'Karyawan', 'hint' => 'Pemohon / pengaju dokumen', 'order' => '01'],
+                'pegawai' => ['label' => 'Pegawai', 'hint' => 'Pemohon / pengaju dokumen', 'order' => '01'],
                 'pejabat' => ['label' => 'Pejabat', 'hint' => 'Pemeriksa / penyetuju tingkat pertama', 'order' => '02'],
                 'atasan' => ['label' => 'Atasan Pejabat', 'hint' => 'Pengesah akhir', 'order' => '03'],
             ],

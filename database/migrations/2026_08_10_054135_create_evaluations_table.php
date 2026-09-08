@@ -11,7 +11,7 @@ return new class extends Migration
         Schema::create('evaluations', function (Blueprint $table) {
             $table->id();
 
-            // Karyawan yang dinilai
+            // Pegawai yang dinilai
             $table->foreignId('employee_id')
                 ->constrained('users')
                 ->cascadeOnDelete();

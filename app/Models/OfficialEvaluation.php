@@ -11,6 +11,7 @@ class OfficialEvaluation extends Model
     protected $fillable = [
         'official_id',
         'supervisor_id',
+        'tahun',
         'kepemimpinan',
         'kemampuan_merencanakan_mengoordinasikan',
         'kemampuan_analisa_evaluasi_pengambilan_keputusan',
@@ -22,20 +23,34 @@ class OfficialEvaluation extends Model
         'pengetahuan_teknik_operasi',
         'score',
         'feedback',
+        'teguran',
         'recommendation',
         'kenaikan_gaji_amount',
+        'promosi_keterangan',
+        'demosi_keterangan',
         'employee_response',
         'employee_response_at',
+        'employee_signature',
         'signature',
+        'hrd_id',
+        'hrd_signature',
+        'hrd_signed_at',
     ];
 
     protected $casts = [
         'employee_response_at' => 'datetime',
+        'hrd_signed_at' => 'datetime',
+        'score' => 'integer',
     ];
 
-    // Nominal maksimal yang boleh diusulkan atasan untuk rekomendasi kenaikan gaji.
-    // Disamakan dengan Evaluation::KENAIKAN_GAJI_MAX supaya konsisten.
-    public const KENAIKAN_GAJI_MAX = 750000;
+    /**
+     * Teks ringkas untuk ditampilkan di PDF/laporan, mis. "Pernah - terlambat berulang kali"
+     * atau "-" kalau tidak pernah ditegur.
+     */
+    public function teguranRingkas(): string
+    {
+        return $this->teguran ? $this->teguran : '-';
+    }
 
     // Bobot setiap komponen penilaian pejabat (total harus 100)
     public const WEIGHTS = [
@@ -86,11 +101,42 @@ class OfficialEvaluation extends Model
         'D' => ['min' => 35, 'max' => 49,  'label' => 'Sangat Kurang Bagus'],
     ];
 
-    // Pilihan rekomendasi, sama seperti penilaian karyawan.
+    // Pilihan rekomendasi, sama seperti penilaian pegawai.
     public const RECOMMENDATIONS = [
-        'perpanjang_kontrak' => 'Perpanjang Kontrak',
-        'promosi'            => 'Promosi',
-        'kenaikan_gaji'      => 'Kenaikan Gaji',
+        'lulus_probation'              => 'Lulus Probation',
+        'review_3_bulan'               => 'Review 3 Bulan',
+        'review_6_bulan'               => 'Review 6 Bulan',
+        'tidak_diperpanjang'           => 'Tidak Diperpanjang',
+        'phl_ke_kontrak'               => 'PHL ke Kontrak',
+        'perpanjang_kontrak_os'        => 'Perpanjang Kontrak OS',
+        'kontrak_os_ke_kontrak_dagsap' => 'Kontrak OS ke Kontrak Dagsap',
+        'perpanjang_kontrak_dagsap'    => 'Perpanjang Kontrak Dagsap',
+        'kontrak_dagsap_ke_tetap'      => 'Kontrak Dagsap ke Tetap',
+        'perpanjang_status_tetap'      => 'Perpanjang Status Tetap',
+        'mendapatkan_uang_makan'       => 'Mendapatkan Uang Makan',
+        'demosi'                       => 'Demosi',
+        'mutasi'                       => 'Mutasi',
+        'promosi'                      => 'Promosi',
+        'kenaikan_gaji'                => 'Kenaikan Gaji',
+    ];
+
+    // Keterangan singkat tiap pilihan rekomendasi, ditampilkan di form supaya lebih jelas.
+    public const RECOMMENDATION_DESCRIPTIONS = [
+        'lulus_probation'              => 'Pejabat dinyatakan lulus masa percobaan (probation)',
+        'review_3_bulan'               => 'Kinerja perlu dievaluasi ulang setelah 3 bulan ke depan',
+        'review_6_bulan'               => 'Kinerja perlu dievaluasi ulang setelah 6 bulan ke depan',
+        'tidak_diperpanjang'           => 'Kontrak/masa kerja pejabat tidak dilanjutkan',
+        'phl_ke_kontrak'               => 'Perubahan status dari PHL (Pekerja Harian Lepas) menjadi kontrak',
+        'perpanjang_kontrak_os'        => 'Perpanjangan kontrak untuk pejabat status Outsourcing (OS)',
+        'kontrak_os_ke_kontrak_dagsap' => 'Perubahan status dari kontrak Outsourcing (OS) menjadi kontrak Dagsap',
+        'perpanjang_kontrak_dagsap'    => 'Perpanjangan kontrak untuk pejabat status Dagsap',
+        'kontrak_dagsap_ke_tetap'      => 'Perubahan status dari kontrak Dagsap menjadi pejabat tetap',
+        'perpanjang_status_tetap'      => 'Perpanjangan status sebagai pejabat tetap',
+        'mendapatkan_uang_makan'       => 'Pejabat direkomendasikan mendapat tunjangan uang makan',
+        'demosi'                       => 'Penurunan jabatan/posisi pejabat',
+        'mutasi'                       => 'Pemindahan pejabat ke posisi atau unit kerja lain',
+        'promosi'                      => 'Kenaikan jabatan/posisi pejabat',
+        'kenaikan_gaji'                => 'Kenaikan nominal gaji pokok pejabat',
     ];
 
     public function official()
@@ -101,6 +147,21 @@ class OfficialEvaluation extends Model
     public function supervisor()
     {
         return $this->belongsTo(User::class, 'supervisor_id');
+    }
+
+    public function hrd()
+    {
+        return $this->belongsTo(User::class, 'hrd_id');
+    }
+
+    /**
+     * Scope: batasi query ke satu tahun tertentu (default tahun berjalan
+     * kalau $tahun tidak diisi). Lihat catatan yang sama di
+     * App\Models\Evaluation::scopeTahunAktif().
+     */
+    public function scopeTahunAktif($query, ?int $tahun = null)
+    {
+        return $query->where('tahun', $tahun ?? now()->year);
     }
 
     /**
@@ -124,10 +185,19 @@ class OfficialEvaluation extends Model
             return 'Tidak Ada';
         }
 
-        $labels = array_map(
-            fn ($value) => self::RECOMMENDATIONS[$value] ?? $value,
-            $list
-        );
+        $labels = array_map(function ($value) {
+            $label = self::RECOMMENDATIONS[$value] ?? $value;
+
+            if ($value === 'promosi' && $this->promosi_keterangan) {
+                $label .= ' (ke ' . $this->promosi_keterangan . ')';
+            }
+
+            if ($value === 'demosi' && $this->demosi_keterangan) {
+                $label .= ' (ke ' . $this->demosi_keterangan . ')';
+            }
+
+            return $label;
+        }, $list);
 
         return implode(', ', $labels);
     }
@@ -141,7 +211,7 @@ class OfficialEvaluation extends Model
             $total += $value * ($weight / 100);
         }
 
-        return round($total, 2);
+        return (int) round($total);
     }
 
     public static function scaleIndex(float $value): string

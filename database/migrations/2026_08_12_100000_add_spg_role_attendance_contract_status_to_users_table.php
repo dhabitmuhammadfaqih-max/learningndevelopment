@@ -9,7 +9,7 @@ return new class extends Migration
     public function up(): void
     {
         // Tambahkan role baru "spg" ke enum role yang sudah ada
-        // (karyawan, pejabat, atasan_pejabat, admin, spg).
+        // (pegawai, pejabat, atasan_pejabat, hrd, spg).
         Schema::table('users', function (Blueprint $table) {
             $table->enum('role', [
                 'karyawan',
@@ -20,8 +20,8 @@ return new class extends Migration
             ])->default('karyawan')->change();
         });
 
-        // Kolom baru untuk admin: jumlah izin/sakit/alpa/terlambat, masing-masing
-        // dipisah sendiri-sendiri (bukan satu status tunggal) supaya admin
+        // Kolom baru untuk hrd: jumlah izin/sakit/alpa/terlambat, masing-masing
+        // dipisah sendiri-sendiri (bukan satu status tunggal) supaya hrd
         // tinggal mengisi jumlah kejadian per kategori. Status kontrak dipakai
         // sebagai string (bukan enum) supaya konsisten dengan pola migration
         // "recommendation" sebelumnya & aman dijalankan di SQLite.
