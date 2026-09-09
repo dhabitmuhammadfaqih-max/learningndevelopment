@@ -131,7 +131,7 @@
                             <div class="flex items-center gap-3 border border-[#E5E5E5] rounded-xl px-4 py-3
                                         bg-[#FAFAFA] focus-within:bg-white focus-within:border-[#8B2331]
                                         focus-within:ring-2 focus-within:ring-[#8B2331]/15 transition-all">
-                                <svg class="w-4.5 h-4.5 w-[18px] h-[18px] text-[#A3A3A3] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+                                <svg class="w-[18px] h-[18px] text-[#A3A3A3] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M17.982 18.725A7.488 7.488 0 0012 15.75a7.488 7.488 0 00-5.982 2.975m11.963 0a9 9 0 10-11.963 0m11.963 0A8.966 8.966 0 0112 21a8.966 8.966 0 01-5.982-2.275M15 9.75a3 3 0 11-6 0 3 3 0 016 0z" />
                                 </svg>
                                 <input
@@ -166,7 +166,7 @@
                                     name="password"
                                     required
                                     autocomplete="current-password"
-                                    placeholder="nik kamu"
+                                    placeholder="nik.kamu"
                                     class="w-full bg-transparent border-0 text-[#171717] placeholder-[#A3A3A3] text-sm focus:outline-none focus:ring-0 focus:border-0 p-0"
                                 />
                                 <button type="button" @click="show = !show" aria-label="Toggle password visibility"
