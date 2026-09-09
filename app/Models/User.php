@@ -56,6 +56,10 @@ class User extends Authenticatable
         'penilai_konfirmasi_pertemuan_evidence_type',
         'pejabat_konfirmasi_pertemuan_evidence_type',
         'atasan_konfirmasi_pertemuan_evidence_type',
+        'pegawai_konfirmasi_pertemuan_metode',
+        'penilai_konfirmasi_pertemuan_metode',
+        'pejabat_konfirmasi_pertemuan_metode',
+        'atasan_konfirmasi_pertemuan_metode',
         'pegawai_konfirmasi_pertemuan_tahun',
         'penilai_konfirmasi_pertemuan_tahun',
         'pejabat_konfirmasi_pertemuan_tahun',
@@ -561,13 +565,39 @@ class User extends Authenticatable
      * *_konfirmasi_pertemuan_evidence_type (migration
      * add_evidence_type_to_checklist_pertemuan_columns) & partial
      * resources/views/partials/checklist-selfie-toggle.blade.php.
-     * Data lama (sebelum fitur pilihan metode ada) selalu berasal dari
-     * selfie kamera, jadi null/tidak dikenali dianggap 'selfie' supaya
-     * data lama tetap tampil benar.
+     * 'upload' = Online (upload bukti Zoom/Telpon/Chat), 'selfie' =
+     * Offline (ketemu langsung, foto selfie kamera). Data lama
+     * (sebelum fitur pilihan metode ada) selalu berasal dari selfie
+     * kamera, jadi null/tidak dikenali dianggap 'selfie' (Offline)
+     * supaya data lama tetap tampil benar.
      */
     public static function checklistEvidenceLabel(?string $evidenceType): string
     {
-        return $evidenceType === 'upload' ? 'Upload File' : 'Selfie';
+        return $evidenceType === 'upload' ? 'Online' : 'Offline';
+    }
+
+    /**
+     * Daftar metode pertemuan yang bisa dipilih saat bukti checklist
+     * "sudah bertemu & evaluasi" adalah Online (evidence_type =
+     * 'upload') - lihat migration
+     * add_meeting_metode_to_checklist_pertemuan_columns & partial
+     * resources/views/partials/checklist-selfie-toggle.blade.php.
+     * Sekadar keterangan, tidak mempengaruhi cara file disimpan.
+     */
+    public const CHECKLIST_MEETING_METHODS = [
+        'zoom'   => 'Zoom',
+        'telpon' => 'Telpon',
+        'chat'   => 'Chat',
+    ];
+
+    /**
+     * Label metode pertemuan (Zoom/Telpon/Chat) untuk ditampilkan di
+     * samping label bukti checklist. Null kalau memang tidak diisi
+     * (mis. bukti Offline/selfie, yang tidak punya metode pertemuan).
+     */
+    public static function checklistMeetingMethodLabel(?string $method): ?string
+    {
+        return self::CHECKLIST_MEETING_METHODS[$method] ?? null;
     }
 
     /**

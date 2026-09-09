@@ -10,6 +10,7 @@
         $kenaikanGajiValue = old('kenaikan_gaji_amount', $supervisorFeedback->kenaikan_gaji_amount ?? '');
         $promosiKeteranganValue = old('promosi_keterangan', $supervisorFeedback->promosi_keterangan ?? '');
         $demosiKeteranganValue = old('demosi_keterangan', $supervisorFeedback->demosi_keterangan ?? '');
+        $mutasiKeteranganValue = old('mutasi_keterangan', $supervisorFeedback->mutasi_keterangan ?? '');
     @endphp
 
     <a href="{{ route('official.dashboard') }}"
@@ -206,6 +207,7 @@
                             'kenaikanGajiValue' => $kenaikanGajiValue,
                             'promosiKeteranganValue' => $promosiKeteranganValue,
                             'demosiKeteranganValue' => $demosiKeteranganValue,
+                            'mutasiKeteranganValue' => $mutasiKeteranganValue,
                             'recommendations' => \App\Models\Evaluation::RECOMMENDATIONS,
                             'recommendationDescriptions' => \App\Models\Evaluation::RECOMMENDATION_DESCRIPTIONS,
                             'subjectLabel' => 'pegawai',

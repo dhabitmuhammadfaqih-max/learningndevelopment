@@ -493,6 +493,7 @@
                     'checkedAt' => auth()->user()->pegawai_konfirmasi_pertemuan_at,
                     'selfieUrl' => auth()->user()->pegawai_konfirmasi_pertemuan_selfie ? Storage::disk('public')->url(auth()->user()->pegawai_konfirmasi_pertemuan_selfie) : null,
                     'evidenceType' => auth()->user()->pegawai_konfirmasi_pertemuan_evidence_type,
+                    'meetingMethod' => auth()->user()->pegawai_konfirmasi_pertemuan_metode,
                     'checkedLabel' => 'Sudah Bertemu & Evaluasi (klik untuk batalkan)',
                     'uncheckedLabel' => 'Ambil Selfie & Tandai Sudah Bertemu',
                     'boleh' => $pegawaiBolehCentang,

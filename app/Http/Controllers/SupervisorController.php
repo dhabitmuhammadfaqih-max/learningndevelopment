@@ -127,7 +127,7 @@ class SupervisorController extends Controller
             return back()->with('success', 'Pejabat ini sudah pernah Anda nilai untuk tahun ' . $tahunIni . '.');
         }
 
-        [$validated, $recommendationValue, $kenaikanGajiAmount, $promosiKeterangan, $demosiKeterangan, $error] = $this->validateOfficialEvaluationInput($request, $pejabat);
+        [$validated, $recommendationValue, $kenaikanGajiAmount, $promosiKeterangan, $demosiKeterangan, $mutasiKeterangan, $error] = $this->validateOfficialEvaluationInput($request, $pejabat);
 
         if ($error) {
             return $error;
@@ -173,6 +173,7 @@ class SupervisorController extends Controller
                 'kenaikan_gaji_amount'                               => $kenaikanGajiAmount,
                 'promosi_keterangan'                                 => $promosiKeterangan,
                 'demosi_keterangan'                                  => $demosiKeterangan,
+                'mutasi_keterangan'                                  => $mutasiKeterangan,
                 'signature'                                          => $signaturePath,
             ]);
         } catch (\Illuminate\Database\QueryException $e) {
@@ -223,7 +224,7 @@ class SupervisorController extends Controller
             );
         }
 
-        [$validated, $recommendationValue, $kenaikanGajiAmount, $promosiKeterangan, $demosiKeterangan, $error] = $this->validateOfficialEvaluationInput($request, $pejabat, signatureRequired: false);
+        [$validated, $recommendationValue, $kenaikanGajiAmount, $promosiKeterangan, $demosiKeterangan, $mutasiKeterangan, $error] = $this->validateOfficialEvaluationInput($request, $pejabat, signatureRequired: false);
 
         if ($error) {
             return $error;
@@ -275,6 +276,7 @@ class SupervisorController extends Controller
             'kenaikan_gaji_amount'                               => $kenaikanGajiAmount,
             'promosi_keterangan'                                 => $promosiKeterangan,
             'demosi_keterangan'                                  => $demosiKeterangan,
+                'mutasi_keterangan'                                  => $mutasiKeterangan,
             'signature'                                          => $signaturePath,
         ]);
 
@@ -317,6 +319,7 @@ class SupervisorController extends Controller
                 'atasan_konfirmasi_pertemuan_at' => null,
                 'atasan_konfirmasi_pertemuan_selfie' => null,
                 'atasan_konfirmasi_pertemuan_evidence_type' => null,
+                'atasan_konfirmasi_pertemuan_metode' => null,
                 'atasan_konfirmasi_pertemuan_tahun' => null,
             ]);
 
@@ -330,7 +333,7 @@ class SupervisorController extends Controller
             );
         }
 
-        [$selfiePath, $evidenceType] = $this->resolveChecklistEvidence($request, 'atasan', $pejabat->id);
+        [$selfiePath, $evidenceType, $meetingMethod] = $this->resolveChecklistEvidence($request, 'atasan', $pejabat->id);
 
         $this->deleteChecklistEvidence($pejabat->atasan_konfirmasi_pertemuan_selfie);
 
@@ -338,6 +341,7 @@ class SupervisorController extends Controller
             'atasan_konfirmasi_pertemuan_at' => now(),
             'atasan_konfirmasi_pertemuan_selfie' => $selfiePath,
             'atasan_konfirmasi_pertemuan_evidence_type' => $evidenceType,
+            'atasan_konfirmasi_pertemuan_metode' => $meetingMethod,
             'atasan_konfirmasi_pertemuan_tahun' => now()->year,
         ]);
 
@@ -371,6 +375,7 @@ class SupervisorController extends Controller
             'kenaikan_gaji_amount'                               => 'nullable|integer|min:1',
             'promosi_keterangan'                                 => 'nullable|string|max:255',
             'demosi_keterangan'                                  => 'nullable|string|max:255',
+            'mutasi_keterangan'                                   => 'nullable|string|max:255',
             'signature'                                          => ($signatureRequired ? 'required' : 'nullable') . '|string',
         ]);
 
@@ -383,7 +388,7 @@ class SupervisorController extends Controller
                 ->withErrors(['recommendation' => 'Rekomendasi Promosi dan Demosi tidak bisa dipilih bersamaan.'])
                 ->withInput();
 
-            return [$validated, null, null, null, null, $error];
+            return [$validated, null, null, null, null, null, $error];
         }
 
         // "Kontrak Dagsap ke Tetap" hanya boleh diajukan kalau status
@@ -393,7 +398,7 @@ class SupervisorController extends Controller
                 ->withErrors(['recommendation' => 'Rekomendasi "Kontrak Dagsap ke Tetap" tidak bisa diajukan karena status pejabat ini bukan Kontrak Dagsap (masih PHL atau Kontrak OS).'])
                 ->withInput();
 
-            return [$validated, null, null, null, null, $error];
+            return [$validated, null, null, null, null, null, $error];
         }
 
         if (in_array('kenaikan_gaji', $recommendations, true) && empty($validated['kenaikan_gaji_amount'])) {
@@ -401,7 +406,7 @@ class SupervisorController extends Controller
                 ->withErrors(['kenaikan_gaji_amount' => 'Nominal kenaikan gaji wajib diisi.'])
                 ->withInput();
 
-            return [$validated, null, null, null, null, $error];
+            return [$validated, null, null, null, null, null, $error];
         }
 
         // Kalau rekomendasi "Promosi" dicentang, keterangan tujuan promosi wajib diisi.
@@ -410,7 +415,7 @@ class SupervisorController extends Controller
                 ->withErrors(['promosi_keterangan' => 'Keterangan tujuan promosi wajib diisi (mis. jabatan/posisi tujuan).'])
                 ->withInput();
 
-            return [$validated, null, null, null, null, $error];
+            return [$validated, null, null, null, null, null, $error];
         }
 
         // Kalau rekomendasi "Demosi" dicentang, keterangan tujuan demosi wajib diisi.
@@ -419,7 +424,16 @@ class SupervisorController extends Controller
                 ->withErrors(['demosi_keterangan' => 'Keterangan tujuan demosi wajib diisi (mis. jabatan/posisi tujuan).'])
                 ->withInput();
 
-            return [$validated, null, null, null, null, $error];
+            return [$validated, null, null, null, null, null, $error];
+        }
+
+        // Kalau rekomendasi "Mutasi" dicentang, keterangan tujuan mutasi wajib diisi.
+        if (in_array('mutasi', $recommendations, true) && empty(trim((string) ($validated['mutasi_keterangan'] ?? '')))) {
+            $error = back()
+                ->withErrors(['mutasi_keterangan' => 'Keterangan tujuan mutasi wajib diisi (mis. posisi/unit kerja tujuan).'])
+                ->withInput();
+
+            return [$validated, null, null, null, null, null, $error];
         }
 
         $recommendationValue = empty($recommendations) ? 'tidak_ada' : implode(',', $recommendations);
@@ -432,7 +446,10 @@ class SupervisorController extends Controller
         $demosiKeterangan = in_array('demosi', $recommendations, true)
             ? trim($validated['demosi_keterangan'])
             : null;
+        $mutasiKeterangan = in_array('mutasi', $recommendations, true)
+            ? trim($validated['mutasi_keterangan'])
+            : null;
 
-        return [$validated, $recommendationValue, $kenaikanGajiAmount, $promosiKeterangan, $demosiKeterangan, null];
+        return [$validated, $recommendationValue, $kenaikanGajiAmount, $promosiKeterangan, $demosiKeterangan, $mutasiKeterangan, null];
     }
 }

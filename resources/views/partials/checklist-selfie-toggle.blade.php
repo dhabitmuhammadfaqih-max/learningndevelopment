@@ -17,7 +17,10 @@
     - $checked       (bool)    apakah checklist ini sudah dicentang
     - $checkedAt     (Carbon|null)
     - $selfieUrl     (string|null) URL bukti tersimpan (kalau sudah dicentang)
-    - $evidenceType  (string|null) 'upload' | 'selfie' | null (data lama)
+    - $evidenceType  (string|null) 'upload' (Online) | 'selfie' (Offline) | null (data lama)
+    - $meetingMethod (string|null) 'zoom' | 'telpon' | 'chat' | null - hanya
+      relevan saat $evidenceType 'upload' (Online), lihat
+      User::CHECKLIST_MEETING_METHODS.
     - $checkedLabel   (string) label tombol saat sudah dicentang
     - $uncheckedLabel (string) label tombol saat belum dicentang
     - $boleh          (bool, optional, default true) apakah checklist ini
@@ -70,6 +73,7 @@
     x-data="{
         rootEl: null,
         method: null,
+        meetingMethod: null,
         uploadFile: null,
         uploadPreview: null,
         open: false,
@@ -126,6 +130,7 @@
         },
         resetMethod() {
             this.method = null;
+            this.meetingMethod = null;
             this.uploadFile = null;
             this.uploadPreview = null;
             this.photo = null;
@@ -415,11 +420,12 @@
         action="{{ $action }}"
         enctype="multipart/form-data"
         x-ref="toggleForm"
-        @if($checked) onsubmit="return true;" @else x-on:submit="if (method === 'upload' && ! uploadFile) { $event.preventDefault(); }" @endif
+        @if($checked) onsubmit="return true;" @else x-on:submit="if (method === 'upload' && (! uploadFile || ! meetingMethod)) { $event.preventDefault(); }" @endif
     >
         @csrf
         <input type="hidden" name="selfie" x-ref="selfieInput">
         <input type="hidden" name="evidence_type" x-bind:value="method">
+        <input type="hidden" name="meeting_method" x-bind:value="meetingMethod">
 
         @if($checked)
             {{-- Sudah dicentang: submit langsung membatalkan, tanpa bukti baru --}}
@@ -434,31 +440,40 @@
             {{-- Langkah 1: pilih metode (tampil selama belum memilih) --}}
             <template x-if="! method">
                 <div>
-                    <p class="text-xs font-semibold text-slate-500 mb-2">Pilih Bukti Checklist</p>
+                    <p class="text-xs font-semibold text-slate-500 mb-2">Disampaikan Secara Langsung</p>
                     <div class="grid grid-cols-2 gap-2">
-                        <button type="button"
-                                x-on:click="chooseUpload()"
-                                class="flex flex-col items-center justify-center gap-1 rounded-xl text-sm font-semibold px-3 py-3 transition bg-slate-50 text-slate-600 hover:bg-slate-100 border border-slate-200">
-                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 16V4m0 0L7 9m5-5 5 5M5 20h14"/></svg>
-                            <span>Upload File</span>
-                        </button>
                         <button type="button"
                                 x-on:click="chooseSelfie()"
                                 class="flex flex-col items-center justify-center gap-1 rounded-xl text-sm font-semibold px-3 py-3 transition bg-amber-50 text-amber-600 hover:bg-amber-100 border border-amber-200">
                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><path stroke-linecap="round" stroke-linejoin="round" d="M4 8a2 2 0 0 1 2-2h1.5l.9-1.5a1 1 0 0 1 .86-.5h5.48a1 1 0 0 1 .86.5L16.5 6H18a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8Z"/><circle cx="12" cy="13" r="3.5"/></svg>
-                            <span>Ambil Selfie</span>
+                            <span>Offline</span>
+                        </button>
+                        <button type="button"
+                                x-on:click="chooseUpload()"
+                                class="flex flex-col items-center justify-center gap-1 rounded-xl text-sm font-semibold px-3 py-3 transition bg-slate-50 text-slate-600 hover:bg-slate-100 border border-slate-200">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 16V4m0 0L7 9m5-5 5 5M5 20h14"/></svg>
+                            <span>Online</span>
                         </button>
                     </div>
                 </div>
             </template>
 
-            {{-- Langkah 2a: metode Upload File dipilih --}}
+            {{-- Langkah 2a: Online dipilih (upload file + metode pertemuan) --}}
             <template x-if="method === 'upload'">
                 <div>
                     <div class="flex items-center justify-between mb-2">
-                        <p class="text-xs font-semibold text-slate-500">Bukti: Upload File</p>
+                        <p class="text-xs font-semibold text-slate-500">Bukti: Online</p>
                         <button type="button" x-on:click="resetMethod()" class="text-xs font-semibold text-blue-600 hover:underline">Ganti Metode</button>
                     </div>
+
+                    <label class="block text-xs font-semibold text-slate-500 mb-1">Metode Pertemuan</label>
+                    <select x-model="meetingMethod"
+                            class="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm mb-3 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none">
+                        <option value="" disabled>Pilih metode pertemuan</option>
+                        @foreach (\App\Models\User::CHECKLIST_MEETING_METHODS as $methodValue => $methodLabel)
+                            <option value="{{ $methodValue }}">{{ $methodLabel }}</option>
+                        @endforeach
+                    </select>
 
                     <label class="flex flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed border-slate-300 px-3 py-4 cursor-pointer hover:bg-slate-50 transition">
                         <template x-if="! uploadPreview">
@@ -476,18 +491,18 @@
                     </label>
 
                     <button type="submit"
-                            :disabled="! uploadFile"
+                            :disabled="! uploadFile || ! meetingMethod"
                             class="mt-2 w-full inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold px-4 py-2.5 transition bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-40 disabled:cursor-not-allowed">
                         {{ $uncheckedLabel }}
                     </button>
                 </div>
             </template>
 
-            {{-- Langkah 2b: metode Ambil Selfie dipilih (kamera dibuka via modal) --}}
+            {{-- Langkah 2b: Offline dipilih (kamera dibuka via modal) --}}
             <template x-if="method === 'selfie' && ! open">
                 <div>
                     <div class="flex items-center justify-between mb-2">
-                        <p class="text-xs font-semibold text-slate-500">Bukti: Selfie</p>
+                        <p class="text-xs font-semibold text-slate-500">Bukti: Offline</p>
                         <button type="button" x-on:click="resetMethod()" class="text-xs font-semibold text-blue-600 hover:underline">Ganti Metode</button>
                     </div>
                     <button type="button"
@@ -507,7 +522,15 @@
     @endif
 
     @if($checked && $selfieUrl)
-        <p class="text-xs text-slate-400 mt-2 mb-1">Bukti: {{ \App\Models\User::checklistEvidenceLabel($evidenceType ?? null) }}</p>
+        @php
+            $meetingMethodLabel = \App\Models\User::checklistMeetingMethodLabel($meetingMethod ?? null);
+        @endphp
+        <p class="text-xs text-slate-400 mt-2 mb-1">
+            Bukti: {{ \App\Models\User::checklistEvidenceLabel($evidenceType ?? null) }}
+            @if($meetingMethodLabel)
+                ({{ $meetingMethodLabel }})
+            @endif
+        </p>
         <div class="mt-1">
             <img src="{{ $selfieUrl }}" alt="Bukti checklist" class="w-16 h-16 object-cover rounded-xl border border-slate-200">
         </div>

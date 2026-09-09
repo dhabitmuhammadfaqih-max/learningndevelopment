@@ -390,6 +390,43 @@ class NotificationTriggerService
     }
 
     /**
+     * Beri tahu PEGAWAI itu sendiri bahwa Penilai baru saja menyimpan
+     * Evaluation untuk dirinya, jadi nilainya sudah muncul/bisa dilihat.
+     *
+     * Berbeda dari trigger lain di service ini yang mengecek dulu apakah
+     * suatu kondisi "siap" terpenuhi (mis. siapDinilaiPenilai()) - method
+     * ini tidak perlu pengecekan tambahan karena dipanggil PERSIS setelah
+     * Evaluation berhasil disimpan, jadi kondisinya sudah pasti terpenuhi.
+     *
+     * Dipanggil dari OfficialController::evaluate() — setelah Evaluation
+     * berhasil disimpan oleh Penilai.
+     */
+    public function triggerNilaiMunculPegawai(User $employee, ?float $score = null): void
+    {
+        try {
+            $body = $score !== null
+                ? "Penilai sudah memberikan penilaian untuk Anda. Nilai akhir: {$score}."
+                : 'Penilai sudah memberikan penilaian untuk Anda. Silakan cek hasilnya.';
+
+            $this->dispatchTriggered(
+                subjectUserId: $employee->id,
+                recipientUserId: $employee->id,
+                type: FcmNotificationLog::TYPE_NILAI_MUNCUL_PEGAWAI,
+                title: 'Nilai Penilaian Sudah Muncul',
+                body: $body,
+                routeName: 'employee.dashboard',
+                routeParam: null,
+                fallbackRouteName: 'employee.dashboard',
+            );
+        } catch (\Throwable $e) {
+            Log::error('FCM NilaiMunculPegawai trigger: exception.', [
+                'employee_id' => $employee->id,
+                'error'       => $e->getMessage(),
+            ]);
+        }
+    }
+
+    /**
      * Helper bersama untuk dispatch SendTriggeredFcmNotification, dengan
      * route yang dibungkus try/catch (nama route tertentu bisa saja belum
      * terdaftar di beberapa environment/versi) supaya kegagalan resolve

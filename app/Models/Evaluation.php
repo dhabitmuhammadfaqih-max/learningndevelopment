@@ -28,6 +28,7 @@ class Evaluation extends Model
         'kenaikan_gaji_amount',
         'promosi_keterangan',
         'demosi_keterangan',
+        'mutasi_keterangan',
         'employee_response',
         'employee_response_at',
         'employee_signature',
@@ -120,7 +121,7 @@ class Evaluation extends Model
         'review_3_bulan'               => 'Review 3 Bulan',
         'review_6_bulan'               => 'Review 6 Bulan',
         'tidak_diperpanjang'           => 'Tidak Diperpanjang',
-        'phl_ke_kontrak'               => 'PHL ke Kontrak',
+        'phl_ke_kontrak'               => 'PHL OS ke Kontrak OS',
         'perpanjang_kontrak_os'        => 'Perpanjang Kontrak OS',
         'kontrak_os_ke_kontrak_dagsap' => 'Kontrak OS ke Kontrak Dagsap',
         'perpanjang_kontrak_dagsap'    => 'Perpanjang Kontrak Dagsap',
@@ -201,6 +202,10 @@ class Evaluation extends Model
 
             if ($value === 'demosi' && $this->demosi_keterangan) {
                 $label .= ' (ke ' . $this->demosi_keterangan . ')';
+            }
+
+            if ($value === 'mutasi' && $this->mutasi_keterangan) {
+                $label .= ' (ke ' . $this->mutasi_keterangan . ')';
             }
 
             return $label;

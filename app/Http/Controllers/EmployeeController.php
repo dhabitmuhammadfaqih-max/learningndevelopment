@@ -321,6 +321,7 @@ class EmployeeController extends Controller
                 'pegawai_konfirmasi_pertemuan_at' => null,
                 'pegawai_konfirmasi_pertemuan_selfie' => null,
                 'pegawai_konfirmasi_pertemuan_evidence_type' => null,
+                'pegawai_konfirmasi_pertemuan_metode' => null,
                 'pegawai_konfirmasi_pertemuan_tahun' => null,
             ]);
 
@@ -334,7 +335,7 @@ class EmployeeController extends Controller
             );
         }
 
-        [$selfiePath, $evidenceType] = $this->resolveChecklistEvidence($request, 'pegawai', $user->id);
+        [$selfiePath, $evidenceType, $meetingMethod] = $this->resolveChecklistEvidence($request, 'pegawai', $user->id);
 
         // Hapus bukti lama (kalau ada) sebelum ditimpa - baik itu sisa
         // attempt sebelumnya di tahun yang sama, MAUPUN sisa checklist
@@ -346,6 +347,7 @@ class EmployeeController extends Controller
             'pegawai_konfirmasi_pertemuan_at' => now(),
             'pegawai_konfirmasi_pertemuan_selfie' => $selfiePath,
             'pegawai_konfirmasi_pertemuan_evidence_type' => $evidenceType,
+            'pegawai_konfirmasi_pertemuan_metode' => $meetingMethod,
             'pegawai_konfirmasi_pertemuan_tahun' => now()->year,
         ]);
 

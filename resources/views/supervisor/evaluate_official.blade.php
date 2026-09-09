@@ -220,6 +220,7 @@
                 $kenaikanGajiValue = old('kenaikan_gaji_amount', $isEdit ? $myEvaluation->kenaikan_gaji_amount : '');
                 $promosiKeteranganValue = old('promosi_keterangan', $isEdit ? $myEvaluation->promosi_keterangan : '');
                 $demosiKeteranganValue = old('demosi_keterangan', $isEdit ? $myEvaluation->demosi_keterangan : '');
+        $mutasiKeteranganValue = old('mutasi_keterangan', $isEdit ? $myEvaluation->mutasi_keterangan : '');
                 $teguranPernahValue = old('teguran_pernah', $isEdit && $myEvaluation->teguran ? 'ya' : 'tidak');
                 $teguranKeteranganValue = old('teguran', $isEdit ? $myEvaluation->teguran : '');
             @endphp
@@ -294,6 +295,7 @@
                     'kenaikanGajiValue' => $kenaikanGajiValue,
                     'promosiKeteranganValue' => $promosiKeteranganValue,
                     'demosiKeteranganValue' => $demosiKeteranganValue,
+                    'mutasiKeteranganValue' => $mutasiKeteranganValue,
                     'recommendations' => \App\Models\OfficialEvaluation::RECOMMENDATIONS,
                     'recommendationDescriptions' => \App\Models\OfficialEvaluation::RECOMMENDATION_DESCRIPTIONS,
                     'subjectLabel' => 'pejabat',
