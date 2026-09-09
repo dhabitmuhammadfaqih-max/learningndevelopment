@@ -96,14 +96,14 @@ class Evaluation extends Model
     // pada form penilaian pejabat.
     public const DESCRIPTIONS = [
         'pengetahuan_kerja'           => 'Kemampuan dalam memahami dan melaksanakan pekerjaan secara efisien dan efektif.',
-        'penguasaan_peralatan'        => 'Kemampuan dalam menggunakan dan mengoperasikan peralatan/perangkat kerja dengan baik dan benar.',
-        'volume_kerja'                => 'Jumlah/kuantitas pekerjaan yang mampu diselesaikan sesuai target yang ditetapkan.',
-        'mutu_tanggung_jawab'         => 'Kualitas hasil pekerjaan serta rasa tanggung jawab terhadap tugas yang diberikan.',
-        'disiplin_dedikasi_loyalitas' => 'Ketaatan terhadap peraturan kerja serta dedikasi dan loyalitas terhadap perusahaan.',
-        'prakarsa'                    => 'Inisiatif dalam menyelesaikan pekerjaan tanpa harus selalu menunggu perintah atasan.',
-        'daya_serap'                  => 'Kemampuan memahami dan menyerap instruksi maupun pengetahuan baru dengan cepat.',
-        'kerajinan'                   => 'Ketekunan dan keuletan dalam menjalankan tugas sehari-hari.',
-        'kerjasama'                   => 'Kemampuan bekerja sama dan berkoordinasi dengan rekan kerja maupun tim.',
+        'penguasaan_peralatan'        => 'Kemampuan dalam menguasai alat kerja yang digunakan.',
+        'volume_kerja'                => 'Kemampuan dalam menyelesaikan tugas/pekerjaan sesuai dengan waktu yang sudah ditetapkan.',
+        'mutu_tanggung_jawab'         => 'Kesanggupan menyelesaikan pekerjaan dengan sebaik-baiknya dan tepat waktu serta bertanggungjawab atas pekerjaannya.',
+        'disiplin_dedikasi_loyalitas' => 'Kesadaran dan kesediaan dalam menaati semua peraturan yang berlaku pada perusahaan.',
+        'prakarsa'                    => 'Langkah-langkah atau melaksanakan sesuatu tindakan yang diperlukan dalam melaksanakan tugas pokok tanpa menunggu perintah (inisiatif).',
+        'daya_serap'                  => 'Kemampuan dalam menyerap atau memahami tugas/pekerjaan yang diberikan.',
+        'kerajinan'                   => 'Kemampuan melakukan pekerjaan dengan sungguh-sungguh untuk mencapai tujuan/target yang diberikan.',
+        'kerjasama'                   => 'Kemampuan untuk bekerja bersama-sama dalam menyelesaikan tugas sehingga mencapai dayaguna dan hasilguna yang lebih maksimal.',
     ];
 
     // Skala index penilaian (I/A/B/C/D) beserta rentang nilai & keterangannya.

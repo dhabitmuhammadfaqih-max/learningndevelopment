@@ -173,7 +173,7 @@
         <div class="flex-1 min-w-0">
 
             <!-- Topbar -->
-            <header class="bg-white/70 backdrop-blur border-b border-slate-100 px-5 sm:px-8 py-5 flex items-center justify-between gap-4">
+            <header class="relative z-30 bg-white/70 backdrop-blur border-b border-slate-100 px-5 sm:px-8 py-5 flex items-center justify-between gap-4">
                 <div>
                     <h1 class="text-xl sm:text-2xl font-extrabold text-slate-800">{{ $title }}</h1>
                 </div>
