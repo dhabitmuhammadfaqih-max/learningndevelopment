@@ -779,4 +779,11 @@ class User extends Authenticatable
     {
         return $this->hasMany(FcmToken::class);
     }
+
+    // Inbox notifikasi in-app milik user ini (lihat Notification model &
+    // FirebaseCloudMessagingService::sendToUser() untuk titik pengisiannya).
+    public function notifications()
+    {
+        return $this->hasMany(\App\Models\Notification::class)->latest();
+    }
 }

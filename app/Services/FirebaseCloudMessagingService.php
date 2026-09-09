@@ -45,6 +45,25 @@ class FirebaseCloudMessagingService
      */
     public function sendToUser(User $user, string $title, string $body, array $data = []): array
     {
+        // Simpan juga ke inbox notifikasi in-app terlepas dari ada/tidaknya
+        // token push terdaftar - supaya user yang belum mengizinkan
+        // notifikasi browser (atau device-nya tidak dapat token, mis. Mi
+        // Browser tanpa Google Play Services / Safari) tetap kebagian
+        // notifikasi ini saat membuka halaman "Notifikasi" di web.
+        try {
+            \App\Models\Notification::create([
+                'user_id' => $user->id,
+                'title'   => $title,
+                'body'    => $body,
+                'url'     => $data['url'] ?? null,
+            ]);
+        } catch (\Throwable $e) {
+            Log::error('FCM: gagal menyimpan notifikasi in-app.', [
+                'user_id' => $user->id,
+                'error'   => $e->getMessage(),
+            ]);
+        }
+
         $tokens = $user->fcmTokens()->pluck('token', 'id');
 
         if ($tokens->isEmpty()) {

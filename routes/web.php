@@ -81,6 +81,24 @@ Route::middleware('auth')->group(function () {
 
     /*
     |--------------------------------------------------------------------------
+    | NOTIFIKASI IN-APP (semua role yang login)
+    |--------------------------------------------------------------------------
+    */
+    Route::prefix('notifikasi')
+        ->name('notifications.')
+        ->group(function () {
+            Route::get('/', [\App\Http\Controllers\NotificationController::class, 'index'])
+                ->name('index');
+            Route::get('/preview', [\App\Http\Controllers\NotificationController::class, 'preview'])
+                ->name('preview');
+            Route::post('/{notification}/baca', [\App\Http\Controllers\NotificationController::class, 'markRead'])
+                ->name('read');
+            Route::post('/baca-semua', [\App\Http\Controllers\NotificationController::class, 'markAllRead'])
+                ->name('read-all');
+        });
+
+    /*
+    |--------------------------------------------------------------------------
     | PEGAWAI
     |--------------------------------------------------------------------------
     */

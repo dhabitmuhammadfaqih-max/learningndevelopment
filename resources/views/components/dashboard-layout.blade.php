@@ -186,6 +186,70 @@
                         </span>
                     @endif
 
+                    {{-- Lonceng notifikasi in-app - lihat NotificationController & Notification model --}}
+                    <div x-data="{
+                            open: false,
+                            unread: 0,
+                            items: [],
+                            loading: false,
+                            fetchPreview() {
+                                this.loading = true;
+                                fetch('{{ route('notifications.preview') }}', { headers: { Accept: 'application/json' } })
+                                    .then(res => res.json())
+                                    .then(data => { this.unread = data.unread_count; this.items = data.items; })
+                                    .finally(() => this.loading = false);
+                            },
+                            toggle() {
+                                this.open = !this.open;
+                                if (this.open) this.fetchPreview();
+                            }
+                         }"
+                         x-init="fetchPreview(); setInterval(() => fetchPreview(), 60000)"
+                         @click.outside="open = false"
+                         class="relative">
+
+                        <button @click="toggle()" type="button"
+                                class="relative p-2.5 rounded-xl text-slate-500 hover:bg-slate-100 transition">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M13.73 21a2 2 0 0 1-3.46 0"/>
+                            </svg>
+                            <span x-show="unread > 0" x-cloak
+                                  x-text="unread > 99 ? '99+' : unread"
+                                  class="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] leading-[18px] font-bold text-center"></span>
+                        </button>
+
+                        <div x-show="open" x-cloak x-transition
+                             class="absolute right-0 mt-2 w-80 bg-white rounded-2xl border border-slate-100 shadow-xl z-50 overflow-hidden">
+                            <div class="px-4 py-3 border-b border-slate-50 flex items-center justify-between">
+                                <p class="text-sm font-bold text-slate-800">Notifikasi</p>
+                                <a href="{{ route('notifications.index') }}" class="text-xs font-semibold text-blue-600 hover:text-blue-700">Lihat semua</a>
+                            </div>
+
+                            <div class="max-h-80 overflow-y-auto divide-y divide-slate-50">
+                                <template x-if="!loading && items.length === 0">
+                                    <p class="px-4 py-8 text-center text-xs text-slate-400">Belum ada notifikasi</p>
+                                </template>
+
+                                <template x-for="item in items" :key="item.id">
+                                    <a :href="'{{ url('notifikasi') }}/' + item.id + '/baca'"
+                                       @click.prevent="
+                                            fetch('{{ url('notifikasi') }}/' + item.id + '/baca', {
+                                                method: 'POST',
+                                                headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}', Accept: 'application/json' }
+                                            }).then(() => { if (item.url) window.location.href = item.url; else { open = false; fetchPreview(); } });
+                                       "
+                                       class="block px-4 py-3 hover:bg-slate-50 transition"
+                                       :class="!item.is_read ? 'bg-blue-50/40' : ''">
+                                        <p class="text-sm font-semibold text-slate-800" x-text="item.title"></p>
+                                        <p class="text-xs text-slate-500 mt-0.5" x-text="item.body"></p>
+                                        <p class="text-[11px] text-slate-400 mt-1" x-text="item.time_ago"></p>
+                                    </a>
+                                </template>
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="flex items-center gap-3 pl-3 sm:pl-4 border-l border-slate-200">
                         <div class="text-right hidden sm:block">
                             <p class="text-sm font-bold text-slate-800 leading-tight">{{ auth()->user()->name }}</p>
