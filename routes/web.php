@@ -18,9 +18,13 @@ use Illuminate\Support\Facades\Storage;
 | `public/storage` belum dibuat lewat `php artisan storage:link`.
 | Kalau symlink sudah ada, web server akan menyajikan file itu langsung
 | sebagai static file dan route ini tidak akan pernah dipanggil.
+|
+| CATATAN: path sengaja diganti dari /storage/ ke /files/ karena di
+| hosting ini path /storage/ diblokir oleh security module server
+| (mengembalikan 403 sebelum request sempat sampai ke Laravel).
 */
 
-Route::get('/storage/{path}', function (string $path) {
+Route::get('/files/{path}', function (string $path) {
     if (! Storage::disk('public')->exists($path)) {
         abort(404);
     }
@@ -49,7 +53,7 @@ Route::get('/storage/{path}', function (string $path) {
         200,
         ['Content-Type' => $contentType]
     );
-})->where('path', '.*')->name('storage.fallback');
+})->where('path', '.*')->name('files.fallback');
 
 
 /*
