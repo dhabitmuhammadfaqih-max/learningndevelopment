@@ -80,7 +80,7 @@
                 type="submit"
                 id="btn-delete-selected"
                 disabled
-                onclick="return confirm('Yakin hapus file yang dipilih? Aksi ini tidak bisa dibatalkan.');"
+                onclick="return confirmDialog(event, 'Yakin hapus file yang dipilih? Aksi ini tidak bisa dibatalkan.');"
                 class="inline-flex items-center justify-center rounded-xl bg-red-600 hover:bg-red-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white text-sm font-semibold px-5 py-2.5 transition"
             >
                 Hapus File Terpilih

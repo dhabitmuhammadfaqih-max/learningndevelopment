@@ -363,6 +363,18 @@ Route::middleware('auth')->group(function () {
                 [HrdController::class, 'index']
             )->name('dashboard');
 
+            // Pengaturan Periode - lihat App\Support\ActivePeriod untuk
+            // alasan kenapa tahun aktif tidak lagi otomatis ikut kalender.
+            Route::get(
+                '/pengaturan/periode',
+                [\App\Http\Controllers\SettingsController::class, 'periode']
+            )->name('settings.periode');
+
+            Route::post(
+                '/pengaturan/periode',
+                [\App\Http\Controllers\SettingsController::class, 'updatePeriode']
+            )->name('settings.periode.update');
+
             // AJAX polling status - lihat pola & alasan di
             // EmployeeController::statusVersion(); versi HRD ini
             // dilingkupi ke tahun yang sama dengan yang sedang dilihat.

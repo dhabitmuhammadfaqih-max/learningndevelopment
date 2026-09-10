@@ -863,6 +863,8 @@
             }
 
             function poll() {
+                if (document.hidden) return;
+
                 // cache: 'no-store' + query anti-cache karena browser bisa
                 // saja menyajikan hasil fetch() sebelumnya dari cache HTTP
                 // biasa - bikin polling ini kelihatan "jalan" (200 OK di
@@ -898,7 +900,7 @@
                                 // jangan ganggu pegawai yang sedang mengetik.
                                 return;
                             }
-                            window.location.reload();
+                            window.showReloadOverlay();
                         }
                     })
                     .catch((err) => {
@@ -909,6 +911,10 @@
                         console.error('status-version polling error:', err);
                     });
             }
+
+            document.addEventListener('visibilitychange', () => {
+                if (document.visibilityState === 'visible') poll();
+            });
 
             setInterval(poll, POLL_INTERVAL_MS);
         })();

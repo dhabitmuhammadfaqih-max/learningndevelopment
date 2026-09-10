@@ -380,7 +380,7 @@ class User extends Authenticatable
     public function pegawaiSudahKonfirmasiPertemuan(?int $tahun = null): bool
     {
         return ! is_null($this->pegawai_konfirmasi_pertemuan_at)
-            && $this->pegawai_konfirmasi_pertemuan_tahun === ($tahun ?? now()->year);
+            && $this->pegawai_konfirmasi_pertemuan_tahun === ($tahun ?? \App\Support\ActivePeriod::year());
     }
 
     /**
@@ -393,7 +393,7 @@ class User extends Authenticatable
     public function penilaiSudahKonfirmasiPertemuan(?int $tahun = null): bool
     {
         return ! is_null($this->penilai_konfirmasi_pertemuan_at)
-            && $this->penilai_konfirmasi_pertemuan_tahun === ($tahun ?? now()->year);
+            && $this->penilai_konfirmasi_pertemuan_tahun === ($tahun ?? \App\Support\ActivePeriod::year());
     }
 
     /**
@@ -520,7 +520,7 @@ class User extends Authenticatable
     public function pejabatSudahKonfirmasiPertemuan(?int $tahun = null): bool
     {
         return ! is_null($this->pejabat_konfirmasi_pertemuan_at)
-            && $this->pejabat_konfirmasi_pertemuan_tahun === ($tahun ?? now()->year);
+            && $this->pejabat_konfirmasi_pertemuan_tahun === ($tahun ?? \App\Support\ActivePeriod::year());
     }
 
     /**
@@ -534,7 +534,7 @@ class User extends Authenticatable
     public function atasanSudahKonfirmasiPertemuan(?int $tahun = null): bool
     {
         return ! is_null($this->atasan_konfirmasi_pertemuan_at)
-            && $this->atasan_konfirmasi_pertemuan_tahun === ($tahun ?? now()->year);
+            && $this->atasan_konfirmasi_pertemuan_tahun === ($tahun ?? \App\Support\ActivePeriod::year());
     }
 
     /**

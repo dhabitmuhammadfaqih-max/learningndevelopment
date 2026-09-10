@@ -48,6 +48,11 @@
             'label' => 'Semua Akun',
             'icon'  => 'grid',
         ] : null,
+        $role === 'hrd' ? [
+            'route' => 'admin.settings.periode',
+            'label' => 'Pengaturan Periode',
+            'icon'  => 'calendar',
+        ] : null,
     ])->filter()->values();
 
     // Badge notifikasi "bisa ditanggapi/dinilai" per menu - lihat
@@ -145,6 +150,9 @@
                                     @case('grid')
                                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
                                         @break
+                                    @case('calendar')
+                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><rect x="3" y="4" width="18" height="18" rx="2"/><path stroke-linecap="round" stroke-linejoin="round" d="M16 2v4M8 2v4M3 10h18"/></svg>
+                                        @break
                                     @default
                                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
                                 @endswitch
@@ -176,6 +184,18 @@
             <header class="relative z-30 bg-white/70 backdrop-blur border-b border-slate-100 px-5 sm:px-8 py-5 flex items-center justify-between gap-4">
                 <div>
                     <h1 class="text-xl sm:text-2xl font-extrabold text-slate-800">{{ $title }}</h1>
+                    {{--
+                        Badge periode penilaian aktif - lihat App\Support\ActivePeriod.
+                        Ditaruh di layout (bukan per-halaman dashboard) supaya SEMUA
+                        role (pegawai/pejabat/hrd) selalu tahu data tahun berapa yang
+                        sedang mereka lihat, terutama penting saat Januari-Februari
+                        kalau periode tahun lalu belum ditutup HRD (jadi bukan berarti
+                        sistem "salah tahun", memang sengaja belum ditutup).
+                    --}}
+                    <p class="text-xs text-slate-400 mt-0.5 flex items-center gap-1">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-3 h-3"><rect x="3" y="4" width="18" height="18" rx="2"/><path stroke-linecap="round" stroke-linejoin="round" d="M16 2v4M8 2v4M3 10h18"/></svg>
+                        Periode Penilaian {{ \App\Support\ActivePeriod::year() }}
+                    </p>
                 </div>
 
                 <div class="flex items-center gap-3 sm:gap-4">
@@ -193,6 +213,7 @@
                             items: [],
                             loading: false,
                             fetchPreview() {
+                                if (document.hidden) return;
                                 this.loading = true;
                                 fetch('{{ route('notifications.preview') }}', { headers: { Accept: 'application/json' } })
                                     .then(res => res.json())
@@ -204,7 +225,7 @@
                                 if (this.open) this.fetchPreview();
                             }
                          }"
-                         x-init="fetchPreview(); setInterval(() => fetchPreview(), 60000)"
+                         x-init="fetchPreview(); setInterval(() => fetchPreview(), 60000); document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') fetchPreview(); })"
                          @click.outside="open = false"
                          class="relative">
 
@@ -268,6 +289,10 @@
             </main>
         </div>
     </div>
+
+    @include('partials.confirm-modal')
+
+    @include('partials.reload-overlay')
 
     @include('partials.fcm-scripts')
 </body>

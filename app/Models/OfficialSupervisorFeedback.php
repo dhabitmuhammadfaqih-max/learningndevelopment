@@ -38,7 +38,7 @@ class OfficialSupervisorFeedback extends Model
      */
     public function scopeTahunAktif($query, ?int $tahun = null)
     {
-        return $query->where('tahun', $tahun ?? now()->year);
+        return $query->where('tahun', $tahun ?? \App\Support\ActivePeriod::year());
     }
 
     /**

@@ -610,6 +610,8 @@
             }
 
             function poll() {
+                if (document.hidden) return;
+
                 fetch(STATUS_URL + '?t=' + Date.now(), { headers: { 'Accept': 'application/json', 'ngrok-skip-browser-warning': 'true' }, cache: 'no-store' })
                     .then(res => res.ok ? res.json() : null)
                     .then(data => {
@@ -620,11 +622,15 @@
                         }
                         if (data.version !== currentVersion) {
                             if (isUserTyping()) return;
-                            window.location.reload();
+                            window.showReloadOverlay();
                         }
                     })
                     .catch((err) => console.error('status-version polling error:', err));
             }
+
+            document.addEventListener('visibilitychange', () => {
+                if (document.visibilityState === 'visible') poll();
+            });
 
             setInterval(poll, POLL_INTERVAL_MS);
         })();
