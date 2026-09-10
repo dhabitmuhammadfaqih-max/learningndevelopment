@@ -9,7 +9,14 @@
 
         <!-- Favicon -->
         <link rel="icon" type="image/png" href="{{ asset('images/logo-dagsap.png') }}">
-        <link rel="apple-touch-icon" href="{{ asset('images/logo-dagsap.png') }}">
+        <link rel="apple-touch-icon" href="{{ asset('images/icon-192.png') }}">
+
+        <!-- PWA / Add to Home Screen (wajib untuk FCM web push di Safari iOS) -->
+        <link rel="manifest" href="{{ asset('manifest.json') }}">
+        <meta name="theme-color" content="#1d4ed8">
+        <meta name="apple-mobile-web-app-capable" content="yes">
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+        <meta name="apple-mobile-web-app-title" content="Learning & Development">
 
         <!-- Open Graph / Link Sharing Preview -->
         <meta property="og:title" content="{{ config('app.name', 'Learning & Development') }}">
