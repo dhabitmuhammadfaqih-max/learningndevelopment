@@ -295,5 +295,7 @@
     @include('partials.reload-overlay')
 
     @include('partials.fcm-scripts')
+
+    @include('partials.notification-permission-banner')
 </body>
 </html>
