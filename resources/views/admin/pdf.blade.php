@@ -202,7 +202,8 @@
         }
 
         .korelasi-ttd img {
-            height: 45px;
+            width: 110px;
+            height: 65px;
         }
 
         .korelasi-ttd .nama {
@@ -405,21 +406,21 @@
             <td style="border:1px solid #000; padding:3px;">{{ $kolom === 'B' ? $nilaiMentah : '' }}</td>
             <td style="border:1px solid #000; padding:3px;">{{ $kolom === 'C' ? $nilaiMentah : '' }}</td>
             <td style="border:1px solid #000; padding:3px;">{{ $kolom === 'D' ? $nilaiMentah : '' }}</td>
-            <td style="border:1px solid #000; padding:3px;">{{ $nilaiTertimbang }}</td>
+            <td style="border:1px solid #000; padding:3px; font-weight:bold;">{{ $nilaiTertimbang }}</td>
             <td style="border:1px solid #000; padding:3px;"></td>
         </tr>
     @endforeach
 
     {{-- Baris TOTAL --}}
     <tr style="font-size:9px; text-align:center;">
-        <td colspan="2" style="border:1px solid #000; padding:3px; text-align:left; padding-left:6px;">TOTAL</td>
+        <td colspan="2" style="border:1px solid #000; padding:3px; text-align:left; padding-left:6px; font-weight:bold;">TOTAL</td>
         <td style="border:1px solid #000; padding:3px;">{{ rtrim(rtrim(number_format($totalBobot, 1), '0'), '.') }}%</td>
         <td style="border:1px solid #000; padding:3px;"></td>
         <td style="border:1px solid #000; padding:3px;"></td>
         <td style="border:1px solid #000; padding:3px;"></td>
         <td style="border:1px solid #000; padding:3px;"></td>
         <td style="border:1px solid #000; padding:3px;"></td>
-        <td style="border:1px solid #000; padding:3px;">{{ $evaluation->score ?? 0 }}</td>
+        <td style="border:1px solid #000; padding:3px; font-weight:bold;">{{ $evaluation->score ?? 0 }}</td>
         <td style="border:1px solid #000; padding:3px;"></td>
     </tr>
 
@@ -439,7 +440,7 @@
         <td style="border:1px solid #000; padding:6px 2px;">{{ $jumlahIzin }}</td>
         <td style="border:1px solid #000; padding:6px 2px;">{{ $jumlahAlpa }}</td>
         <td style="border:1px solid #000; padding:6px 2px;">{{ $jumlahTerlambat }}</td>
-        <td colspan="2" style="border:1px solid #000; border-top:none; padding:6px 2px;">{{ $jumlahKetidakhadiran }}</td>
+        <td colspan="2" style="border:1px solid #000; border-top:none; padding:6px 2px; font-weight:bold;">{{ $jumlahKetidakhadiran }}</td>
     </tr>
 
     {{-- Baris JUMLAH PENGURANG --}}
@@ -559,14 +560,14 @@
                 @endif
             </td>
             <td></td>
-            <td style="text-align:center; height:46px; vertical-align:bottom; padding:0 4px;">
+            <td style="text-align:center; height:58px; vertical-align:bottom; padding:0 4px;">
                 @if(!empty($signatures['korelasi']) && count($signatures['korelasi']))
                     <table style="width:100%; border-collapse:collapse;">
                         <tr>
                             @foreach ($signatures['korelasi']->take(3) as $korelasi)
-                                <td style="width:{{ number_format(100 / min($signatures['korelasi']->count(), 3), 2) }}%; text-align:center; vertical-align:bottom; height:46px; padding:0 2px;">
+                                <td style="width:{{ number_format(100 / min($signatures['korelasi']->count(), 3), 2) }}%; text-align:center; vertical-align:bottom; height:58px; padding:0 2px;">
                                     @if(!empty($korelasi['signature']))
-                                        <img src="{{ $korelasi['signature'] }}" style="height:36px; max-width:100%;">
+                                        <img src="{{ $korelasi['signature'] }}" style="width:75px; height:56px;">
                                     @endif
                                 </td>
                             @endforeach
