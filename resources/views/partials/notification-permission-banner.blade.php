@@ -44,40 +44,98 @@
     </div>
 </div>
 
+{{--
+    Baris diagnostik kecil di pojok kiri bawah. SENGAJA selalu di-render
+    (bukan cuma pas ada masalah) supaya kalau banner "Aktifkan Notifikasi"
+    di atas tidak muncul, penyebabnya bisa langsung dibaca di layar HP
+    tanpa perlu sambungin device ke komputer / buka console. Tap baris ini
+    untuk sembunyikan.
+--}}
+<div
+    id="fcm-debug-status"
+    class="hidden fixed bottom-4 left-4 z-50 max-w-[85vw] rounded-md bg-gray-900/90 text-gray-100 text-[11px] leading-snug px-3 py-2 shadow-lg"
+    onclick="this.classList.add('hidden')"
+></div>
+
 <script>
     (function () {
-        if (!('Notification' in window)) {
-            return;
+        const debugEl = document.getElementById('fcm-debug-status');
+
+        function showDebug(message) {
+            if (!debugEl) return;
+            debugEl.textContent = '[FCM] ' + message + ' (tap untuk tutup)';
+            debugEl.classList.remove('hidden');
         }
 
-        const banner = document.getElementById('fcm-permission-banner');
-        const enableBtn = document.getElementById('fcm-permission-enable-btn');
-        const dismissBtn = document.getElementById('fcm-permission-dismiss-btn');
-        const dismissedKey = 'fcm-banner-dismissed';
-
-        // Tampilkan banner hanya kalau izin belum pernah diputuskan sama
-        // sekali, dan user belum pernah menutupnya di sesi ini.
-        if (Notification.permission === 'default' && !sessionStorage.getItem(dismissedKey)) {
-            banner.classList.remove('hidden');
-        }
-
-        enableBtn.addEventListener('click', function () {
-            // Panggil langsung di dalam handler klik - JANGAN di-wrap
-            // dengan await/setTimeout apapun sebelum ini, supaya Safari
-            // iOS masih menganggap ini bagian dari user gesture.
-            if (typeof window.initFcm === 'function') {
-                window.initFcm();
+        try {
+            if (!('Notification' in window)) {
+                showDebug('Notification API tidak tersedia di browser/mode ini. Di iPhone, ini cuma ada kalau app dibuka standalone dari icon Home Screen (bukan tab Safari) dan iOS-nya 16.4+.');
+                return;
             }
-            banner.classList.add('hidden');
-        });
 
-        dismissBtn.addEventListener('click', function () {
-            sessionStorage.setItem(dismissedKey, '1');
-            banner.classList.add('hidden');
-        });
+            const banner = document.getElementById('fcm-permission-banner');
+            const enableBtn = document.getElementById('fcm-permission-enable-btn');
+            const dismissBtn = document.getElementById('fcm-permission-dismiss-btn');
+            const dismissedKey = 'fcm-banner-dismissed';
 
-        // Kalau user allow/deny lewat prompt native, sembunyikan banner.
-        window.addEventListener('fcm:ready', () => banner.classList.add('hidden'));
-        window.addEventListener('fcm:permission-denied', () => banner.classList.add('hidden'));
+            let dismissedInSession = false;
+            try {
+                dismissedInSession = !!sessionStorage.getItem(dismissedKey);
+            } catch (storageError) {
+                // Private browsing di Safari bisa bikin sessionStorage
+                // melempar error - jangan sampai itu menghentikan seluruh
+                // script, anggap saja belum pernah di-dismiss.
+                dismissedInSession = false;
+            }
+
+            const currentPermission = Notification.permission;
+
+            if (currentPermission === 'default' && !dismissedInSession) {
+                banner.classList.remove('hidden');
+            } else if (currentPermission === 'denied') {
+                showDebug('Izin notifikasi sudah PERNAH DITOLAK sebelumnya (status: denied). Safari tidak akan menampilkan popup lagi sampai izin di-reset lewat Settings > nama app ini > Notifications, atau hapus Website Data untuk domain ini lalu install ulang.');
+            } else if (currentPermission === 'granted') {
+                showDebug('Izin notifikasi sudah GRANTED - popup memang tidak akan muncul lagi karena sudah diizinkan. Notifikasi harusnya sudah aktif.');
+            } else if (dismissedInSession) {
+                showDebug('Banner sempat ditutup manual ("Nanti saja") di sesi ini. Tutup app sepenuhnya (swipe di App Switcher) lalu buka ulang dari icon Home Screen untuk memunculkannya lagi.');
+            }
+
+            enableBtn.addEventListener('click', function () {
+                // Panggil langsung di dalam handler klik - JANGAN di-wrap
+                // dengan await/setTimeout apapun sebelum ini, supaya Safari
+                // iOS masih menganggap ini bagian dari user gesture.
+                if (typeof window.initFcm === 'function') {
+                    window.initFcm();
+                } else {
+                    showDebug('initFcm() belum ke-load (fcm-client.js gagal dimuat atau config Firebase belum lengkap).');
+                }
+                banner.classList.add('hidden');
+            });
+
+            dismissBtn.addEventListener('click', function () {
+                try {
+                    sessionStorage.setItem(dismissedKey, '1');
+                } catch (storageError) {
+                    // Abaikan - private browsing, tidak fatal.
+                }
+                banner.classList.add('hidden');
+            });
+
+            // Kalau user allow/deny lewat prompt native, sembunyikan banner.
+            window.addEventListener('fcm:ready', () => banner.classList.add('hidden'));
+            window.addEventListener('fcm:permission-denied', () => {
+                banner.classList.add('hidden');
+                showDebug('User menolak popup izin notifikasi barusan (status jadi denied).');
+            });
+            window.addEventListener('fcm:token-failed', () => {
+                showDebug('Izin sudah diberikan, tapi FCM gagal generate token (cek VAPID key / config Firebase).');
+            });
+            window.addEventListener('fcm:error', (e) => {
+                const msg = e?.detail?.error?.message || 'unknown error';
+                showDebug('Error saat inisialisasi push notification: ' + msg);
+            });
+        } catch (fatalError) {
+            showDebug('Script notifikasi error: ' + (fatalError?.message || fatalError));
+        }
     })();
 </script>
