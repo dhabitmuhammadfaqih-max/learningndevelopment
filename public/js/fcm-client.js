@@ -15,15 +15,16 @@
  * Kalau dipanggil otomatis saat halaman load, atau dipanggil setelah
  * `await` lain (mis. registrasi service worker), Safari akan menolak
  * diam-diam TANPA menampilkan popup izin sama sekali. Karena itu:
- *   - initFcm() TIDAK dipanggil otomatis saat page load lagi.
- *   - initFcm() dipanggil dari onclick tombol "Aktifkan Notifikasi"
- *     (lihat notification-permission-button.blade.php), dan
- *     requestPermission() dipanggil PALING AWAL di initFcm(), sebelum
- *     `await` apapun, supaya masih dianggap "dalam" user gesture oleh
+ *   - initFcm() TIDAK dipanggil otomatis dengan requestPermission saat
+ *     page load. Auto-init saat load HANYA jalan kalau izin sudah
+ *     'granted' sebelumnya (lihat paling bawah file ini) - jalur itu
+ *     TIDAK memanggil requestPermission() sama sekali.
+ *   - initFcm({ requestPermission: true }) dipanggil dari onclick tombol
+ *     "Aktifkan Notifikasi" (lihat notification-permission-banner.blade.php).
+ *     requestPermission() dipanggil PALING AWAL di initFcm() (sebelum
+ *     `await` apapun) HANYA kalau requestPermission: true DAN status izin
+ *     masih 'default', supaya masih dianggap "dalam" user gesture oleh
  *     Safari.
- *   - Kalau izin sudah granted sebelumnya (dari kunjungan lalu), token
- *     tetap di-refresh otomatis saat page load - itu tidak butuh popup
- *     baru jadi aman dipanggil otomatis.
  */
 (function () {
     const config = window.__FCM_CONFIG__;
@@ -87,18 +88,29 @@
         });
     }
 
-    async function initFcm() {
+    async function initFcm({ requestPermission = false } = {}) {
         try {
-            // WAJIB paling awal, sebelum `await` apapun - lihat catatan di
-            // atas soal user gesture requirement Safari iOS.
-            const permission = await Notification.requestPermission();
+            let permission = Notification.permission;
+
+            // Cuma minta izin (munculin popup native) kalau eksplisit
+            // dipanggil dari user gesture (klik tombol "Aktifkan") DAN
+            // izin belum pernah diputuskan sama sekali. WAJIB baris ini
+            // yang paling awal dieksekusi, sebelum `await` apapun -
+            // lihat catatan di atas soal user gesture requirement Safari
+            // iOS: begitu ada `await` lain sebelumnya, Safari udah
+            // nganggep ini di luar konteks klik user dan bakal nolak
+            // diam-diam tanpa nampilin popup sama sekali.
+            if (permission === 'default' && requestPermission) {
+                permission = await Notification.requestPermission();
+            }
 
             if (permission !== 'granted') {
-                console.warn('[FCM] Izin notifikasi ditolak/belum diberikan oleh user.');
+                console.warn('[FCM] Izin notifikasi belum diberikan oleh user.');
                 window.dispatchEvent(new CustomEvent('fcm:permission-denied'));
                 return;
             }
 
+            // Baru register service worker SETELAH izin granted.
             const registration = await registerServiceWorker();
 
             const token = await messaging.getToken({
@@ -154,21 +166,18 @@
 
     window.initFcm = initFcm;
 
-    // Kalau izin SUDAH granted dari kunjungan sebelumnya, refresh token
-    // secara otomatis saat halaman dimuat - ini AMAN dipanggil otomatis
-    // karena tidak akan memunculkan popup baru (izin sudah ada).
+    // Kalau izin SUDAH granted dari kunjungan sebelumnya (Android yang
+    // sudah pernah Allow, atau iPhone yang sudah pernah tap Aktifkan +
+    // Allow), refresh token otomatis saat halaman dimuat - ini AMAN
+    // dipanggil otomatis karena tidak memunculkan popup baru (izin
+    // sudah ada, requestPermission tidak pernah dipanggil di jalur ini).
+    //
     // Kalau izin masih 'default' (belum pernah ditanya) atau 'denied',
-    // JANGAN dipanggil otomatis - tunggu user tap tombol "Aktifkan
-    // Notifikasi" supaya popup izin bisa muncul di Safari iOS.
-    function autoInitIfAlreadyGranted() {
-        if (Notification.permission === 'granted') {
-            initFcm();
-        }
-    }
-
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', autoInitIfAlreadyGranted);
-    } else {
-        autoInitIfAlreadyGranted();
+    // JANGAN dipanggil otomatis sama sekali - tunggu user tap tombol
+    // "Aktifkan Notifikasi" (lihat notification-permission-banner.blade.php)
+    // supaya requestPermission() dipanggil dalam konteks user gesture dan
+    // popup native iOS bisa muncul.
+    if (Notification.permission === 'granted') {
+        initFcm();
     }
 })();

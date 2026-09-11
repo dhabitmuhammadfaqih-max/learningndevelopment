@@ -105,7 +105,7 @@
                 // dengan await/setTimeout apapun sebelum ini, supaya Safari
                 // iOS masih menganggap ini bagian dari user gesture.
                 if (typeof window.initFcm === 'function') {
-                    window.initFcm();
+                    window.initFcm({ requestPermission: true });
                 } else {
                     showDebug('initFcm() belum ke-load (fcm-client.js gagal dimuat atau config Firebase belum lengkap).');
                 }
