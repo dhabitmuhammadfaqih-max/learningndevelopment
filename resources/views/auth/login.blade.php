@@ -6,6 +6,18 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>{{ config('app.name', 'Learning and Development') }} — Log in</title>
 
+    <!-- PWA: perlu ada di halaman login juga (ini biasanya halaman pertama
+         yang dibuka user), supaya Safari iOS bisa detect manifest saat
+         "Add to Home Screen" dan hasilnya jadi standalone app beneran,
+         bukan bookmark biasa. Disamakan dengan dashboard-layout.blade.php. -->
+    <link rel="icon" type="image/png" href="{{ asset('images/logo-dagsap.png') }}">
+    <link rel="apple-touch-icon" href="{{ asset('images/icon-192.png') }}">
+    <link rel="manifest" href="{{ asset('manifest.json') }}">
+    <meta name="theme-color" content="#1d4ed8">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Learning & Development">
+
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
