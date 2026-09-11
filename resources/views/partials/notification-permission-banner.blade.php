@@ -9,6 +9,9 @@
     Di iPhone, banner juga dipakai untuk memberi instruksi memasang aplikasi
     ke Home Screen. Notification API memang tidak tersedia di tab Safari.
 --}}
+<div style="position:fixed;top:0;left:0;right:0;background:red;color:white;text-align:center;padding:8px;z-index:99999;font-weight:bold;">
+    TEST VERSI BARU - {{ now() }}
+</div>
 <div
     id="fcm-permission-banner"
     class="hidden fixed bottom-4 inset-x-4 sm:inset-x-auto sm:right-4 sm:max-w-sm z-50 rounded-lg shadow-lg border border-blue-200 bg-white dark:bg-gray-800 dark:border-gray-700 p-4"
