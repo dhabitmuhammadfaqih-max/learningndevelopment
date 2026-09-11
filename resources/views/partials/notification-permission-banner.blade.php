@@ -53,7 +53,7 @@
 --}}
 <div
     id="fcm-debug-status"
-    class="hidden fixed bottom-4 left-4 z-50 max-w-[85vw] rounded-md bg-gray-900/90 text-gray-100 text-[11px] leading-snug px-3 py-2 shadow-lg"
+    class="hidden fixed top-4 left-4 z-[9999] max-w-[85vw] rounded-md bg-red-600 text-white text-[11px] leading-snug px-3 py-2 shadow-lg border-2 border-yellow-300"
     onclick="this.classList.add('hidden')"
 ></div>
 
