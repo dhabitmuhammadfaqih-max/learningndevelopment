@@ -16,6 +16,13 @@ return Application::configure(basePath: dirname(__DIR__))
             'role' => \App\Http\Middleware\RoleMiddleware::class,
         ]);
 
+        // Wajib supaya halaman standalone PWA (terutama di iPhone) selalu
+        // ambil versi terbaru dari server, tidak nyangkut di cache lokal
+        // device - lihat catatan lengkap di PreventPwaPageCaching.php.
+        $middleware->web(append: [
+            \App\Http\Middleware\PreventPwaPageCaching::class,
+        ]);
+
         // Percayai header X-Forwarded-* dari SEMUA proxy di depan aplikasi
         // (ngrok saat development/testing, dan nanti reverse proxy Nginx
         // di production) - supaya Laravel tahu request aslinya HTTPS
