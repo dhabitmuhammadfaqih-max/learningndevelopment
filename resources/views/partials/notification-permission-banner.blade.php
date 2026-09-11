@@ -103,7 +103,7 @@
 
             const currentPermission = Notification.permission;
 
-            if (currentPermission === 'default' && !dismissedInSession) {
+            if (currentPermission === 'default' && (!dismissedInSession || isIos)) {
                 banner.classList.remove('hidden');
             } else if (currentPermission === 'denied') {
                 title.textContent = 'Notifikasi diblokir';
@@ -118,15 +118,29 @@
             }
 
             enableBtn.addEventListener('click', function () {
-                // Panggil langsung di dalam handler klik - JANGAN di-wrap
-                // dengan await/setTimeout apapun sebelum ini, supaya Safari
-                // iOS masih menganggap ini bagian dari user gesture.
-                if (typeof window.initFcm === 'function') {
-                    window.initFcm({ requestPermission: true });
-                } else {
-                    showDebug('initFcm() belum ke-load (fcm-client.js gagal dimuat atau config Firebase belum lengkap).');
+                // Safari iOS membutuhkan requestPermission() tepat di dalam
+                // handler tap. Registrasi FCM dilakukan setelah izin selesai.
+                if (!('Notification' in window)) {
+                    showDebug('Notification API tidak tersedia di PWA ini. Pastikan iOS 16.4+ dan aplikasi dibuka dari Home Screen.');
+                    return;
                 }
-                banner.classList.add('hidden');
+
+                if (typeof window.initFcm !== 'function') {
+                    showDebug('initFcm() belum ke-load (fcm-client.js gagal dimuat atau config Firebase belum lengkap).');
+                    return;
+                }
+
+                Notification.requestPermission().then((permission) => {
+                    if (permission === 'granted') {
+                        banner.classList.add('hidden');
+                        window.initFcm();
+                    } else {
+                        banner.classList.add('hidden');
+                        showDebug('User menolak popup izin notifikasi atau Safari tidak mengizinkannya.');
+                    }
+                }).catch((error) => {
+                    showDebug('Popup izin notifikasi gagal dibuka: ' + (error?.message || error));
+                });
             });
 
             dismissBtn.addEventListener('click', function () {
