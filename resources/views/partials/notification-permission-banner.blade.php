@@ -74,15 +74,16 @@
             const message = document.getElementById('fcm-permission-message');
             const actions = document.getElementById('fcm-permission-actions');
 
+            if (isIos && !isStandalone) {
+                title.textContent = 'Pasang aplikasi untuk notifikasi';
+                message.innerHTML = 'Di Safari, ketuk <strong>Bagikan</strong> lalu <strong>Tambahkan ke Layar Utama</strong>. Setelah itu buka aplikasi dari ikon baru tersebut dan aktifkan notifikasi.';
+                actions.classList.add('hidden');
+                banner.classList.remove('hidden');
+                return;
+            }
+
             if (!('Notification' in window)) {
-                if (isIos && !isStandalone && banner) {
-                    title.textContent = 'Pasang aplikasi untuk notifikasi';
-                    message.innerHTML = 'Di Safari, ketuk <strong>Bagikan</strong> lalu <strong>Tambahkan ke Layar Utama</strong>. Setelah itu buka aplikasi dari ikon baru tersebut dan aktifkan notifikasi.';
-                    actions.classList.add('hidden');
-                    banner.classList.remove('hidden');
-                } else {
-                    showDebug('Notifikasi membutuhkan iOS 16.4 atau lebih baru dan aplikasi yang dibuka dari Home Screen.');
-                }
+                showDebug('Notifikasi membutuhkan iOS 16.4 atau lebih baru dan aplikasi yang dibuka dari Home Screen.');
                 return;
             }
 
@@ -105,7 +106,11 @@
             if (currentPermission === 'default' && !dismissedInSession) {
                 banner.classList.remove('hidden');
             } else if (currentPermission === 'denied') {
-                showDebug('Izin notifikasi sudah PERNAH DITOLAK sebelumnya (status: denied). Safari tidak akan menampilkan popup lagi sampai izin di-reset lewat Settings > nama app ini > Notifications, atau hapus Website Data untuk domain ini lalu install ulang.');
+                title.textContent = 'Notifikasi diblokir';
+                message.textContent = 'Buka Settings > Notifications, pilih aplikasi ini, lalu aktifkan Allow Notifications. Setelah itu buka ulang aplikasi.';
+                actions.classList.add('hidden');
+                banner.classList.remove('hidden');
+                showDebug('Izin notifikasi sudah ditolak sebelumnya. Aktifkan kembali lewat Settings > Notifications.');
             } else if (currentPermission === 'granted') {
                 showDebug('Izin notifikasi sudah GRANTED - popup memang tidak akan muncul lagi karena sudah diizinkan. Notifikasi harusnya sudah aktif.');
             } else if (dismissedInSession) {
