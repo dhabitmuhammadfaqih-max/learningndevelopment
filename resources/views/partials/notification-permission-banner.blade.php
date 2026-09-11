@@ -67,6 +67,25 @@
             debugEl.classList.remove('hidden');
         }
 
+        // --- SEMENTARA UNTUK DEBUGGING: selalu tampilkan info dasar,
+        // apapun statusnya, supaya bisa dibaca langsung dari layar iPhone
+        // tanpa perlu Mac / Web Inspector. HAPUS blok ini setelah masalah
+        // ketemu. ---
+        (function alwaysShowDiagnostic() {
+            var info = [
+                'NotifAPI=' + ('Notification' in window),
+                'perm=' + (('Notification' in window) ? Notification.permission : 'n/a'),
+                'initFcm=' + (typeof window.initFcm),
+                'sw=' + ('serviceWorker' in navigator),
+                'cfg=' + (window.__FCM_CONFIG__ ? 'ok' : 'MISSING'),
+                'standalone=' + (window.navigator.standalone === true),
+            ].join(' | ');
+            if (debugEl) {
+                debugEl.textContent = '[DIAG] ' + info + ' (tap untuk tutup)';
+                debugEl.classList.remove('hidden');
+            }
+        })();
+
         try {
             if (!('Notification' in window)) {
                 showDebug('Notification API tidak tersedia di browser/mode ini. Di iPhone, ini cuma ada kalau app dibuka standalone dari icon Home Screen (bukan tab Safari) dan iOS-nya 16.4+.');
