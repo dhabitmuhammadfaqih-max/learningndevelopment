@@ -46,6 +46,14 @@ if (firebaseConfig.apiKey && firebaseConfig.projectId) {
     // sehingga satu push muncul sebagai DUA notifikasi (bug "double
     // kirim"). Selama server tetap kirim data-only, baca title/body
     // dari payload.data, BUKAN payload.notification.
+    //
+    // CATATAN (iOS fix): onBackgroundMessage() terindikasi TIDAK selalu
+    // ke-trigger di Safari iOS untuk data-only message (walau jalan
+    // normal di Chrome/Android). Karena itu ditambahkan juga listener
+    // 'push' manual di bawah sebagai jalur alternatif supaya notifikasi
+    // tetap muncul di iOS. Kalau dua-duanya ke-trigger di platform yang
+    // sama, ada risiko notifikasi tampil dobel - lihat catatan di bawah
+    // listener 'push'.
     messaging.onBackgroundMessage((payload) => {
         const title = payload.data?.title || 'Notifikasi';
         const body = payload.data?.body || '';
@@ -56,6 +64,45 @@ if (firebaseConfig.apiKey && firebaseConfig.projectId) {
             icon: '/images/logo-dagsap.png',
             data: { url },
         });
+    });
+
+    // FALLBACK untuk Safari iOS: listener 'push' manual, bypass parsing
+    // internal Firebase SDK yang terindikasi tidak reliable di iOS untuk
+    // data-only message. Payload push dari FCM diparse langsung dari
+    // event.data.
+    //
+    // SEMENTARA dipasang BARENGAN dengan onBackgroundMessage() di atas
+    // untuk keperluan testing/perbandingan platform:
+    // - Kalau di iPhone notifikasi jadi MUNCUL setelah ini ditambahkan,
+    //   berarti terbukti onBackgroundMessage() yang bermasalah di iOS.
+    // - Kalau di Android/desktop notifikasi jadi MUNCUL DOBEL (2x),
+    //   berarti kedua listener ini sama-sama ke-trigger di Chrome, dan
+    //   blok messaging.onBackgroundMessage() di atas HARUS dihapus,
+    //   cukup pakai listener 'push' manual ini saja untuk semua platform.
+    self.addEventListener('push', (event) => {
+        if (!event.data) {
+            return;
+        }
+
+        let payload;
+        try {
+            payload = event.data.json();
+        } catch (e) {
+            return;
+        }
+
+        const data = payload.data || {};
+        const title = data.title || 'Notifikasi';
+        const body = data.body || '';
+        const url = data.url || '/';
+
+        event.waitUntil(
+            self.registration.showNotification(title, {
+                body,
+                icon: '/images/logo-dagsap.png',
+                data: { url },
+            })
+        );
     });
 
     // Klik notifikasi -> fokuskan tab yang sudah terbuka, atau buka tab baru
