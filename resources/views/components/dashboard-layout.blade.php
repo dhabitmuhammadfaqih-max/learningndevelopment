@@ -78,6 +78,16 @@
     <link rel="icon" type="image/png" href="{{ asset('images/logo-dagsap.png') }}">
     <link rel="apple-touch-icon" href="{{ asset('images/logo-dagsap.png') }}">
 
+    <!-- PWA: wajib ada di SEMUA halaman (termasuk dashboard) supaya Safari iOS
+         menganggap halaman ini standalone saat dibuka dari Home Screen, dan
+         supaya Notification API / FCM push bisa jalan. Disamakan dengan
+         layouts/app.blade.php & layouts/guest.blade.php. -->
+    <link rel="manifest" href="{{ asset('manifest.json') }}">
+    <meta name="theme-color" content="#1d4ed8">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Learning & Development">
+
     <!-- Open Graph / Link Sharing Preview -->
     <meta property="og:title" content="{{ $title }} · {{ config('app.name', 'Learning & Development') }}">
     <meta property="og:site_name" content="{{ config('app.name', 'Learning & Development') }}">
