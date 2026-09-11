@@ -6,10 +6,8 @@
     respons LANGSUNG dari tap/klik user. Kalau dipanggil otomatis, Safari
     menolak diam-diam tanpa menampilkan popup izin sama sekali.
 
-    Banner ini disembunyikan secara default, dan cuma dimunculkan lewat JS
-    kalau browser mendukung Notification API DAN user belum pernah
-    memberi/menolak izin (Notification.permission === 'default'). Kalau
-    sudah 'granted' atau 'denied', banner tidak pernah muncul.
+    Di iPhone, banner juga dipakai untuk memberi instruksi memasang aplikasi
+    ke Home Screen. Notification API memang tidak tersedia di tab Safari.
 --}}
 <div
     id="fcm-permission-banner"
@@ -22,9 +20,9 @@
             </svg>
         </div>
         <div class="flex-1">
-            <p class="text-sm font-medium text-gray-900 dark:text-gray-100">Aktifkan Notifikasi</p>
-            <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Dapatkan info penilaian &amp; feedback terbaru secara langsung.</p>
-            <div class="mt-3 flex gap-2">
+            <p id="fcm-permission-title" class="text-sm font-medium text-gray-900 dark:text-gray-100">Aktifkan Notifikasi</p>
+            <p id="fcm-permission-message" class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Dapatkan info penilaian &amp; feedback terbaru secara langsung.</p>
+            <div id="fcm-permission-actions" class="mt-3 flex gap-2">
                 <button
                     type="button"
                     id="fcm-permission-enable-btn"
@@ -67,32 +65,27 @@
             debugEl.classList.remove('hidden');
         }
 
-        // --- SEMENTARA UNTUK DEBUGGING: selalu tampilkan info dasar,
-        // apapun statusnya, supaya bisa dibaca langsung dari layar iPhone
-        // tanpa perlu Mac / Web Inspector. HAPUS blok ini setelah masalah
-        // ketemu. ---
-        (function alwaysShowDiagnostic() {
-            var info = [
-                'NotifAPI=' + ('Notification' in window),
-                'perm=' + (('Notification' in window) ? Notification.permission : 'n/a'),
-                'initFcm=' + (typeof window.initFcm),
-                'sw=' + ('serviceWorker' in navigator),
-                'cfg=' + (window.__FCM_CONFIG__ ? 'ok' : 'MISSING'),
-                'standalone=' + (window.navigator.standalone === true),
-            ].join(' | ');
-            if (debugEl) {
-                debugEl.textContent = '[DIAG] ' + info + ' (tap untuk tutup)';
-                debugEl.classList.remove('hidden');
-            }
-        })();
-
         try {
+            const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent);
+            const isStandalone = window.navigator.standalone === true
+                || window.matchMedia('(display-mode: standalone)').matches;
+            const banner = document.getElementById('fcm-permission-banner');
+            const title = document.getElementById('fcm-permission-title');
+            const message = document.getElementById('fcm-permission-message');
+            const actions = document.getElementById('fcm-permission-actions');
+
             if (!('Notification' in window)) {
-                showDebug('Notification API tidak tersedia di browser/mode ini. Di iPhone, ini cuma ada kalau app dibuka standalone dari icon Home Screen (bukan tab Safari) dan iOS-nya 16.4+.');
+                if (isIos && !isStandalone && banner) {
+                    title.textContent = 'Pasang aplikasi untuk notifikasi';
+                    message.innerHTML = 'Di Safari, ketuk <strong>Bagikan</strong> lalu <strong>Tambahkan ke Layar Utama</strong>. Setelah itu buka aplikasi dari ikon baru tersebut dan aktifkan notifikasi.';
+                    actions.classList.add('hidden');
+                    banner.classList.remove('hidden');
+                } else {
+                    showDebug('Notifikasi membutuhkan iOS 16.4 atau lebih baru dan aplikasi yang dibuka dari Home Screen.');
+                }
                 return;
             }
 
-            const banner = document.getElementById('fcm-permission-banner');
             const enableBtn = document.getElementById('fcm-permission-enable-btn');
             const dismissBtn = document.getElementById('fcm-permission-dismiss-btn');
             const dismissedKey = 'fcm-banner-dismissed';
