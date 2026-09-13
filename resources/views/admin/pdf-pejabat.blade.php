@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <style>
         body {
-            font-family: DejaVu Sans, sans-serif;
+            font-family: Arial, sans-serif;
             font-size: 10px;
             color: #000;
             margin: 0;
@@ -42,6 +42,7 @@
             width: 30%;
             font-size: 10px;
             padding: 0 !important;
+            vertical-align: middle;
         }
 
         .header-meta table {
@@ -52,10 +53,16 @@
             border: none;
             border-bottom: 1px solid #000;
             padding: 3px 6px;
+            font-size: 8.5px;
+            white-space: nowrap;
         }
 
         .header-meta table td:first-child {
-            width: 45%;
+            width: 50%;
+        }
+
+        .header-meta table td:last-child {
+            width: 50%;
         }
 
         .header-meta table tr:last-child td {
@@ -70,7 +77,7 @@
         }
 
         .periode {
-            text-align: center;
+            text-align: left;
             margin-bottom: 8px;
         }
 
@@ -224,11 +231,25 @@
 </head>
 <body>
 
+@php
+    // Format NIK jadi kelompok 4 digit dipisah titik, mis. "12345678"
+    // -> "1234.5678". Kalau panjangnya bukan kelipatan 4 (sisa di
+    // akhir), sisa itu tetap ikut ditampilkan di grup terakhir apa
+    // adanya supaya tidak ada karakter yang hilang.
+    $formatNik = function ($nik) {
+        if (! $nik) {
+            return '-';
+        }
+
+        return implode('.', str_split($nik, 4));
+    };
+@endphp
+
 <!-- HEADER DOKUMEN -->
 <table class="header-table">
     <tr>
         <td class="header-logo">
-            <img src="{{ public_path('images/logo-dagsap.png') }}" alt="Logo Dagsap" style="height:45px; margin-bottom:2px;"><br>
+            <img src="{{ public_path('images/logo-dagsap.png') }}" alt="Logo Dagsap" style="height:65px; margin-bottom:2px;"><br>
             PT. DAGSAP ENDURA EATORE
         </td>
         <td class="header-title">
@@ -263,7 +284,7 @@
             <tr>
                 <td class="label">NIK</td>
                 <td class="colon">:</td>
-                <td>{{ $pejabat->nik ?? '-' }}</td>
+                <td>{{ $formatNik($pejabat->nik) }}</td>
             </tr>
             <tr>
                 <td class="label">JABATAN</td>
@@ -292,7 +313,7 @@
             <tr>
                 <td class="label">NIK</td>
                 <td class="colon">:</td>
-                <td>{{ $evaluation?->supervisor?->nik ?? '-' }}</td>
+                <td>{{ $formatNik($evaluation?->supervisor?->nik) }}</td>
             </tr>
             <tr>
                 <td class="label">JABATAN</td>
