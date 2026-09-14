@@ -364,6 +364,18 @@ class OfficialController extends Controller
             );
         }
 
+        // Sekali tanggapan & tanda tangan pejabat tersimpan, tidak boleh
+        // ditimpa lagi lewat request ini - sama pola-nya seperti
+        // EmployeeController::respondEvaluation(). Penting karena HRD bisa
+        // saja sudah menandatangani (HrdController::signAsHrdOfficial())
+        // berdasarkan tanggapan versi lama.
+        if ($evaluation->employee_signature) {
+            return back()->with(
+                'error',
+                'Tanggapan Anda sudah dikirim dan tidak bisa diubah lagi.'
+            );
+        }
+
         $validated = $request->validate([
             'employee_response'  => 'required|string|min:5',
             'employee_signature' => 'required|string',

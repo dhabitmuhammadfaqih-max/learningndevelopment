@@ -248,6 +248,21 @@ class EmployeeController extends Controller
             );
         }
 
+        // Sekali tanggapan & tanda tangan pegawai tersimpan, tidak boleh
+        // ditimpa lagi lewat request ini - form-nya sendiri sudah
+        // disembunyikan di view begitu employee_signature terisi, tapi
+        // dicek juga di sini supaya tidak bisa diakali dengan mengirim
+        // request langsung ke route ini. Ini penting karena HRD bisa saja
+        // sudah menandatangani (HrdController::signAsHrd()) berdasarkan
+        // tanggapan versi lama - kalau pegawai boleh menimpa lagi setelah
+        // itu, tanda tangan HRD jadi mengesahkan teks yang sudah berubah.
+        if ($evaluation->employee_signature) {
+            return back()->with(
+                'error',
+                'Tanggapan Anda sudah dikirim dan tidak bisa diubah lagi.'
+            );
+        }
+
         $validated = $request->validate([
             'employee_response' => 'required|string|min:5',
             'employee_signature' => 'required|string',
