@@ -12,7 +12,6 @@
 <div
     id="fcm-permission-banner"
     class="hidden fixed bottom-4 inset-x-4 sm:inset-x-auto sm:right-4 sm:max-w-sm z-50 rounded-lg shadow-lg border border-blue-200 bg-white dark:bg-gray-800 dark:border-gray-700 p-4"
-    style="transform: translateZ(0); -webkit-transform: translateZ(0); -webkit-backface-visibility: hidden;"
 >
     <div class="flex items-start gap-3">
         <div class="flex-shrink-0 text-blue-600 dark:text-blue-400">
@@ -53,7 +52,6 @@
 <div
     id="fcm-debug-status"
     class="hidden fixed top-4 left-4 z-[9999] max-w-[85vw] rounded-md bg-red-600 text-white text-[11px] leading-snug px-3 py-2 shadow-lg border-2 border-yellow-300"
-    style="transform: translateZ(0); -webkit-transform: translateZ(0); -webkit-backface-visibility: hidden;"
     onclick="this.classList.add('hidden')"
 ></div>
 
