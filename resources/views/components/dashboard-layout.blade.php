@@ -104,6 +104,11 @@
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body class="font-sans antialiased bg-[#eef3fb] text-slate-700">
+<!-- SEMENTARA: Eruda mobile console, buat lihat error JS langsung di layar
+     iPhone tanpa perlu Mac. Muncul tombol kecil di pojok layar, tap buat
+     buka console/network/elements. HAPUS setelah debugging selesai. -->
+<script src="https://cdn.jsdelivr.net/npm/eruda"></script>
+<script>eruda.init();</script>
 <div style="position:fixed;top:0;left:0;right:0;background:red;color:white;text-align:center;padding:10px;z-index:999999;font-weight:bold;font-size:16px;">
     CACHE TEST - {{ now() }} - kalau ini muncul di iPhone, HTML terbaru sudah ke-load
 </div>
