@@ -11,7 +11,7 @@
 --}}
 <div
     id="fcm-permission-banner"
-    class="hidden fixed bottom-4 inset-x-4 sm:inset-x-auto sm:right-4 sm:max-w-sm z-50 rounded-lg shadow-lg border border-blue-200 bg-white dark:bg-gray-800 dark:border-gray-700 p-4"
+    class="hidden fixed inset-x-4 sm:inset-x-auto sm:right-4 sm:max-w-sm z-50 rounded-lg shadow-lg border border-blue-200 bg-white dark:bg-gray-800 dark:border-gray-700 p-4"
 >
     <div class="flex items-start gap-3">
         <div class="flex-shrink-0 text-blue-600 dark:text-blue-400">
@@ -67,6 +67,40 @@
             debugEl.classList.remove('hidden');
         }
 
+        // PAKSA posisi banner lewat JS, bypass CSS "bottom" yang di sebagian
+        // device/browser dihitung salah (kadang jadi puluhan ribu px). Kita
+        // hitung posisi "top" secara manual dari tinggi viewport yang
+        // sebenarnya (termasuk visualViewport, lebih akurat di iOS Safari
+        // saat address bar collapse/expand), lalu paksa dengan !important
+        // supaya tidak bisa ketimpa apapun.
+        function forceBannerPosition() {
+            const banner = document.getElementById('fcm-permission-banner');
+            if (!banner || banner.classList.contains('hidden')) return;
+
+            const vv = window.visualViewport;
+            const viewportHeight = vv ? vv.height : window.innerHeight;
+            const viewportOffsetTop = vv ? vv.offsetTop : 0;
+            const margin = 16; // sama dengan "bottom-4" Tailwind (1rem)
+
+            const bannerHeight = banner.offsetHeight || 140;
+            const top = viewportOffsetTop + viewportHeight - bannerHeight - margin;
+
+            banner.style.setProperty('position', 'fixed', 'important');
+            banner.style.setProperty('bottom', 'auto', 'important');
+            banner.style.setProperty('top', top + 'px', 'important');
+        }
+
+        window.addEventListener('resize', forceBannerPosition);
+        window.addEventListener('scroll', forceBannerPosition, { passive: true });
+        window.addEventListener('orientationchange', forceBannerPosition);
+        if (window.visualViewport) {
+            window.visualViewport.addEventListener('resize', forceBannerPosition);
+            window.visualViewport.addEventListener('scroll', forceBannerPosition);
+        }
+        // Jaga-jaga: layout bisa berubah beberapa saat setelah banner
+        // ditampilkan (font load, dsb), jadi dicoba ulang beberapa kali.
+        [0, 100, 300, 800, 1500, 3000].forEach((delay) => setTimeout(forceBannerPosition, delay));
+
         try {
             console.log('[DIAG-BANNER] Masuk try block.');
             const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent);
@@ -97,6 +131,7 @@
                 message.innerHTML = 'Di Safari, ketuk <strong>Bagikan</strong> lalu <strong>Tambahkan ke Layar Utama</strong>. Setelah itu buka aplikasi dari ikon baru tersebut dan aktifkan notifikasi.';
                 actions.classList.add('hidden');
                 banner.classList.remove('hidden');
+                forceBannerPosition();
                 return;
             }
 
@@ -124,6 +159,7 @@
             if (currentPermission === 'default' && (!dismissedInSession || isIos)) {
                 console.log('[DIAG-BANNER] Kondisi default terpenuhi, banner.classList.remove(hidden) dipanggil.');
                 banner.classList.remove('hidden');
+                forceBannerPosition();
                 console.log('[DIAG-BANNER] Class banner setelah remove hidden:', banner.className);
 
                 var cs = window.getComputedStyle(banner);
@@ -169,6 +205,7 @@
                 message.textContent = 'Buka Settings > Notifications, pilih aplikasi ini, lalu aktifkan Allow Notifications. Setelah itu buka ulang aplikasi.';
                 actions.classList.add('hidden');
                 banner.classList.remove('hidden');
+                forceBannerPosition();
                 showDebug('Izin notifikasi sudah ditolak sebelumnya. Aktifkan kembali lewat Settings > Notifications.');
             } else if (currentPermission === 'granted') {
                 showDebug('Izin notifikasi sudah GRANTED - popup memang tidak akan muncul lagi karena sudah diizinkan. Notifikasi harusnya sudah aktif.');
