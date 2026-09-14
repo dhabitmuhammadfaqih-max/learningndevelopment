@@ -289,7 +289,7 @@
                         </button>
 
                         <div x-show="open" x-cloak x-transition
-                             class="absolute right-0 mt-2 w-80 bg-white rounded-2xl border border-slate-100 shadow-xl z-50 overflow-hidden">
+                             class="absolute -right-3 sm:right-0 mt-2 w-[88vw] max-w-80 bg-white rounded-2xl border border-slate-100 shadow-xl z-50 overflow-hidden">
                             <div class="px-4 py-3 border-b border-slate-50 flex items-center justify-between">
                                 <p class="text-sm font-bold text-slate-800">Notifikasi</p>
                                 <a href="{{ route('notifications.index') }}" class="text-xs font-semibold text-blue-600 hover:text-blue-700">Lihat semua</a>
