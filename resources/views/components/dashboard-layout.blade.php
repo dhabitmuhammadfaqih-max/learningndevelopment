@@ -104,44 +104,6 @@
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body class="font-sans antialiased bg-[#eef3fb] text-slate-700">
-<script>
-    // Auto-run diagnostic, hasilnya otomatis ke-print ke console Eruda
-    // tanpa perlu ngetik command manual di iPhone.
-    (function () {
-        function log(label, value) {
-            console.log('[DIAG] ' + label + ': ' + value);
-        }
-
-        // PENTING: dibungkus window.addEventListener('load', ...) supaya
-        // dijalankan SETELAH seluruh HTML (termasuk elemen dari partial
-        // notification-permission-banner yang letaknya di bawah body) benar-benar
-        // selesai di-render. Sebelumnya diagnostic ini ditaruh langsung di
-        // atas <body> dan jalan SEBELUM elemen-elemen itu ada di DOM,
-        // sehingga hasil sebelumnya (false semua) tidak akurat.
-        window.addEventListener('load', function () {
-        try {
-            log('fcm-debug-status element ada?', !!document.getElementById('fcm-debug-status'));
-            log('fcm-permission-banner element ada?', !!document.getElementById('fcm-permission-banner'));
-            log('typeof window.initFcm', typeof window.initFcm);
-            log('navigator.standalone', navigator.standalone);
-            log('Notification in window?', ('Notification' in window));
-            log('Notification.permission', ('Notification' in window) ? Notification.permission : 'N/A - Notification API tidak ada');
-            log('User Agent', navigator.userAgent);
-            log('matchMedia standalone', window.matchMedia('(display-mode: standalone)').matches);
-        } catch (diagError) {
-            console.error('[DIAG] Error saat diagnostic:', diagError.message);
-        }
-
-        fetch(location.href).then(function (r) {
-            var headers = [];
-            r.headers.forEach(function (v, k) { headers.push(k + ': ' + v); });
-            console.log('[DIAG] Response Headers:\n' + headers.join('\n'));
-        }).catch(function (e) {
-            console.error('[DIAG] Gagal fetch headers:', e.message);
-        });
-        }); // end window load listener
-    })();
-</script>
 
     <div class="min-h-screen lg:flex">
 
@@ -343,6 +305,70 @@
     @include('partials.reload-overlay')
 
     @include('partials.fcm-scripts')
+
+    <!-- Tombol FCM iOS: sengaja selalu terlihat agar request permission
+         berasal langsung dari tap user, bukan dari proses otomatis. -->
+    <div id="fcm-ios-direct-wrap" class="fixed bottom-5 right-5 z-[9998]">
+        <button
+            type="button"
+            id="fcm-ios-direct-btn"
+            class="rounded-xl bg-blue-600 px-4 py-3 text-sm font-bold text-white shadow-lg hover:bg-blue-700 active:scale-95 transition"
+        >
+            🔔 Aktifkan Notifikasi
+        </button>
+        <div id="fcm-ios-direct-status" class="mt-2 hidden max-w-xs rounded-lg bg-white px-3 py-2 text-xs text-slate-700 shadow border border-slate-200"></div>
+    </div>
+
+    <script>
+        (function () {
+            const wrap = document.getElementById('fcm-ios-direct-wrap');
+            const btn = document.getElementById('fcm-ios-direct-btn');
+            const status = document.getElementById('fcm-ios-direct-status');
+            if (!wrap || !btn) return;
+
+            const standalone = window.navigator.standalone === true ||
+                window.matchMedia('(display-mode: standalone)').matches;
+
+            function showStatus(text) {
+                status.textContent = text;
+                status.classList.remove('hidden');
+            }
+
+            btn.addEventListener('click', async function () {
+                // requestPermission HARUS dipanggil langsung dalam event click.
+                if (!('Notification' in window)) {
+                    showStatus('Notification API tidak tersedia di perangkat ini.');
+                    return;
+                }
+
+                showStatus('Meminta izin notifikasi...');
+
+                try {
+                    const permission = await Notification.requestPermission();
+                    showStatus('Permission: ' + permission + (standalone ? ' | PWA: standalone' : ' | bukan standalone'));
+
+                    if (permission === 'granted') {
+                        if (typeof window.initFcm === 'function') {
+                            await window.initFcm();
+                            showStatus('Notifikasi aktif.');
+                            btn.textContent = '✓ Notifikasi Aktif';
+                            btn.disabled = true;
+                            btn.classList.add('opacity-70', 'cursor-not-allowed');
+                        } else {
+                            showStatus('Izin berhasil, tetapi initFcm() belum tersedia.');
+                        }
+                    }
+                } catch (error) {
+                    showStatus('Gagal meminta izin: ' + (error?.message || error));
+                }
+            });
+
+            // Jangan sembunyikan tombol sebelum kita tahu statusnya.
+            if (Notification.permission === 'granted') {
+                btn.textContent = '✓ Notifikasi Aktif';
+            }
+        })();
+    </script>
 
     @include('partials.notification-permission-banner')
 </body>
