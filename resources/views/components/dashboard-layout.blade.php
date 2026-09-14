@@ -109,6 +109,36 @@
      buka console/network/elements. HAPUS setelah debugging selesai. -->
 <script src="https://cdn.jsdelivr.net/npm/eruda"></script>
 <script>eruda.init();</script>
+<script>
+    // Auto-run diagnostic, hasilnya otomatis ke-print ke console Eruda
+    // tanpa perlu ngetik command manual di iPhone.
+    (function () {
+        function log(label, value) {
+            console.log('[DIAG] ' + label + ': ' + value);
+        }
+
+        try {
+            log('fcm-debug-status element ada?', !!document.getElementById('fcm-debug-status'));
+            log('fcm-permission-banner element ada?', !!document.getElementById('fcm-permission-banner'));
+            log('typeof window.initFcm', typeof window.initFcm);
+            log('navigator.standalone', navigator.standalone);
+            log('Notification in window?', ('Notification' in window));
+            log('Notification.permission', ('Notification' in window) ? Notification.permission : 'N/A - Notification API tidak ada');
+            log('User Agent', navigator.userAgent);
+            log('matchMedia standalone', window.matchMedia('(display-mode: standalone)').matches);
+        } catch (diagError) {
+            console.error('[DIAG] Error saat diagnostic:', diagError.message);
+        }
+
+        fetch(location.href).then(function (r) {
+            var headers = [];
+            r.headers.forEach(function (v, k) { headers.push(k + ': ' + v); });
+            console.log('[DIAG] Response Headers:\n' + headers.join('\n'));
+        }).catch(function (e) {
+            console.error('[DIAG] Gagal fetch headers:', e.message);
+        });
+    })();
+</script>
 <div style="position:fixed;top:0;left:0;right:0;background:red;color:white;text-align:center;padding:10px;z-index:999999;font-weight:bold;font-size:16px;">
     CACHE TEST - {{ now() }} - kalau ini muncul di iPhone, HTML terbaru sudah ke-load
 </div>
