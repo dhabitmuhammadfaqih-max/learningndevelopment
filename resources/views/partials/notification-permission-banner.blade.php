@@ -56,8 +56,10 @@
 ></div>
 
 <script>
+    console.log('[DIAG-BANNER] Script partial notification-permission-banner MULAI dieksekusi.');
     (function () {
         const debugEl = document.getElementById('fcm-debug-status');
+        console.log('[DIAG-BANNER] debugEl ditemukan?', !!debugEl);
 
         function showDebug(message) {
             if (!debugEl) return;
@@ -66,13 +68,16 @@
         }
 
         try {
+            console.log('[DIAG-BANNER] Masuk try block.');
             const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent);
             const isStandalone = window.navigator.standalone === true
                 || window.matchMedia('(display-mode: standalone)').matches;
+            console.log('[DIAG-BANNER] isIos=' + isIos + ' isStandalone=' + isStandalone);
             const banner = document.getElementById('fcm-permission-banner');
             const title = document.getElementById('fcm-permission-title');
             const message = document.getElementById('fcm-permission-message');
             const actions = document.getElementById('fcm-permission-actions');
+            console.log('[DIAG-BANNER] banner=' + !!banner + ' title=' + !!title + ' message=' + !!message + ' actions=' + !!actions);
 
             // Diagnostik mode selalu ditampilkan di iOS (walau nanti bisa
             // ketimpa pesan showDebug lain yang lebih spesifik di bawah) -
@@ -117,7 +122,9 @@
             const currentPermission = Notification.permission;
 
             if (currentPermission === 'default' && (!dismissedInSession || isIos)) {
+                console.log('[DIAG-BANNER] Kondisi default terpenuhi, banner.classList.remove(hidden) dipanggil.');
                 banner.classList.remove('hidden');
+                console.log('[DIAG-BANNER] Class banner setelah remove hidden:', banner.className);
             } else if (currentPermission === 'denied') {
                 title.textContent = 'Notifikasi diblokir';
                 message.textContent = 'Buka Settings > Notifications, pilih aplikasi ini, lalu aktifkan Allow Notifications. Setelah itu buka ulang aplikasi.';
@@ -143,16 +150,16 @@
                     return;
                 }
 
-                // Jalankan initFcm dengan requestPermission=true.
-                // requestPermission() di dalam initFcm dipanggil sebelum
-                // await apa pun, sehingga tetap berada dalam konteks tap user
-                // yang dibutuhkan Safari iOS.
-                window.initFcm({ requestPermission: true }).then(() => {
-                    if (Notification.permission === 'granted') {
+                Notification.requestPermission().then((permission) => {
+                    if (permission === 'granted') {
                         banner.classList.add('hidden');
+                        window.initFcm();
+                    } else {
+                        banner.classList.add('hidden');
+                        showDebug('User menolak popup izin notifikasi atau Safari tidak mengizinkannya.');
                     }
                 }).catch((error) => {
-                    showDebug('Gagal mengaktifkan notifikasi: ' + (error?.message || error));
+                    showDebug('Popup izin notifikasi gagal dibuka: ' + (error?.message || error));
                 });
             });
 
@@ -179,7 +186,9 @@
                 showDebug('Error saat inisialisasi push notification: ' + msg);
             });
         } catch (fatalError) {
+            console.error('[DIAG-BANNER] FATAL ERROR:', fatalError.message, fatalError.stack);
             showDebug('Script notifikasi error: ' + (fatalError?.message || fatalError));
         }
     })();
+    console.log('[DIAG-BANNER] Script partial SELESAI dieksekusi (sampai baris terakhir).');
 </script>
