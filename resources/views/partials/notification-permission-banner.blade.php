@@ -125,6 +125,16 @@
                 console.log('[DIAG-BANNER] Kondisi default terpenuhi, banner.classList.remove(hidden) dipanggil.');
                 banner.classList.remove('hidden');
                 console.log('[DIAG-BANNER] Class banner setelah remove hidden:', banner.className);
+
+                var cs = window.getComputedStyle(banner);
+                console.log('[DIAG-BANNER] computedStyle langsung setelah remove: display=' + cs.display + ' visibility=' + cs.visibility + ' opacity=' + cs.opacity + ' position=' + cs.position + ' bottom=' + cs.bottom + ' zIndex=' + cs.zIndex + ' width=' + cs.width + ' height=' + cs.height);
+
+                setTimeout(function () {
+                    var cs2 = window.getComputedStyle(banner);
+                    console.log('[DIAG-BANNER] computedStyle 2 DETIK KEMUDIAN: display=' + cs2.display + ' visibility=' + cs2.visibility + ' opacity=' + cs2.opacity + ' className=' + banner.className);
+                    var rect = banner.getBoundingClientRect();
+                    console.log('[DIAG-BANNER] getBoundingClientRect: top=' + rect.top + ' left=' + rect.left + ' width=' + rect.width + ' height=' + rect.height);
+                }, 2000);
             } else if (currentPermission === 'denied') {
                 title.textContent = 'Notifikasi diblokir';
                 message.textContent = 'Buka Settings > Notifications, pilih aplikasi ini, lalu aktifkan Allow Notifications. Setelah itu buka ulang aplikasi.';
