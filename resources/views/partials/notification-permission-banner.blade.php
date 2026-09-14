@@ -11,7 +11,8 @@
 --}}
 <div
     id="fcm-permission-banner"
-    class="hidden fixed bottom-4 inset-x-4 sm:inset-x-auto sm:right-4 sm:max-w-sm z-50 rounded-lg shadow-lg border border-blue-200 bg-white dark:bg-gray-800 dark:border-gray-700 p-4"
+    style="display:none"
+    class="fixed bottom-4 inset-x-4 sm:inset-x-auto sm:right-4 sm:max-w-sm z-50 rounded-lg shadow-lg border border-blue-200 bg-white dark:bg-gray-800 dark:border-gray-700 p-4"
 >
     <div class="flex items-start gap-3">
         <div class="flex-shrink-0 text-blue-600 dark:text-blue-400">
@@ -51,33 +52,28 @@
 --}}
 <div
     id="fcm-debug-status"
-    class="hidden fixed top-4 left-4 z-[9999] max-w-[85vw] rounded-md bg-red-600 text-white text-[11px] leading-snug px-3 py-2 shadow-lg border-2 border-yellow-300"
-    onclick="this.classList.add('hidden')"
+    style="display:none" class="fixed top-4 left-4 z-[9999] max-w-[85vw] rounded-md bg-red-600 text-white text-[11px] leading-snug px-3 py-2 shadow-lg border-2 border-yellow-300"
+    onclick="this.style.display='none'"
 ></div>
 
 <script>
-    console.log('[DIAG-BANNER] Script partial notification-permission-banner MULAI dieksekusi.');
     (function () {
         const debugEl = document.getElementById('fcm-debug-status');
-        console.log('[DIAG-BANNER] debugEl ditemukan?', !!debugEl);
 
         function showDebug(message) {
             if (!debugEl) return;
             debugEl.textContent = '[FCM] ' + message + ' (tap untuk tutup)';
-            debugEl.classList.remove('hidden');
+            debugEl.style.display = 'block';
         }
 
         try {
-            console.log('[DIAG-BANNER] Masuk try block.');
             const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent);
             const isStandalone = window.navigator.standalone === true
                 || window.matchMedia('(display-mode: standalone)').matches;
-            console.log('[DIAG-BANNER] isIos=' + isIos + ' isStandalone=' + isStandalone);
             const banner = document.getElementById('fcm-permission-banner');
             const title = document.getElementById('fcm-permission-title');
             const message = document.getElementById('fcm-permission-message');
             const actions = document.getElementById('fcm-permission-actions');
-            console.log('[DIAG-BANNER] banner=' + !!banner + ' title=' + !!title + ' message=' + !!message + ' actions=' + !!actions);
 
             // Diagnostik mode selalu ditampilkan di iOS (walau nanti bisa
             // ketimpa pesan showDebug lain yang lebih spesifik di bawah) -
@@ -96,7 +92,7 @@
                 title.textContent = 'Pasang aplikasi untuk notifikasi';
                 message.innerHTML = 'Di Safari, ketuk <strong>Bagikan</strong> lalu <strong>Tambahkan ke Layar Utama</strong>. Setelah itu buka aplikasi dari ikon baru tersebut dan aktifkan notifikasi.';
                 actions.classList.add('hidden');
-                banner.classList.remove('hidden');
+                banner.style.display = 'block';
                 return;
             }
 
@@ -122,36 +118,12 @@
             const currentPermission = Notification.permission;
 
             if (currentPermission === 'default' && (!dismissedInSession || isIos)) {
-                console.log('[DIAG-BANNER] Kondisi default terpenuhi, banner.classList.remove(hidden) dipanggil.');
-                banner.classList.remove('hidden');
-                console.log('[DIAG-BANNER] Class banner setelah remove hidden:', banner.className);
-
-                var cs = window.getComputedStyle(banner);
-                console.log('[DIAG-BANNER] computedStyle langsung setelah remove: display=' + cs.display + ' visibility=' + cs.visibility + ' opacity=' + cs.opacity + ' position=' + cs.position + ' bottom=' + cs.bottom + ' zIndex=' + cs.zIndex + ' width=' + cs.width + ' height=' + cs.height);
-
-                setTimeout(function () {
-                    var cs2 = window.getComputedStyle(banner);
-                    console.log('[DIAG-BANNER] computedStyle 2 DETIK KEMUDIAN: display=' + cs2.display + ' visibility=' + cs2.visibility + ' opacity=' + cs2.opacity + ' className=' + banner.className);
-                    var rect = banner.getBoundingClientRect();
-                    console.log('[DIAG-BANNER] getBoundingClientRect: top=' + rect.top + ' left=' + rect.left + ' width=' + rect.width + ' height=' + rect.height);
-
-                    // Telusuri ke atas cari ancestor yang punya transform/filter/
-                    // perspective/contain - itu yang bikin position:fixed jadi
-                    // gak nempel ke viewport.
-                    var el = banner.parentElement;
-                    var depth = 0;
-                    while (el && depth < 20) {
-                        var s = window.getComputedStyle(el);
-                        console.log('[DIAG-ANCESTOR ' + depth + '] <' + el.tagName + ' class="' + el.className + '"> transform=' + s.transform + ' filter=' + s.filter + ' backdropFilter=' + s.backdropFilter + ' perspective=' + s.perspective + ' contain=' + s.contain + ' willChange=' + s.willChange);
-                        el = el.parentElement;
-                        depth++;
-                    }
-                }, 2000);
+                banner.style.display = 'block';
             } else if (currentPermission === 'denied') {
                 title.textContent = 'Notifikasi diblokir';
                 message.textContent = 'Buka Settings > Notifications, pilih aplikasi ini, lalu aktifkan Allow Notifications. Setelah itu buka ulang aplikasi.';
                 actions.classList.add('hidden');
-                banner.classList.remove('hidden');
+                banner.style.display = 'block';
                 showDebug('Izin notifikasi sudah ditolak sebelumnya. Aktifkan kembali lewat Settings > Notifications.');
             } else if (currentPermission === 'granted') {
                 showDebug('Izin notifikasi sudah GRANTED - popup memang tidak akan muncul lagi karena sudah diizinkan. Notifikasi harusnya sudah aktif.');
@@ -174,10 +146,10 @@
 
                 Notification.requestPermission().then((permission) => {
                     if (permission === 'granted') {
-                        banner.classList.add('hidden');
+                        banner.style.display = 'none';
                         window.initFcm();
                     } else {
-                        banner.classList.add('hidden');
+                        banner.style.display = 'none';
                         showDebug('User menolak popup izin notifikasi atau Safari tidak mengizinkannya.');
                     }
                 }).catch((error) => {
@@ -191,13 +163,13 @@
                 } catch (storageError) {
                     // Abaikan - private browsing, tidak fatal.
                 }
-                banner.classList.add('hidden');
+                banner.style.display = 'none';
             });
 
             // Kalau user allow/deny lewat prompt native, sembunyikan banner.
             window.addEventListener('fcm:ready', () => banner.classList.add('hidden'));
             window.addEventListener('fcm:permission-denied', () => {
-                banner.classList.add('hidden');
+                banner.style.display = 'none';
                 showDebug('User menolak popup izin notifikasi barusan (status jadi denied).');
             });
             window.addEventListener('fcm:token-failed', () => {
@@ -208,9 +180,7 @@
                 showDebug('Error saat inisialisasi push notification: ' + msg);
             });
         } catch (fatalError) {
-            console.error('[DIAG-BANNER] FATAL ERROR:', fatalError.message, fatalError.stack);
             showDebug('Script notifikasi error: ' + (fatalError?.message || fatalError));
         }
     })();
-    console.log('[DIAG-BANNER] Script partial SELESAI dieksekusi (sampai baris terakhir).');
 </script>
