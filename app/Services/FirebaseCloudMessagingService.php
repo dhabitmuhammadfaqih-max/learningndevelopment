@@ -133,26 +133,24 @@ class FirebaseCloudMessagingService
         ]));
         $fcmOptions = array_filter(['link' => $data['url'] ?? null]);
 
-        // PENTING - JANGAN tambahkan kembali key `notification` di sini
-        // (baik `message.notification` maupun `webpush.notification`).
+        // KIRIM notification + data.
         //
-        // Sebelumnya title/body dikirim lewat `message.notification`.
-        // Begitu payload FCM punya field `notification`, browser
-        // (lewat service worker) OTOMATIS menampilkan notifikasi
-        // sendiri di background - TAPI firebase-messaging-sw.js di
-        // project ini JUGA memanggil showNotification() secara manual
-        // di onBackgroundMessage(). Kombinasi keduanya menyebabkan SATU
-        // push dari server muncul sebagai DUA notifikasi di device
-        // (notifikasi "double kirim"/dobel).
+        // Untuk background web push, Firebase memang dirancang untuk
+        // menangani notification message secara otomatis. Sebelumnya project
+        // hanya mengirim data-only lalu mencoba menggambar notifikasi manual
+        // dari service worker. Pola data-only ini lebih rapuh untuk Safari/iOS
+        // PWA, dan juga membuat fcm_options.link tidak bisa dimanfaatkan.
         //
-        // Fix: kirim data-only message. title/body dilewatkan lewat
-        // `data` saja, lalu ditampilkan manual SEKALI oleh
-        // onBackgroundMessage() di service worker (lihat
-        // public/firebase-messaging-sw.js) maupun onMessage() di
-        // public/js/fcm-client.js saat tab aktif.
+        // Data tetap dikirim supaya aplikasi punya metadata tambahan (mis.
+        // url), sementara title/body tersedia sebagai notification payload
+        // untuk jalur background yang dikelola FCM.
         $payload = [
             'message' => [
                 'token' => $token,
+                'notification' => [
+                    'title' => $title,
+                    'body' => $body,
+                ],
                 'data' => empty($dataPayload) ? new \stdClass() : $dataPayload,
                 'webpush' => [
                     'fcm_options' => empty($fcmOptions) ? new \stdClass() : $fcmOptions,

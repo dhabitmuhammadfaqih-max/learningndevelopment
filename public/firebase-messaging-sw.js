@@ -38,22 +38,14 @@ if (firebaseConfig.apiKey && firebaseConfig.projectId) {
 
     // Notifikasi saat TAB TIDAK AKTIF / browser di background.
     //
-    // PENTING: server SENGAJA mengirim data-only message (tidak ada
-    // field `notification`) - lihat catatan di
-    // FirebaseCloudMessagingService::sendToToken(). Kalau payload
-    // punya field `notification`, browser otomatis menampilkan
-    // notifikasi sendiri SELAIN showNotification() manual di bawah ini,
-    // sehingga satu push muncul sebagai DUA notifikasi (bug "double
-    // kirim"). Selama server tetap kirim data-only, baca title/body
-    // dari payload.data, BUKAN payload.notification.
+    // Server sekarang mengirim notification + data payload. Untuk
+    // notification message, FCM menangani tampilan notifikasi background
+    // secara otomatis. Karena itu JANGAN memanggil showNotification() lagi
+    // kalau payload sudah punya `notification`, supaya tidak dobel.
     //
-    // Dipakai listener 'push' manual (bukan messaging.onBackgroundMessage())
-    // karena onBackgroundMessage() terindikasi tidak selalu ke-trigger di
-    // Safari iOS untuk data-only message, walau jalan normal di
-    // Chrome/Android. Listener 'push' manual ini adalah standar Push API
-    // browser dan konsisten jalan di semua platform (Chrome, Android,
-    // Safari iOS 16.4+), jadi dipakai satu-satunya jalur supaya tidak ada
-    // risiko notifikasi tampil dobel.
+    // Listener push tetap dipertahankan sebagai fallback untuk data-only
+    // message. Ini juga menjaga kompatibilitas bila ada pengirim lain yang
+    // masih mengirim data-only ke token yang sama.
     self.addEventListener('push', (event) => {
         if (!event.data) {
             return;
@@ -63,6 +55,12 @@ if (firebaseConfig.apiKey && firebaseConfig.projectId) {
         try {
             payload = event.data.json();
         } catch (e) {
+            return;
+        }
+
+        // FCM akan menampilkan notification message secara otomatis saat
+        // aplikasi berjalan di background. Jangan tampilkan kedua kalinya.
+        if (payload.notification) {
             return;
         }
 
