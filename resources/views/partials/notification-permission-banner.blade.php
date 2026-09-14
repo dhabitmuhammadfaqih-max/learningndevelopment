@@ -134,6 +134,18 @@
                     console.log('[DIAG-BANNER] computedStyle 2 DETIK KEMUDIAN: display=' + cs2.display + ' visibility=' + cs2.visibility + ' opacity=' + cs2.opacity + ' className=' + banner.className);
                     var rect = banner.getBoundingClientRect();
                     console.log('[DIAG-BANNER] getBoundingClientRect: top=' + rect.top + ' left=' + rect.left + ' width=' + rect.width + ' height=' + rect.height);
+
+                    // Telusuri ke atas cari ancestor yang punya transform/filter/
+                    // perspective/contain - itu yang bikin position:fixed jadi
+                    // gak nempel ke viewport.
+                    var el = banner.parentElement;
+                    var depth = 0;
+                    while (el && depth < 20) {
+                        var s = window.getComputedStyle(el);
+                        console.log('[DIAG-ANCESTOR ' + depth + '] <' + el.tagName + ' class="' + el.className + '"> transform=' + s.transform + ' filter=' + s.filter + ' backdropFilter=' + s.backdropFilter + ' perspective=' + s.perspective + ' contain=' + s.contain + ' willChange=' + s.willChange);
+                        el = el.parentElement;
+                        depth++;
+                    }
                 }, 2000);
             } else if (currentPermission === 'denied') {
                 title.textContent = 'Notifikasi diblokir';
