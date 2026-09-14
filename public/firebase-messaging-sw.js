@@ -38,14 +38,11 @@ if (firebaseConfig.apiKey && firebaseConfig.projectId) {
 
     // Notifikasi saat TAB TIDAK AKTIF / browser di background.
     //
-    // Server sekarang mengirim notification + data payload. Untuk
-    // notification message, FCM menangani tampilan notifikasi background
-    // secara otomatis. Karena itu JANGAN memanggil showNotification() lagi
-    // kalau payload sudah punya `notification`, supaya tidak dobel.
-    //
-    // Listener push tetap dipertahankan sebagai fallback untuk data-only
-    // message. Ini juga menjaga kompatibilitas bila ada pengirim lain yang
-    // masih mengirim data-only ke token yang sama.
+    // Server mengirim data-only payload (lihat
+    // FirebaseCloudMessagingService::sendToToken()) - sengaja BUKAN
+    // notification+data, supaya browser/OS tidak ikut auto-display
+    // sendiri di level platform. Ini satu-satunya tempat yang menampilkan
+    // notifikasi untuk kondisi background, persis sekali per push.
     self.addEventListener('push', (event) => {
         if (!event.data) {
             return;
@@ -58,8 +55,10 @@ if (firebaseConfig.apiKey && firebaseConfig.projectId) {
             return;
         }
 
-        // FCM akan menampilkan notification message secara otomatis saat
-        // aplikasi berjalan di background. Jangan tampilkan kedua kalinya.
+        // Jaga-jaga kalau suatu saat ada pengirim lain (bukan
+        // FirebaseCloudMessagingService di atas) yang masih mengirim
+        // notification payload ke token yang sama - jangan tampilkan
+        // dobel dengan auto-display bawaan FCM untuk notification message.
         if (payload.notification) {
             return;
         }

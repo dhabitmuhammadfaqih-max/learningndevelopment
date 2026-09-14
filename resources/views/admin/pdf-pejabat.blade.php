@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <style>
         body {
-            font-family: Arial, sans-serif;
+            font-family: Arial;
             font-size: 10px;
             color: #000;
             margin: 0;
