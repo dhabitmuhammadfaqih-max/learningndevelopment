@@ -104,45 +104,6 @@
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body class="font-sans antialiased bg-[#eef3fb] text-slate-700">
-<script>
-    // Auto-run diagnostic, hasilnya otomatis ke-print ke console Eruda
-    // tanpa perlu ngetik command manual di iPhone.
-    (function () {
-        function log(label, value) {
-            console.log('[DIAG] ' + label + ': ' + value);
-        }
-
-        // PENTING: dibungkus window.addEventListener('load', ...) supaya
-        // dijalankan SETELAH seluruh HTML (termasuk elemen dari partial
-        // notification-permission-banner yang letaknya di bawah body) benar-benar
-        // selesai di-render. Sebelumnya diagnostic ini ditaruh langsung di
-        // atas <body> dan jalan SEBELUM elemen-elemen itu ada di DOM,
-        // sehingga hasil sebelumnya (false semua) tidak akurat.
-        window.addEventListener('load', function () {
-        try {
-            log('fcm-debug-status element ada?', !!document.getElementById('fcm-debug-status'));
-            log('fcm-permission-banner element ada?', !!document.getElementById('fcm-permission-banner'));
-            log('typeof window.initFcm', typeof window.initFcm);
-            log('navigator.standalone', navigator.standalone);
-            log('Notification in window?', ('Notification' in window));
-            log('Notification.permission', ('Notification' in window) ? Notification.permission : 'N/A - Notification API tidak ada');
-            log('User Agent', navigator.userAgent);
-            log('matchMedia standalone', window.matchMedia('(display-mode: standalone)').matches);
-        } catch (diagError) {
-            console.error('[DIAG] Error saat diagnostic:', diagError.message);
-        }
-
-        fetch(location.href).then(function (r) {
-            var headers = [];
-            r.headers.forEach(function (v, k) { headers.push(k + ': ' + v); });
-            console.log('[DIAG] Response Headers:\n' + headers.join('\n'));
-        }).catch(function (e) {
-            console.error('[DIAG] Gagal fetch headers:', e.message);
-        });
-        }); // end window load listener
-    })();
-</script>
-
     <div class="min-h-screen lg:flex">
 
         <!-- Sidebar -->
@@ -289,7 +250,7 @@
                         </button>
 
                         <div x-show="open" x-cloak x-transition
-                             class="absolute -right-3 sm:right-0 mt-2 w-[88vw] max-w-80 bg-white rounded-2xl border border-slate-100 shadow-xl z-50 overflow-hidden">
+                             class="absolute -right-1 sm:right-0 mt-2 w-[70vw] max-w-[500px] bg-white rounded-2xl border border-slate-100 shadow-xl z-50 overflow-hidden">
                             <div class="px-4 py-3 border-b border-slate-50 flex items-center justify-between">
                                 <p class="text-sm font-bold text-slate-800">Notifikasi</p>
                                 <a href="{{ route('notifications.index') }}" class="text-xs font-semibold text-blue-600 hover:text-blue-700">Lihat semua</a>

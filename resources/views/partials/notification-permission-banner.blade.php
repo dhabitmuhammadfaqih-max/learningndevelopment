@@ -42,37 +42,14 @@
     </div>
 </div>
 
-{{--
-    Baris diagnostik kecil di pojok kiri bawah. SENGAJA selalu di-render
-    (bukan cuma pas ada masalah) supaya kalau banner "Aktifkan Notifikasi"
-    di atas tidak muncul, penyebabnya bisa langsung dibaca di layar HP
-    tanpa perlu sambungin device ke komputer / buka console. Tap baris ini
-    untuk sembunyikan.
---}}
-<div
-    id="fcm-debug-status"
-    class="hidden fixed top-4 left-4 z-[9999] max-w-[90vw] max-h-[70vh] overflow-y-auto rounded-md bg-red-600 text-white text-[11px] leading-snug px-3 py-2 shadow-lg border-2 border-yellow-300"
-    onclick="this.classList.add('hidden')"
-></div>
-
 <script>
-    console.log('[DIAG-BANNER] Script partial notification-permission-banner MULAI dieksekusi.');
     (function () {
-        const debugEl = document.getElementById('fcm-debug-status');
-        console.log('[DIAG-BANNER] debugEl ditemukan?', !!debugEl);
-
-        function showDebug(message) {
-            if (!debugEl) return;
-            debugEl.textContent = '[FCM] ' + message + ' (tap untuk tutup)';
-            debugEl.classList.remove('hidden');
-        }
-
         // PAKSA posisi banner lewat JS, bypass CSS "bottom" yang di sebagian
-        // device/browser dihitung salah (kadang jadi puluhan ribu px). Kita
-        // hitung posisi "top" secara manual dari tinggi viewport yang
-        // sebenarnya (termasuk visualViewport, lebih akurat di iOS Safari
-        // saat address bar collapse/expand), lalu paksa dengan !important
-        // supaya tidak bisa ketimpa apapun.
+        // device/browser (khususnya PWA standalone di iOS Safari) bisa
+        // dihitung salah oleh engine. Kita hitung posisi "top" secara manual
+        // dari tinggi viewport yang sebenarnya (termasuk visualViewport,
+        // lebih akurat saat address bar collapse/expand), lalu paksa dengan
+        // !important supaya tidak bisa ketimpa apapun.
         function forceBannerPosition() {
             const banner = document.getElementById('fcm-permission-banner');
             if (!banner || banner.classList.contains('hidden')) return;
@@ -102,29 +79,13 @@
         [0, 100, 300, 800, 1500, 3000].forEach((delay) => setTimeout(forceBannerPosition, delay));
 
         try {
-            console.log('[DIAG-BANNER] Masuk try block.');
             const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent);
             const isStandalone = window.navigator.standalone === true
                 || window.matchMedia('(display-mode: standalone)').matches;
-            console.log('[DIAG-BANNER] isIos=' + isIos + ' isStandalone=' + isStandalone);
             const banner = document.getElementById('fcm-permission-banner');
             const title = document.getElementById('fcm-permission-title');
             const message = document.getElementById('fcm-permission-message');
             const actions = document.getElementById('fcm-permission-actions');
-            console.log('[DIAG-BANNER] banner=' + !!banner + ' title=' + !!title + ' message=' + !!message + ' actions=' + !!actions);
-
-            // Diagnostik mode selalu ditampilkan di iOS (walau nanti bisa
-            // ketimpa pesan showDebug lain yang lebih spesifik di bawah) -
-            // supaya pas testing langsung ketauan device kedetect standalone
-            // (PWA dari Home Screen) atau masih browser tab biasa, tanpa
-            // perlu console/Mac.
-            if (isIos) {
-                showDebug(
-                    'Mode: ' + (isStandalone ? 'STANDALONE (PWA icon)' : 'BROWSER TAB (bukan PWA)')
-                    + ' | navigator.standalone=' + window.navigator.standalone
-                    + ' | matchMedia=' + window.matchMedia('(display-mode: standalone)').matches
-                );
-            }
 
             if (isIos && !isStandalone) {
                 title.textContent = 'Pasang aplikasi untuk notifikasi';
@@ -136,7 +97,6 @@
             }
 
             if (!('Notification' in window)) {
-                showDebug('Notifikasi membutuhkan iOS 16.4 atau lebih baru dan aplikasi yang dibuka dari Home Screen.');
                 return;
             }
 
@@ -157,85 +117,31 @@
             const currentPermission = Notification.permission;
 
             if (currentPermission === 'default' && (!dismissedInSession || isIos)) {
-                console.log('[DIAG-BANNER] Kondisi default terpenuhi, banner.classList.remove(hidden) dipanggil.');
                 banner.classList.remove('hidden');
                 forceBannerPosition();
-                console.log('[DIAG-BANNER] Class banner setelah remove hidden:', banner.className);
-
-                var cs = window.getComputedStyle(banner);
-                console.log('[DIAG-BANNER] computedStyle langsung setelah remove: display=' + cs.display + ' visibility=' + cs.visibility + ' opacity=' + cs.opacity + ' position=' + cs.position + ' bottom=' + cs.bottom + ' zIndex=' + cs.zIndex + ' width=' + cs.width + ' height=' + cs.height);
-
-                setTimeout(function () {
-                    var cs2 = window.getComputedStyle(banner);
-                    console.log('[DIAG-BANNER] computedStyle 2 DETIK KEMUDIAN: display=' + cs2.display + ' visibility=' + cs2.visibility + ' opacity=' + cs2.opacity + ' className=' + banner.className);
-                    var rect = banner.getBoundingClientRect();
-                    console.log('[DIAG-BANNER] getBoundingClientRect: top=' + rect.top + ' left=' + rect.left + ' width=' + rect.width + ' height=' + rect.height);
-
-                    // Telusuri ke atas cari ancestor yang punya transform/filter/
-                    // perspective/contain - itu yang bikin position:fixed jadi
-                    // gak nempel ke viewport.
-                    var el = banner.parentElement;
-                    var depth = 0;
-                    var ancestorSummary = [];
-                    while (el && depth < 20) {
-                        var s = window.getComputedStyle(el);
-                        var line = '[' + depth + ']' + el.tagName + ' pos=' + s.position + ' tf=' + (s.transform !== 'none' ? s.transform : '-') + ' filt=' + (s.filter !== 'none' ? s.filter : '-') + ' bdf=' + (s.backdropFilter !== 'none' ? s.backdropFilter : '-') + ' persp=' + (s.perspective !== 'none' ? s.perspective : '-') + ' contain=' + (s.contain !== 'none' ? s.contain : '-') + ' wc=' + (s.willChange !== 'auto' ? s.willChange : '-');
-                        console.log('[DIAG-ANCESTOR ' + depth + '] <' + el.tagName + ' class="' + el.className + '"> transform=' + s.transform + ' filter=' + s.filter + ' backdropFilter=' + s.backdropFilter + ' perspective=' + s.perspective + ' contain=' + s.contain + ' willChange=' + s.willChange);
-                        ancestorSummary.push(line);
-                        el = el.parentElement;
-                        depth++;
-                    }
-
-                    // Tampilkan LANGSUNG di layar (tanpa perlu console/eruda) supaya
-                    // bisa dibaca dan di-screenshot langsung dari HP.
-                    showDebug(
-                        'DIAG POSISI: rect.top=' + rect.top.toFixed(1)
-                        + ' bannerPos=' + cs2.position
-                        + ' bannerBottom=' + cs2.bottom
-                        + ' | scrollY=' + window.scrollY
-                        + ' docScrollH=' + document.documentElement.scrollHeight
-                        + ' bodyScrollH=' + document.body.scrollHeight
-                        + ' innerH=' + window.innerHeight
-                        + ' visualVH=' + (window.visualViewport ? window.visualViewport.height : 'n/a')
-                        + ' | ' + ancestorSummary.join(' || ')
-                    );
-                }, 2000);
             } else if (currentPermission === 'denied') {
                 title.textContent = 'Notifikasi diblokir';
                 message.textContent = 'Buka Settings > Notifications, pilih aplikasi ini, lalu aktifkan Allow Notifications. Setelah itu buka ulang aplikasi.';
                 actions.classList.add('hidden');
                 banner.classList.remove('hidden');
                 forceBannerPosition();
-                showDebug('Izin notifikasi sudah ditolak sebelumnya. Aktifkan kembali lewat Settings > Notifications.');
-            } else if (currentPermission === 'granted') {
-                showDebug('Izin notifikasi sudah GRANTED - popup memang tidak akan muncul lagi karena sudah diizinkan. Notifikasi harusnya sudah aktif.');
-            } else if (dismissedInSession) {
-                showDebug('Banner sempat ditutup manual ("Nanti saja") di sesi ini. Tutup app sepenuhnya (swipe di App Switcher) lalu buka ulang dari icon Home Screen untuk memunculkannya lagi.');
             }
 
             enableBtn.addEventListener('click', function () {
                 // Safari iOS membutuhkan requestPermission() tepat di dalam
                 // handler tap. Registrasi FCM dilakukan setelah izin selesai.
-                if (!('Notification' in window)) {
-                    showDebug('Notification API tidak tersedia di PWA ini. Pastikan iOS 16.4+ dan aplikasi dibuka dari Home Screen.');
-                    return;
-                }
-
-                if (typeof window.initFcm !== 'function') {
-                    showDebug('initFcm() belum ke-load (fcm-client.js gagal dimuat atau config Firebase belum lengkap).');
+                if (!('Notification' in window) || typeof window.initFcm !== 'function') {
                     return;
                 }
 
                 Notification.requestPermission().then((permission) => {
+                    banner.classList.add('hidden');
                     if (permission === 'granted') {
-                        banner.classList.add('hidden');
                         window.initFcm();
-                    } else {
-                        banner.classList.add('hidden');
-                        showDebug('User menolak popup izin notifikasi atau Safari tidak mengizinkannya.');
                     }
-                }).catch((error) => {
-                    showDebug('Popup izin notifikasi gagal dibuka: ' + (error?.message || error));
+                }).catch(() => {
+                    // Popup izin gagal dibuka - biarkan banner tetap tampil
+                    // supaya user bisa coba tap lagi.
                 });
             });
 
@@ -250,21 +156,9 @@
 
             // Kalau user allow/deny lewat prompt native, sembunyikan banner.
             window.addEventListener('fcm:ready', () => banner.classList.add('hidden'));
-            window.addEventListener('fcm:permission-denied', () => {
-                banner.classList.add('hidden');
-                showDebug('User menolak popup izin notifikasi barusan (status jadi denied).');
-            });
-            window.addEventListener('fcm:token-failed', () => {
-                showDebug('Izin sudah diberikan, tapi FCM gagal generate token (cek VAPID key / config Firebase).');
-            });
-            window.addEventListener('fcm:error', (e) => {
-                const msg = e?.detail?.error?.message || 'unknown error';
-                showDebug('Error saat inisialisasi push notification: ' + msg);
-            });
+            window.addEventListener('fcm:permission-denied', () => banner.classList.add('hidden'));
         } catch (fatalError) {
-            console.error('[DIAG-BANNER] FATAL ERROR:', fatalError.message, fatalError.stack);
-            showDebug('Script notifikasi error: ' + (fatalError?.message || fatalError));
+            console.error('[FCM] Notification banner error:', fatalError);
         }
     })();
-    console.log('[DIAG-BANNER] Script partial SELESAI dieksekusi (sampai baris terakhir).');
 </script>
