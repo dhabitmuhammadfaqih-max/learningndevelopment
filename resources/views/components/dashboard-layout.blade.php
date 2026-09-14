@@ -117,6 +117,13 @@
             console.log('[DIAG] ' + label + ': ' + value);
         }
 
+        // PENTING: dibungkus window.addEventListener('load', ...) supaya
+        // dijalankan SETELAH seluruh HTML (termasuk elemen dari partial
+        // notification-permission-banner yang letaknya di bawah body) benar-benar
+        // selesai di-render. Sebelumnya diagnostic ini ditaruh langsung di
+        // atas <body> dan jalan SEBELUM elemen-elemen itu ada di DOM,
+        // sehingga hasil sebelumnya (false semua) tidak akurat.
+        window.addEventListener('load', function () {
         try {
             log('fcm-debug-status element ada?', !!document.getElementById('fcm-debug-status'));
             log('fcm-permission-banner element ada?', !!document.getElementById('fcm-permission-banner'));
@@ -137,6 +144,7 @@
         }).catch(function (e) {
             console.error('[DIAG] Gagal fetch headers:', e.message);
         });
+        }); // end window load listener
     })();
 </script>
 <div style="position:fixed;top:0;left:0;right:0;background:red;color:white;text-align:center;padding:10px;z-index:999999;font-weight:bold;font-size:16px;">
