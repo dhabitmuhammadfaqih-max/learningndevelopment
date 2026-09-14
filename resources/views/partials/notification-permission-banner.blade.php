@@ -74,6 +74,19 @@
             const message = document.getElementById('fcm-permission-message');
             const actions = document.getElementById('fcm-permission-actions');
 
+            // Diagnostik mode selalu ditampilkan di iOS (walau nanti bisa
+            // ketimpa pesan showDebug lain yang lebih spesifik di bawah) -
+            // supaya pas testing langsung ketauan device kedetect standalone
+            // (PWA dari Home Screen) atau masih browser tab biasa, tanpa
+            // perlu console/Mac.
+            if (isIos) {
+                showDebug(
+                    'Mode: ' + (isStandalone ? 'STANDALONE (PWA icon)' : 'BROWSER TAB (bukan PWA)')
+                    + ' | navigator.standalone=' + window.navigator.standalone
+                    + ' | matchMedia=' + window.matchMedia('(display-mode: standalone)').matches
+                );
+            }
+
             if (isIos && !isStandalone) {
                 title.textContent = 'Pasang aplikasi untuk notifikasi';
                 message.innerHTML = 'Di Safari, ketuk <strong>Bagikan</strong> lalu <strong>Tambahkan ke Layar Utama</strong>. Setelah itu buka aplikasi dari ikon baru tersebut dan aktifkan notifikasi.';
@@ -130,16 +143,16 @@
                     return;
                 }
 
-                Notification.requestPermission().then((permission) => {
-                    if (permission === 'granted') {
+                // Jalankan initFcm dengan requestPermission=true.
+                // requestPermission() di dalam initFcm dipanggil sebelum
+                // await apa pun, sehingga tetap berada dalam konteks tap user
+                // yang dibutuhkan Safari iOS.
+                window.initFcm({ requestPermission: true }).then(() => {
+                    if (Notification.permission === 'granted') {
                         banner.classList.add('hidden');
-                        window.initFcm();
-                    } else {
-                        banner.classList.add('hidden');
-                        showDebug('User menolak popup izin notifikasi atau Safari tidak mengizinkannya.');
                     }
                 }).catch((error) => {
-                    showDebug('Popup izin notifikasi gagal dibuka: ' + (error?.message || error));
+                    showDebug('Gagal mengaktifkan notifikasi: ' + (error?.message || error));
                 });
             });
 

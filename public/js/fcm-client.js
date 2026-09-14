@@ -42,6 +42,16 @@
     firebase.initializeApp(config);
     const messaging = firebase.messaging();
 
+    function isIOS() {
+        return /iPhone|iPad|iPod/i.test(navigator.userAgent)
+            || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    }
+
+    function isStandalonePwa() {
+        return window.navigator.standalone === true
+            || window.matchMedia('(display-mode: standalone)').matches;
+    }
+
     // Dipakai ulang oleh foreground handler (onMessage) supaya bisa pakai
     // registration.showNotification() - BUKAN `new Notification()`, karena
     // constructor itu tidak didukung sama sekali di Safari iOS (baik tab
@@ -101,6 +111,12 @@
             // nganggep ini di luar konteks klik user dan bakal nolak
             // diam-diam tanpa nampilin popup sama sekali.
             if (permission === 'default' && requestPermission) {
+                // IMPORTANT: this call must happen immediately from the button
+                // click path on iOS. Do not put any await before it.
+                if (isIOS() && !isStandalonePwa()) {
+                    throw new Error('Di iPhone, notifikasi hanya bisa diaktifkan dari Web App yang dibuka dari Home Screen.');
+                }
+
                 permission = await Notification.requestPermission();
             }
 
@@ -112,6 +128,10 @@
 
             // Baru register service worker SETELAH izin granted.
             const registration = await registerServiceWorker();
+
+            if (!config.vapidKey) {
+                throw new Error('FIREBASE_VAPID_KEY belum tersedia di konfigurasi client.');
+            }
 
             const token = await messaging.getToken({
                 vapidKey: config.vapidKey,

@@ -248,16 +248,16 @@
 <!-- HEADER DOKUMEN -->
 <table class="header-table">
     <tr>
-        <td class="header-logo">
+        <td class="header-logo" valign="middle">
             <img src="{{ public_path('images/logo-dagsap.png') }}" alt="Logo Dagsap" style="height:65px; margin-bottom:2px;"><br>
             PT. DAGSAP ENDURA EATORE
         </td>
-        <td class="header-title">
+        <td class="header-title" valign="middle">
             FORM<br>
             PENILAIAN KINERJA<br>
             PEJABAT
         </td>
-        <td class="header-meta">
+        <td class="header-meta" valign="middle">
             <table>
                 <tr><td>Nomor Dokumen</td><td>: FRM.HRD.03.06</td></tr>
                 <tr><td>Revisi</td><td>: 0</td></tr>
