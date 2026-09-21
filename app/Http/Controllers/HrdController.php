@@ -2373,4 +2373,59 @@ class HrdController extends Controller
             '.pdf'
         );
     }
+
+    /**
+     * Daftar permintaan kode pertemuan yang KEDUA pihaknya (subject &
+     * issuer) sudah sama-sama menekan "Minta Kode" tapi belum
+     * di-generate - lihat App\Models\MeetingCode::scopeSiapDigenerate().
+     * HRD tinggal menekan "Buat Kode" di baris yang sesuai.
+     *
+     * Dibatasi ke tahun yang dipilih ($tahun), sama seperti halaman
+     * HRD lain - lihat App\Http\Concerns\FiltersByTahun.
+     */
+    public function meetingCodeRequests(Request $request)
+    {
+        $tahun = $this->selectedTahun($request);
+        $availableTahun = $this->availableTahunOptions();
+
+        $pendingRequests = \App\Models\MeetingCode::with(['subject', 'issuer'])
+            ->siapDigenerate()
+            ->where('tahun', $tahun)
+            ->latest('issuer_requested_at')
+            ->get();
+
+        // Riwayat kode yang sudah di-generate tahun ini, buat referensi
+        // HRD (masih aktif/menunggu dipakai, atau sudah dipakai/kedaluwarsa).
+        $recentlyGenerated = \App\Models\MeetingCode::with(['subject', 'issuer', 'generatedBy', 'usedBy'])
+            ->where('tahun', $tahun)
+            ->whereNotNull('code')
+            ->latest('generated_at')
+            ->limit(30)
+            ->get();
+
+        return view('admin.meeting-code-requests', compact(
+            'pendingRequests',
+            'recentlyGenerated',
+            'tahun',
+            'availableTahun'
+        ));
+    }
+
+    /**
+     * HRD menekan "Buat Kode" untuk satu permintaan - lihat
+     * App\Models\MeetingCode::generate(). Kodenya lalu tampil otomatis
+     * di dashboard subject maupun issuer lewat MeetingCode::activeFor().
+     */
+    public function generateMeetingCode(Request $request, $meetingCode)
+    {
+        $row = \App\Models\MeetingCode::findOrFail($meetingCode);
+
+        try {
+            \App\Models\MeetingCode::generate($row, $request->user());
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return back()->with('error', collect($e->errors())->collapse()->first());
+        }
+
+        return back()->with('success', 'Kode pertemuan dibuat, sudah tampil di dashboard kedua pihak.');
+    }
 }

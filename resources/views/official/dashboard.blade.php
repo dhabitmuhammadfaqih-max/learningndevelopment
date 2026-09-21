@@ -219,15 +219,15 @@
                                 @php
                                     $atasanSudahCentang    = $pejabat->atasanSudahKonfirmasiPertemuan();
                                     $atasanBolehCentang    = $pejabat->checklistPertemuanPejabatBolehDiisi();
-                                    // Kode pertemuan yang masih berlaku untuk pejabat ini, supaya
-                                    // kode tetap tampil setelah halaman di-refresh tanpa perlu
-                                    // generate ulang - lihat App\Models\MeetingCode::activeFor().
-                                    // Query hanya dijalankan untuk baris yang memang masih
-                                    // butuh kode - tanpa syarat ini, halaman dengan banyak
-                                    // pejabat binaan akan menembak 1 query tambahan per baris
-                                    // walau checklist-nya sudah lama selesai.
-                                    $atasanKodeAktif       = (! $atasanSudahCentang && $atasanBolehCentang)
-                                        ? \App\Models\MeetingCode::activeFor($pejabat->id, \App\Models\MeetingCode::CONTEXT_PEJABAT)
+                                    // Baris permintaan/kode yang masih terbuka untuk pejabat ini,
+                                    // supaya statusnya tetap tampil setelah halaman di-refresh -
+                                    // lihat App\Models\MeetingCode::openFor(). Query hanya
+                                    // dijalankan untuk baris yang memang masih butuh kode - tanpa
+                                    // syarat ini, halaman dengan banyak pejabat binaan akan
+                                    // menembak 1 query tambahan per baris walau checklist-nya
+                                    // sudah lama selesai.
+                                    $atasanMeetingRow      = (! $atasanSudahCentang && $atasanBolehCentang)
+                                        ? \App\Models\MeetingCode::openFor($pejabat->id, \App\Models\MeetingCode::CONTEXT_PEJABAT, \App\Support\ActivePeriod::year())
                                         : null;
                                     // Terkunci begitu HRD sudah tanda tangan penilaian pejabat ini -
                                     // lihat User::hrdSudahMenandatanganiPenilaianPejabat().
@@ -239,8 +239,9 @@
                                     @include('partials.checklist-pertemuan-toggle', [
                                         'action' => route('supervisor.official.checklist-pertemuan.toggle', $pejabat->id),
                                         'mode' => 'issuer',
-                                        'codeAction' => route('supervisor.official.meeting-code.generate', $pejabat->id),
-                                        'activeCode' => $atasanKodeAktif,
+                                        'requestAction' => route('supervisor.official.meeting-code.request', $pejabat->id),
+                                        'meetingRow' => $atasanMeetingRow,
+                                        'counterpartLabel' => 'pejabat yang bersangkutan',
                                         'checked' => $atasanSudahCentang,
                                         'checkedAt' => $pejabat->atasan_konfirmasi_pertemuan_at,
                                         'selfieUrl' => $pejabat->atasan_konfirmasi_pertemuan_selfie ? Storage::disk('public')->url($pejabat->atasan_konfirmasi_pertemuan_selfie) : null,
@@ -254,6 +255,17 @@
                                         'hrdLocked' => $atasanHrdLocked,
                                         'hrdLockedMessage' => 'Terkunci - penilaian sudah ditanda-tangani HRD.',
                                     ])
+
+                                    {{-- Atur Korelasi: Atasan menentukan pejabat lain mana yang
+                                         boleh ditanggapi pejabat ini - lihat
+                                         SupervisorController::korelasi(). --}}
+                                    <a href="{{ route('supervisor.official.korelasi', $pejabat->id) }}"
+                                       class="text-center rounded-xl border border-indigo-200 text-indigo-600 text-sm font-semibold px-4 py-2.5 hover:bg-indigo-50 transition">
+                                        Atur Korelasi
+                                        <span class="ml-1 text-[11px] font-bold px-2 py-0.5 rounded-full {{ $pejabat->korelasi_pemberi_count > 0 ? 'bg-indigo-100 text-indigo-700' : 'bg-rose-100 text-rose-600' }}">
+                                            {{ $pejabat->korelasi_pemberi_count }}
+                                        </span>
+                                    </a>
 
                                     {{-- Tombol Nilai Pejabat --}}
                                     @if ($pejabatBinaanLocked)
@@ -360,10 +372,10 @@
                                             // pertemuan yang dibuat di sini lalu dimasukkan pegawai.
                                             $penilaiSudahCentang = $employee->penilaiSudahKonfirmasiPertemuan();
                                             $penilaiBolehCentang = $employee->checklistPertemuanPenilaiBolehDiisi();
-                                            // Kode pertemuan yang masih berlaku untuk pegawai ini -
-                                            // lihat App\Models\MeetingCode::activeFor().
-                                            $penilaiKodeAktif    = (! $penilaiSudahCentang && $penilaiBolehCentang)
-                                                ? \App\Models\MeetingCode::activeFor($employee->id, \App\Models\MeetingCode::CONTEXT_PEGAWAI)
+                                            // Baris permintaan/kode yang masih terbuka untuk pegawai
+                                            // ini - lihat App\Models\MeetingCode::openFor().
+                                            $penilaiMeetingRow   = (! $penilaiSudahCentang && $penilaiBolehCentang)
+                                                ? \App\Models\MeetingCode::openFor($employee->id, \App\Models\MeetingCode::CONTEXT_PEGAWAI, \App\Support\ActivePeriod::year())
                                                 : null;
                                             // Terkunci begitu HRD sudah tanda tangan penilaian pegawai ini -
                                             // lihat User::hrdSudahMenandatanganiPenilaian().
@@ -372,8 +384,9 @@
                                         @include('partials.checklist-pertemuan-toggle', [
                                             'action' => route('official.employee.checklist-pertemuan.toggle', $employee->id),
                                             'mode' => 'issuer',
-                                            'codeAction' => route('official.employee.meeting-code.generate', $employee->id),
-                                            'activeCode' => $penilaiKodeAktif,
+                                            'requestAction' => route('official.employee.meeting-code.request', $employee->id),
+                                            'meetingRow' => $penilaiMeetingRow,
+                                            'counterpartLabel' => 'pegawai yang bersangkutan',
                                             'checked' => $penilaiSudahCentang,
                                             'checkedAt' => $employee->penilai_konfirmasi_pertemuan_at,
                                             'selfieUrl' => $employee->penilai_konfirmasi_pertemuan_selfie ? Storage::disk('public')->url($employee->penilai_konfirmasi_pertemuan_selfie) : null,
@@ -387,6 +400,17 @@
                                             'hrdLocked' => $penilaiHrdLocked,
                                             'hrdLockedMessage' => 'Terkunci - penilaian sudah ditanda-tangani HRD.',
                                         ])
+
+                                        {{-- Atur Korelasi: Penilai menentukan rekan kerja mana yang
+                                             boleh ditanggapi pegawai ini - lihat
+                                             OfficialController::korelasi(). --}}
+                                        <a href="{{ route('official.employee.korelasi', $employee->id) }}"
+                                           class="text-center rounded-xl border border-indigo-200 text-indigo-600 text-sm font-semibold px-4 py-2.5 hover:bg-indigo-50 transition">
+                                            Atur Korelasi
+                                            <span class="ml-1 text-[11px] font-bold px-2 py-0.5 rounded-full {{ $employee->korelasi_pemberi_count > 0 ? 'bg-indigo-100 text-indigo-700' : 'bg-rose-100 text-rose-600' }}">
+                                                {{ $employee->korelasi_pemberi_count }}
+                                            </span>
+                                        </a>
                                     @endif
 
                                     @if ($alreadyEvaluated)
@@ -585,11 +609,13 @@
             <div id="beri-tanggapan" class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 sm:p-7">
                 <h3 class="text-lg font-bold text-slate-800 mb-1">Beri Tanggapan ke Pejabat Lain</h3>
                 <p class="text-xs text-slate-400 mb-5">
-                    Anda bisa memberi tanggapan untuk pejabat lain dari unit kerja manapun.
+                    Anda hanya bisa menanggapi pejabat yang Atasan-nya menunjuk Anda sebagai korelasi.
                 </p>
 
                 @if ($peerOfficials->isEmpty())
-                    <p class="text-sm text-slate-400">Belum ada pejabat lain yang terdaftar.</p>
+                    <p class="text-sm text-slate-400">
+                        Belum ada pejabat yang perlu Anda tanggapi.
+                    </p>
                 @else
                     <form method="POST" action="{{ route('official.feedback') }}" id="form-official-feedback" class="space-y-4" data-autosave>
                         @csrf

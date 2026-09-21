@@ -250,7 +250,7 @@
     <tr>
         <td class="header-logo" valign="middle">
             <img src="{{ public_path('images/logo-dagsap.png') }}" alt="Logo Dagsap" style="height:65px; margin-bottom:2px;"><br>
-            PT. DAGSAP ENDURA EATORE
+            PT DAGSAP ENDURA EATORE
         </td>
         <td class="header-title" valign="middle">
             FORM<br>

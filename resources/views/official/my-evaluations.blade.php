@@ -49,17 +49,24 @@
         // Terkunci begitu HRD sudah tanda tangan penilaian ini - lihat
         // User::hrdSudahMenandatanganiPenilaianPejabat().
         $pejabatHrdLocked = auth()->user()->hrdSudahMenandatanganiPenilaianPejabat();
+        // Baris permintaan/kode yang masih terbuka untuk penilaian diri
+        // sendiri - lihat App\Models\MeetingCode::openFor().
+        $pejabatMeetingRow = (! $pejabatSudahCentang && $pejabatBolehCentang)
+            ? \App\Models\MeetingCode::openFor(auth()->id(), \App\Models\MeetingCode::CONTEXT_PEJABAT, \App\Support\ActivePeriod::year())
+            : null;
     @endphp
     <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 sm:p-7 mb-8">
         <h3 class="text-lg font-bold text-slate-800 mb-2">Checklist Pertemuan &amp; Evaluasi</h3>
         <p class="text-sm text-slate-400 mb-4">
-            Centang setelah Anda bertemu dan mendiskusikan hasil evaluasi dengan Atasan Anda. Untuk pertemuan offline, masukkan kode yang ditunjukkan Atasan Anda sebagai bukti.
+            Centang setelah Anda bertemu dan mendiskusikan hasil evaluasi dengan Atasan Anda. Untuk pertemuan offline, Penilai meminta kode ke HRD, lalu kalian berdua menekan "Sudah Bertemu".
             HRD tidak dapat mencetak PDF penilaian Anda sebelum checklist ini dicentang.
         </p>
 
         @include('partials.checklist-pertemuan-toggle', [
             'action' => route('official.checklist-pertemuan-saya.toggle'),
             'mode' => 'subject',
+            'meetingRow' => $pejabatMeetingRow,
+            'counterpartLabel' => 'Atasan Anda',
             'checked' => $pejabatSudahCentang,
             'checkedAt' => auth()->user()->pejabat_konfirmasi_pertemuan_at,
             'selfieUrl' => auth()->user()->pejabat_konfirmasi_pertemuan_selfie ? Storage::disk('public')->url(auth()->user()->pejabat_konfirmasi_pertemuan_selfie) : null,

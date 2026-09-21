@@ -712,6 +712,37 @@ class User extends Authenticatable
         );
     }
 
+    /**
+     * Rekan kerja yang BOLEH ditanggapi akun ini = akun-akun yang
+     * menunjuk akun ini sebagai korelasinya (ditentukan Penilai/Atasan
+     * mereka). Satu-satunya sumber daftar di "Berikan Tanggapan kepada
+     * Rekan Kerja" & pengecekan EmployeeController::feedback().
+     */
+    public function korelasiTargets()
+    {
+        return $this->belongsToMany(
+            User::class,
+            'korelasi_assignments',
+            'reviewer_id',
+            'target_id'
+        )->withTimestamps();
+    }
+
+    /**
+     * Korelasi akun ini = akun-akun yang ditunjuk Penilai/Atasan untuk
+     * MEMBERI tanggapan kepada akun ini. Dipakai untuk badge jumlah di
+     * tombol "Atur Korelasi" (withCount('korelasiPemberi')).
+     */
+    public function korelasiPemberi()
+    {
+        return $this->belongsToMany(
+            User::class,
+            'korelasi_assignments',
+            'target_id',
+            'reviewer_id'
+        )->withTimestamps();
+    }
+
     public function feedbacksReceived()
     {
         return $this->hasMany(

@@ -7,6 +7,7 @@ use App\Models\OfficialEvaluation;
 use App\Services\NotificationTriggerService;
 use App\Support\AccountSignature;
 use App\Http\Controllers\Concerns\HandlesChecklistEvidence;
+use App\Http\Controllers\Concerns\ManagesKorelasi;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
@@ -14,6 +15,7 @@ use Illuminate\Support\Facades\Storage;
 class SupervisorController extends Controller
 {
     use HandlesChecklistEvidence;
+    use ManagesKorelasi;
 
     // Method index()/show()/feedback() ("Dashboard Atasan") sudah dihapus.
     // Fitur tanggapan atasan penilai untuk pegawai sekarang hanya bisa
@@ -321,13 +323,34 @@ class SupervisorController extends Controller
             );
         }
 
-        // ATASAN yang MEMBUAT kode pertemuan, bukan memasukkannya -
-        // lihat catatan di OfficialController::toggleChecklistPertemuanPegawai().
+        // Metode Offline: ATASAN tidak mengetik kode, cukup menekan
+        // "Sudah Bertemu" untuk kode yang sudah dibuat HRD - lihat
+        // OfficialController::toggleChecklistPertemuanPegawai().
         if ($request->input('evidence_type') === 'kode') {
-            return back()->with(
-                'error',
-                'Untuk pertemuan Offline, tekan "Buat Kode Pertemuan" lalu minta pejabat memasukkan kodenya.'
+            $tahun = \App\Support\ActivePeriod::year();
+
+            $kodeRecord = \App\Models\MeetingCode::confirmByIssuer(
+                $pejabat,
+                $request->user(),
+                \App\Models\MeetingCode::CONTEXT_PEJABAT,
+                $tahun
             );
+
+            $this->deleteChecklistEvidence($pejabat->atasan_konfirmasi_pertemuan_selfie);
+
+            $pejabat->update([
+                'atasan_konfirmasi_pertemuan_at' => now(),
+                'atasan_konfirmasi_pertemuan_selfie' => null,
+                'atasan_konfirmasi_pertemuan_evidence_type' => 'kode',
+                'atasan_konfirmasi_pertemuan_metode' => null,
+                'atasan_konfirmasi_pertemuan_kode' => $kodeRecord->code,
+                'atasan_konfirmasi_pertemuan_tahun' => $tahun,
+            ]);
+
+            app(NotificationTriggerService::class)
+                ->triggerSiapTandaTanganHrdPejabatJikaPerlu($pejabat);
+
+            return back()->with('success', 'Checklist pertemuan & evaluasi berhasil dicentang.');
         }
 
         [$selfiePath, $evidenceType, $meetingMethod, $meetingCode] = $this->resolveChecklistEvidence($request, 'atasan', $pejabat->id);
@@ -352,12 +375,12 @@ class SupervisorController extends Controller
     }
 
     /**
-     * ATASAN menekan "Buat Kode Pertemuan" untuk pejabat ini - versi
-     * pejabat dari OfficialController::generateMeetingCodePegawai().
-     * Lihat App\Models\MeetingCode untuk alur & alasan kode ini sah
-     * sebagai bukti tatap muka.
+     * ATASAN menekan "Minta Kode" untuk pejabat ini - versi pejabat
+     * dari OfficialController::requestMeetingCodePegawai(). Permintaan
+     * langsung muncul di halaman "Permintaan Kode" HRD untuk
+     * di-generate. Lihat App\Models\MeetingCode untuk alur lengkapnya.
      */
-    public function generateMeetingCodePejabat(Request $request, $id)
+    public function requestMeetingCodePejabat(Request $request, $id)
     {
         $pejabat = User::where('role', 'pejabat')->findOrFail($id);
 
@@ -368,7 +391,7 @@ class SupervisorController extends Controller
         if ($pejabat->hrdSudahMenandatanganiPenilaianPejabat()) {
             return back()->with(
                 'error',
-                'Kode pertemuan tidak bisa dibuat karena penilaian ini sudah ditanda-tangani HRD.'
+                'Kode pertemuan tidak bisa diminta karena penilaian ini sudah ditanda-tangani HRD.'
             );
         }
 
@@ -382,11 +405,11 @@ class SupervisorController extends Controller
         if (! $pejabat->checklistPertemuanPejabatBolehDiisi()) {
             return back()->with(
                 'error',
-                'Kode pertemuan belum bisa dibuat. Tanggapan dari Atasan Penilai untuk pejabat ini belum diselesaikan.'
+                'Kode pertemuan belum bisa diminta. Tanggapan dari Atasan Penilai untuk pejabat ini belum diselesaikan.'
             );
         }
 
-        \App\Models\MeetingCode::issue(
+        \App\Models\MeetingCode::request(
             $pejabat,
             $request->user(),
             \App\Models\MeetingCode::CONTEXT_PEJABAT,
@@ -395,8 +418,50 @@ class SupervisorController extends Controller
 
         return back()->with(
             'success',
-            'Kode pertemuan dibuat. Tunjukkan kode di layar ini ke pejabat yang bersangkutan.'
+            'Permintaan kode terkirim. Tunggu HRD membuat kodenya, lalu tekan "Sudah Bertemu" setelah bertemu dengan pejabat.'
         );
+    }
+
+    /**
+     * Halaman "Atur Korelasi" untuk PEJABAT binaan: ATASAN (users.
+     * supervisor_id pejabat ini) menentukan pejabat lain mana saja yang
+     * menjadi KORELASI pejabat tsb, yaitu yang MEMBERI tanggapan
+     * kepadanya - versi pejabat dari OfficialController::korelasi().
+     * Pejabat yang dicentang melihat pejabat ini di "Beri Tanggapan ke
+     * Pejabat Lain" - lihat OfficialController::index() & feedback().
+     */
+    public function korelasi($id)
+    {
+        $pejabat = $this->atasanOfPejabat($id);
+
+        return $this->renderKorelasiPage(
+            $pejabat,
+            'pejabat',
+            route('supervisor.official.korelasi.update', $pejabat->id)
+        );
+    }
+
+    public function updateKorelasi(Request $request, $id)
+    {
+        $pejabat = $this->atasanOfPejabat($id);
+
+        return $this->saveKorelasi(
+            $request,
+            $pejabat,
+            'pejabat',
+            route('supervisor.official.korelasi', $pejabat->id)
+        );
+    }
+
+    private function atasanOfPejabat($id): User
+    {
+        $pejabat = User::where('role', 'pejabat')->findOrFail($id);
+
+        if ((int) $pejabat->supervisor_id !== Auth::id()) {
+            abort(403, 'Anda bukan Atasan yang ditugaskan untuk menilai pejabat ini.');
+        }
+
+        return $pejabat;
     }
 
     /**

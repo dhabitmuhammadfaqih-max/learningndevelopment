@@ -178,9 +178,18 @@ class PendingActions
             ->tahunAktif()
             ->count();
 
+        // Permintaan kode pertemuan yang kedua pihaknya sudah minta
+        // tapi belum di-generate HRD - lihat
+        // App\Models\MeetingCode::scopeSiapDigenerate().
+        $meetingCodePending = \App\Models\MeetingCode::query()
+            ->siapDigenerate()
+            ->where('tahun', \App\Support\ActivePeriod::year())
+            ->count();
+
         return [
             'admin.employees' => $employeePending,
             'admin.officials' => $officialPending,
+            'admin.meeting-codes' => $meetingCodePending,
         ];
     }
 }

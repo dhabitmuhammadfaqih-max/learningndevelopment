@@ -11,20 +11,24 @@ use App\Models\OfficialSupervisorFeedback;
 use App\Services\NotificationTriggerService;
 use App\Support\AccountSignature;
 use App\Http\Controllers\Concerns\HandlesChecklistEvidence;
+use App\Http\Controllers\Concerns\ManagesKorelasi;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Database\QueryException;
 
 class OfficialController extends Controller
 {
     use HandlesChecklistEvidence;
+    use ManagesKorelasi;
 
     public function index()
     {
         $employees = $this->scopedEmployeesQuery()
             ->withCount('feedbacksReceived')
             ->withCount('supervisorFeedbacks')
+            ->withCount('korelasiPemberi')
             ->with(['evaluations' => function ($query) {
                 // Difilter ke tahun berjalan supaya status "sudah dinilai"
                 // di dashboard cuma mencerminkan siklus penilaian tahun
@@ -74,6 +78,7 @@ class OfficialController extends Controller
                 }]
             )
             ->withCount('feedbacksReceived')
+            ->withCount('korelasiPemberi')
             ->with(['officialEvaluations' => function ($query) {
                 // Dipakai untuk mengecek employee_signature supaya tombol
                 // "Nilai Pejabat" ikut berubah jadi "Lihat Penilaian" +
@@ -117,13 +122,26 @@ class OfficialController extends Controller
         // memberi tanggapan sekali ke satu orang yang sama (lihat juga
         // pengecekan di feedback()).
         $alreadyGivenPeerFeedbackIds = Feedback::where('reviewer_id', Auth::id())
-            ->pluck('employee_id');
+            ->pluck('employee_id')
+            ->map(fn ($v) => (int) $v);
 
-        $peerOfficials = User::where('role', 'pejabat')
-            ->where('id', '!=', Auth::id())
-            ->whereNotIn('id', $alreadyGivenPeerFeedbackIds)
-            ->orderBy('name')
-            ->get();
+        // Pejabat yang BOLEH ditanggapi = pejabat yang Atasan-nya menunjuk
+        // akun ini sebagai korelasi (lihat SupervisorController::korelasi()
+        // & App\Models\KorelasiAssignment). Akun yang belum pernah
+        // ditunjuk melihat daftar KOSONG.
+        $korelasiTargets = Auth::user()
+            ->korelasiTargets()
+            ->where('users.role', 'pejabat')
+            ->orderBy('users.name')
+            ->get()
+            ->each(function ($target) use ($alreadyGivenPeerFeedbackIds) {
+                $target->sudah_ditanggapi = $alreadyGivenPeerFeedbackIds->contains((int) $target->id);
+            });
+
+        // Yang masih perlu ditanggapi - satu-satunya isi picker.
+        $peerOfficials = $korelasiTargets
+            ->reject(fn ($target) => $target->sudah_ditanggapi)
+            ->values();
 
         $myPeerFeedbacks = Feedback::where('employee_id', Auth::id())
             ->whereHas('reviewer', function ($query) {
@@ -156,6 +174,7 @@ class OfficialController extends Controller
             'pejabatBinaan',
             'atasanPenilaiPejabatList',
             'peerOfficials',
+            'korelasiTargets',
             'myPeerFeedbacks',
             'myGivenPeerFeedbacks',
             'sudahDinilaiEmployees'
@@ -254,6 +273,19 @@ class OfficialController extends Controller
         if ($targetOfficial->id === Auth::id()) {
             return back()
                 ->withErrors(['official_id' => 'Anda tidak bisa memberi tanggapan untuk diri sendiri.'])
+                ->withInput();
+        }
+
+        // Hanya boleh menanggapi pejabat yang MENUNJUK akun ini sebagai
+        // korelasinya (ditentukan Atasan mereka, lihat KorelasiAssignment) - dicek di server juga, bukan cuma
+        // dibatasi lewat pilihan di dashboard.
+        $ditentukanAtasan = \App\Models\KorelasiAssignment::where('reviewer_id', Auth::id())
+            ->where('target_id', $targetOfficial->id)
+            ->exists();
+
+        if (! $ditentukanAtasan) {
+            return back()
+                ->withErrors(['official_id' => 'Anda hanya bisa memberi tanggapan kepada pejabat yang menunjuk Anda sebagai korelasinya (ditentukan Atasan mereka).'])
                 ->withInput();
         }
 
@@ -1252,21 +1284,10 @@ class OfficialController extends Controller
             'pejabat_konfirmasi_pertemuan_tahun' => $tahun,
         ]);
 
-        // Satu kode = satu pertemuan berdua, jadi checklist ATASAN ikut
-        // tercentang sekaligus - lihat catatan lengkapnya di
-        // EmployeeController::toggleChecklistPertemuan().
-        if ($kodeRecord && ! $user->atasanSudahKonfirmasiPertemuan($tahun)) {
-            $this->deleteChecklistEvidence($user->atasan_konfirmasi_pertemuan_selfie);
-
-            $user->update([
-                'atasan_konfirmasi_pertemuan_at' => now(),
-                'atasan_konfirmasi_pertemuan_selfie' => null,
-                'atasan_konfirmasi_pertemuan_evidence_type' => 'kode',
-                'atasan_konfirmasi_pertemuan_metode' => null,
-                'atasan_konfirmasi_pertemuan_kode' => $kodeRecord->code,
-                'atasan_konfirmasi_pertemuan_tahun' => $tahun,
-            ]);
-        }
+        // Satu kode = satu pertemuan berdua, tapi masing-masing menekan
+        // "Sudah Bertemu" sendiri: pejabat lewat sini, Atasan lewat
+        // SupervisorController::toggleChecklistPertemuanPejabat(). Jadi
+        // yang tercentang di sini HANYA checklist pejabat.
 
         // Kalau checklist ATASAN untuk pejabat ini sudah lebih dulu
         // lengkap, checklist PEJABAT barusan ini yang melengkapi syarat
@@ -1277,27 +1298,24 @@ class OfficialController extends Controller
         return back()->with(
             'success',
             $evidenceType === 'kode'
-                ? 'Kode pertemuan cocok. Checklist Anda dan Atasan sudah tercentang, datanya diteruskan ke HRD.'
+                ? 'Kode pertemuan cocok. Checklist Anda sudah tercentang. HRD baru bisa menandatangani setelah Atasan juga menekan "Sudah Bertemu".'
                 : 'Checklist pertemuan & evaluasi berhasil dicentang.'
         );
     }
 
     /**
-     * PENILAI menekan "Generate Kode" untuk pegawai ini - langkah
-     * pertama bukti checklist metode Offline, pengganti selfie.
-     *
-     * Kode hasil generate HANYA dikembalikan ke layar penilai (lewat
-     * MeetingCode::activeFor() saat halaman dirender ulang), TIDAK
-     * pernah dikirim ke pegawai lewat jalur apa pun - itulah yang
-     * membuat kode ini sah sebagai bukti pertemuan tatap muka. Lihat
-     * App\Models\MeetingCode.
+     * PENILAI menekan "Minta Kode" untuk pegawai ini - satu-satunya
+     * yang meminta dalam alur kode pertemuan lewat HRD. Permintaan
+     * langsung muncul di halaman "Permintaan Kode" HRD untuk
+     * di-generate, kodenya lalu tampil di dashboard KEDUA pihak.
+     * Lihat App\Models\MeetingCode.
      *
      * Syaratnya sama persis dengan mencentang checklist secara manual
      * (toggleChecklistPertemuanPegawai di bawah): penilai yang
      * ditugaskan, belum dikunci HRD, dan checklist memang sudah boleh
      * diisi.
      */
-    public function generateMeetingCodePegawai(Request $request, $id)
+    public function requestMeetingCodePegawai(Request $request, $id)
     {
         $employee = User::where('role', 'pegawai')->findOrFail($id);
 
@@ -1308,7 +1326,7 @@ class OfficialController extends Controller
         if ($employee->hrdSudahMenandatanganiPenilaian()) {
             return back()->with(
                 'error',
-                'Kode pertemuan tidak bisa dibuat karena penilaian ini sudah ditanda-tangani HRD.'
+                'Kode pertemuan tidak bisa diminta karena penilaian ini sudah ditanda-tangani HRD.'
             );
         }
 
@@ -1322,11 +1340,11 @@ class OfficialController extends Controller
         if (! $employee->checklistPertemuanPenilaiBolehDiisi()) {
             return back()->with(
                 'error',
-                'Kode pertemuan belum bisa dibuat. Tanggapan dari Atasan Penilai untuk pegawai ini belum diselesaikan.'
+                'Kode pertemuan belum bisa diminta. Tanggapan dari Atasan Penilai untuk pegawai ini belum diselesaikan.'
             );
         }
 
-        \App\Models\MeetingCode::issue(
+        \App\Models\MeetingCode::request(
             $employee,
             $request->user(),
             \App\Models\MeetingCode::CONTEXT_PEGAWAI,
@@ -1335,8 +1353,59 @@ class OfficialController extends Controller
 
         return back()->with(
             'success',
-            'Kode pertemuan dibuat. Tunjukkan kode di layar ini ke pegawai yang bersangkutan.'
+            'Permintaan kode terkirim. Tunggu HRD membuat kodenya, lalu tekan "Sudah Bertemu" setelah bertemu dengan pegawai.'
         );
+    }
+
+    /**
+     * Halaman "Atur Korelasi": PENILAI (users.supervisor_id pegawai ini,
+     * bukan Atasan Penilai) menentukan pegawai mana saja yang menjadi
+     * KORELASI pegawai ini, yaitu yang MEMBERI tanggapan kepadanya.
+     * Pegawai yang dicentang akan melihat pegawai ini di "Berikan
+     * Tanggapan kepada Rekan Kerja" miliknya - lihat
+     * EmployeeController::index() & feedback().
+     */
+    public function korelasi($id)
+    {
+        $employee = $this->penilaiOfEmployee($id);
+
+        return $this->renderKorelasiPage(
+            $employee,
+            'pegawai',
+            route('official.employee.korelasi.update', $employee->id)
+        );
+    }
+
+    /**
+     * Simpan daftar korelasi pegawai $id - lihat
+     * Concerns\ManagesKorelasi::saveKorelasi().
+     */
+    public function updateKorelasi(Request $request, $id)
+    {
+        $employee = $this->penilaiOfEmployee($id);
+
+        return $this->saveKorelasi(
+            $request,
+            $employee,
+            'pegawai',
+            route('official.employee.korelasi', $employee->id)
+        );
+    }
+
+    /**
+     * Pegawai yang Penilai LANGSUNG-nya (users.supervisor_id) adalah akun
+     * yang sedang login. Atasan Penilai TIDAK termasuk - sama seperti
+     * checklist pertemuan Penilai.
+     */
+    private function penilaiOfEmployee($id): User
+    {
+        $employee = User::where('role', 'pegawai')->findOrFail($id);
+
+        if ((int) $employee->supervisor_id !== Auth::id()) {
+            abort(403, 'Anda bukan Penilai yang ditugaskan untuk pegawai ini.');
+        }
+
+        return $employee;
     }
 
     /**
@@ -1406,17 +1475,37 @@ class OfficialController extends Controller
             );
         }
 
-        // PENILAI tidak pernah MEMASUKKAN kode pertemuan - dia yang
-        // MEMBUAT kode (generateMeetingCodePegawai()), lalu
-        // checklist-nya ikut tercentang otomatis begitu pegawai
-        // memasukkan kode tsb (lihat
-        // EmployeeController::toggleChecklistPertemuan()). Jadi jalur
-        // submit manual di sini khusus metode Online saja.
+        // Metode Offline: PENILAI tidak mengetik kode, cukup menekan
+        // "Sudah Bertemu" untuk kode yang sudah dibuat HRD (pegawai
+        // menekan tombolnya sendiri di dashboard-nya). Hanya
+        // checklist milik Penilai yang tercentang di sini.
         if ($request->input('evidence_type') === 'kode') {
-            return back()->with(
-                'error',
-                'Untuk pertemuan Offline, tekan "Buat Kode Pertemuan" lalu minta pegawai memasukkan kodenya.'
+            $tahun = \App\Support\ActivePeriod::year();
+
+            // Melempar ValidationException kalau kode belum dibuat HRD
+            // atau sudah kedaluwarsa.
+            $kodeRecord = \App\Models\MeetingCode::confirmByIssuer(
+                $employee,
+                $request->user(),
+                \App\Models\MeetingCode::CONTEXT_PEGAWAI,
+                $tahun
             );
+
+            $this->deleteChecklistEvidence($employee->penilai_konfirmasi_pertemuan_selfie);
+
+            $employee->update([
+                'penilai_konfirmasi_pertemuan_at' => now(),
+                'penilai_konfirmasi_pertemuan_selfie' => null,
+                'penilai_konfirmasi_pertemuan_evidence_type' => 'kode',
+                'penilai_konfirmasi_pertemuan_metode' => null,
+                'penilai_konfirmasi_pertemuan_kode' => $kodeRecord->code,
+                'penilai_konfirmasi_pertemuan_tahun' => $tahun,
+            ]);
+
+            app(NotificationTriggerService::class)
+                ->triggerSiapTandaTanganHrdJikaPerlu($employee);
+
+            return back()->with('success', 'Checklist pertemuan & evaluasi berhasil dicentang.');
         }
 
         [$selfiePath, $evidenceType, $meetingMethod, $meetingCode] = $this->resolveChecklistEvidence($request, 'penilai', $employee->id);

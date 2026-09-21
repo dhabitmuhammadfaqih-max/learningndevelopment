@@ -20,19 +20,31 @@ class EmployeeController extends Controller
 
     public function index()
     {
-        // Kolega yang SUDAH diberi tanggapan (korelasi) oleh pegawai yang
-        // sedang login - dikecualikan dari $employees supaya tidak muncul
-        // lagi di daftar pilihan "Berikan Tanggapan Teman" (satu akun
-        // hanya boleh memberi tanggapan sekali ke satu orang yang sama -
-        // lihat juga pengecekan di feedback()).
-        $alreadyGivenFeedbackIds = Feedback::where('reviewer_id', auth::id())
-            ->pluck('employee_id');
+        // Rekan kerja yang SUDAH diberi tanggapan (korelasi) oleh pegawai
+        // yang sedang login - dikecualikan dari pilihan (satu akun hanya
+        // boleh memberi tanggapan sekali ke satu orang yang sama - lihat
+        // juga pengecekan di feedback()).
+        $alreadyGivenFeedbackIds = Feedback::where('reviewer_id', Auth::id())
+            ->pluck('employee_id')
+            ->map(fn ($v) => (int) $v);
 
-        $employees = User::where('role', 'pegawai')
-            ->where('id', '!=', auth::id())
-            ->whereNotIn('id', $alreadyGivenFeedbackIds)
-            ->orderBy('name')
-            ->get();
+        // Rekan kerja yang BOLEH ditanggapi = pegawai yang Penilai-nya
+        // menunjuk akun ini sebagai korelasi (lihat
+        // OfficialController::korelasi() & App\Models\KorelasiAssignment).
+        // Akun yang belum pernah ditunjuk melihat daftar KOSONG.
+        $korelasiTargets = Auth::user()
+            ->korelasiTargets()
+            ->where('users.role', 'pegawai')
+            ->orderBy('users.name')
+            ->get()
+            ->each(function ($target) use ($alreadyGivenFeedbackIds) {
+                $target->sudah_ditanggapi = $alreadyGivenFeedbackIds->contains((int) $target->id);
+            });
+
+        // Yang masih perlu ditanggapi - satu-satunya isi picker.
+        $employees = $korelasiTargets
+            ->reject(fn ($target) => $target->sudah_ditanggapi)
+            ->values();
 
         $employeeUnits = $employees
             ->pluck('unit_kerja')
@@ -92,6 +104,7 @@ class EmployeeController extends Controller
             ->where('id', '!=', auth::id())
             ->where('supervisor_id', auth::id())
             ->withCount('feedbacksReceived')
+            ->withCount('korelasiPemberi')
             ->with(['evaluations' => function ($query) {
                 $query->where('official_id', auth::id())->tahunAktif();
             }])
@@ -101,6 +114,7 @@ class EmployeeController extends Controller
         return view('employee.dashboard', compact(
             'employees',
             'employeeUnits',
+            'korelasiTargets',
             'myFeedbacks',
             'myGivenFeedbacks',
             'mySupervisorFeedback',
@@ -163,6 +177,21 @@ class EmployeeController extends Controller
         if ((int) $validated['employee_id'] === (int) Auth::id()) {
             return back()
                 ->withErrors(['employee_id' => 'Anda tidak bisa memberi tanggapan untuk diri sendiri.'])
+                ->withInput();
+        }
+
+        // Hanya boleh menanggapi rekan kerja yang MENUNJUK akun ini
+        // sebagai korelasinya (ditentukan Penilai mereka, lihat
+        // KorelasiAssignment) - dicek di server juga, bukan cuma
+        // dibatasi lewat pilihan di dashboard, supaya request yang
+        // dikirim manual tetap ditolak.
+        $ditentukanPenilai = \App\Models\KorelasiAssignment::where('reviewer_id', Auth::id())
+            ->where('target_id', $validated['employee_id'])
+            ->exists();
+
+        if (! $ditentukanPenilai) {
+            return back()
+                ->withErrors(['employee_id' => 'Anda hanya bisa memberi tanggapan kepada rekan kerja yang menunjuk Anda sebagai korelasinya (ditentukan Penilai mereka).'])
                 ->withInput();
         }
 
@@ -387,26 +416,11 @@ class EmployeeController extends Controller
             'pegawai_konfirmasi_pertemuan_tahun' => $tahun,
         ]);
 
-        // PENTING: satu kode = satu pertemuan yang dihadiri DUA orang.
-        // Penilai sudah membuktikan kehadirannya dengan menekan
-        // "Generate Kode" di perangkatnya sendiri, dan pegawai
-        // membuktikannya dengan mengetik kode itu - jadi checklist
-        // PENILAI ikut tercentang sekaligus di sini, tidak perlu
-        // dicentang terpisah lagi (dulu masing-masing selfie sendiri).
-        // Kalau checklist penilai sudah tercentang duluan lewat metode
-        // Online, biarkan apa adanya - jangan timpa bukti yang sudah ada.
-        if ($kodeRecord && ! $user->penilaiSudahKonfirmasiPertemuan($tahun)) {
-            $this->deleteChecklistEvidence($user->penilai_konfirmasi_pertemuan_selfie);
-
-            $user->update([
-                'penilai_konfirmasi_pertemuan_at' => now(),
-                'penilai_konfirmasi_pertemuan_selfie' => null,
-                'penilai_konfirmasi_pertemuan_evidence_type' => 'kode',
-                'penilai_konfirmasi_pertemuan_metode' => null,
-                'penilai_konfirmasi_pertemuan_kode' => $kodeRecord->code,
-                'penilai_konfirmasi_pertemuan_tahun' => $tahun,
-            ]);
-        }
+        // Satu kode = satu pertemuan yang dihadiri DUA orang, tapi
+        // masing-masing menekan "Sudah Bertemu" sendiri: pegawai lewat
+        // sini, Penilai lewat
+        // OfficialController::toggleChecklistPertemuanPegawai(). Jadi
+        // yang tercentang di sini HANYA checklist pegawai.
 
         // Kalau checklist PENILAI untuk pegawai ini sudah lebih dulu
         // lengkap, checklist PEGAWAI barusan ini yang melengkapi syarat
@@ -417,7 +431,7 @@ class EmployeeController extends Controller
         return back()->with(
             'success',
             $evidenceType === 'kode'
-                ? 'Kode pertemuan cocok. Checklist Anda dan Penilai sudah tercentang, datanya diteruskan ke HRD.'
+                ? 'Kode pertemuan cocok. Checklist Anda sudah tercentang. HRD baru bisa menandatangani setelah Penilai juga menekan "Sudah Bertemu".'
                 : 'Checklist pertemuan & evaluasi berhasil dicentang.'
         );
     }

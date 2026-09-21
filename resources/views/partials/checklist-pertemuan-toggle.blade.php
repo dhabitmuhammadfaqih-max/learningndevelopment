@@ -3,38 +3,44 @@
 
     MENGGANTIKAN partials/checklist-selfie-toggle.blade.php. Bukti
     metode OFFLINE yang dulu berupa selfie kamera sekarang berupa KODE
-    PERTEMUAN (lihat App\Models\MeetingCode):
+    PERTEMUAN yang di-generate HRD (lihat App\Models\MeetingCode):
 
-    - Pihak PENILAI/ATASAN ($mode = 'issuer') menekan "Buat Kode
-      Pertemuan". Kodenya tampil di layar dia saja, berlaku
-      MeetingCode::VALID_MINUTES menit.
-    - Pihak PEGAWAI/PEJABAT ($mode = 'subject') mengetik kode itu di
-      perangkatnya sendiri. Begitu cocok, checklist KEDUA pihak
-      tercentang sekaligus & HRD langsung diberi tahu - tidak ada
-      lagi dua bukti terpisah seperti waktu masih pakai selfie.
+    - Hanya PENILAI/ATASAN ($mode = 'issuer') yang menekan "Minta Kode"
+      di dashboard-nya. Pihak yang dinilai ($mode = 'subject') tidak
+      meminta apa-apa, cukup menunggu.
+    - Permintaan langsung masuk ke halaman "Permintaan Kode" milik HRD.
+      HRD menekan "Buat Kode", lalu kodenya tampil OTOMATIS di
+      dashboard KEDUA pihak.
+    - Setelah bertemu, KEDUA pihak menekan "Sudah Bertemu" (urutan
+      bebas) selama kode belum kedaluwarsa. Tiap pihak hanya
+      mencentang checklist-nya sendiri; HRD diberi tahu begitu
+      keduanya lengkap.
 
     Metode ONLINE (upload bukti Zoom/Telpon/Chat) TIDAK berubah sama
     sekali dan masih tersedia untuk kedua mode.
 
     Props:
-    - $action        (string)  route submit toggle checklist
-    - $mode          (string)  'subject' (yang dinilai, memasukkan kode)
-                               | 'issuer' (yang menilai, membuat kode)
-    - $checked       (bool)
-    - $checkedAt     (Carbon|null)
-    - $selfieUrl     (string|null) URL file bukti - hanya terisi untuk
+    - $action          (string)  route submit toggle checklist
+    - $mode            (string)  'subject' (yang dinilai)
+                                 | 'issuer' (yang menilai)
+    - $checked         (bool)
+    - $checkedAt       (Carbon|null)
+    - $selfieUrl       (string|null) URL file bukti - hanya terisi untuk
       metode Online (upload) & data LAMA bermetode selfie.
-    - $evidenceType  (string|null) 'upload' (Online) | 'kode' (Offline)
+    - $evidenceType    (string|null) 'upload' (Online) | 'kode' (Offline)
       | 'selfie' (Offline, data lama) | null (data lama)
-    - $meetingMethod (string|null) 'zoom' | 'telpon' | 'chat' - hanya
+    - $meetingMethod   (string|null) 'zoom' | 'telpon' | 'chat' - hanya
       relevan saat $evidenceType 'upload'.
-    - $meetingCode   (string|null) kode yang dipakai - hanya relevan
+    - $meetingCode     (string|null) kode yang dipakai - hanya relevan
       saat $evidenceType 'kode'.
-    - $codeAction    (string|null) route "buat kode", WAJIB saat
-      $mode = 'issuer'.
-    - $activeCode    (App\Models\MeetingCode|null) kode yang masih
-      berlaku, supaya tetap tampil setelah halaman di-refresh. Hanya
-      dipakai saat $mode = 'issuer'.
+    - $requestAction   (string|null) route "Minta Kode" - hanya dipakai
+      & wajib diisi untuk $mode 'issuer'.
+    - $meetingRow      (App\Models\MeetingCode|null) baris permintaan/
+      kode yang masih terbuka untuk pasangan ini - lihat
+      App\Models\MeetingCode::openFor(). Dipakai supaya status
+      permintaan & kode tetap tampil setelah halaman di-refresh.
+    - $counterpartLabel (string) sebutan pihak lawan untuk pesan status,
+      mis. "Penilai Anda" / "pegawai yang bersangkutan".
     - $checkedLabel / $uncheckedLabel (string) label tombol
     - $boleh / $bolehMessage       — sama seperti partial lama
     - $hrdLocked / $hrdLockedMessage — sama seperti partial lama
@@ -45,9 +51,14 @@
     $bolehMessage = $bolehMessage ?? 'Belum bisa memberikan bukti evaluasi.';
     $hrdLocked = $hrdLocked ?? false;
     $hrdLockedMessage = $hrdLockedMessage ?? 'Terkunci - penilaian sudah ditanda-tangani HRD.';
-    $codeAction = $codeAction ?? null;
-    $activeCode = $activeCode ?? null;
+    $requestAction = $requestAction ?? null;
+    $meetingRow = $meetingRow ?? null;
+    $counterpartLabel = $counterpartLabel ?? ($mode === 'issuer' ? 'pihak yang dinilai' : 'Penilai/Atasan Anda');
     $meetingCode = $meetingCode ?? null;
+    // Kode yang sudah dibuat HRD & belum kedaluwarsa - TERMASUK yang
+    // sudah dipakai pihak lawan, karena pihak ini masih perlu menekan
+    // tombolnya sendiri.
+    $activeCode = ($meetingRow && $meetingRow->kodeHidup()) ? $meetingRow : null;
 @endphp
 @if ($hrdLocked)
     <div class="relative isolate z-10 w-full sm:max-w-xs rounded-xl bg-slate-50 border border-slate-200 px-4 py-2.5 text-xs text-slate-500">
@@ -81,14 +92,14 @@
     class="relative isolate z-10 w-full sm:max-w-xs rounded-2xl bg-white border border-slate-200 p-3"
     x-data="{
         rootEl: null,
-        method: {!! ($mode === 'issuer' && $activeCode && $activeCode->masihBerlaku()) || ($mode === 'subject' && $errors->has('meeting_code')) ? "'kode'" : 'null' !!},
+        method: {!! ($activeCode || $meetingRow || $errors->has('meeting_code')) ? "'kode'" : 'null' !!},
         meetingMethod: null,
         uploadFile: null,
         uploadPreview: null,
-        // Sisa detik kode yang masih berlaku (mode issuer). Dihitung
-        // ulang di browser tiap detik supaya penilai tahu kapan harus
-        // generate ulang, tanpa perlu refresh halaman.
-        sisaDetik: {{ $mode === 'issuer' && $activeCode ? $activeCode->sisaDetik() : 0 }},
+        // Sisa detik kode yang masih berlaku. Dihitung ulang di
+        // browser tiap detik supaya kedua pihak tahu kapan kodenya
+        // kedaluwarsa, tanpa perlu refresh halaman.
+        sisaDetik: {{ $activeCode ? $activeCode->sisaDetik() : 0 }},
         get sisaLabel() {
             const m = Math.floor(this.sisaDetik / 60);
             const s = this.sisaDetik % 60;
@@ -218,84 +229,100 @@
             </form>
         </template>
 
-        {{-- Langkah 2b: Offline --}}
-        @if ($mode === 'issuer')
-            {{-- Sisi PENILAI/ATASAN: membuat kode, lalu menunjukkannya
-                 langsung ke lawan bicaranya. Checklist sisi ini akan
-                 tercentang otomatis begitu kodenya dimasukkan. --}}
-            <template x-if="method === 'kode'">
-                <div>
-                    <div class="flex items-center justify-between mb-2">
-                        <p class="text-xs font-semibold text-slate-500">Bukti: Offline (Kode)</p>
-                        <button type="button" x-on:click="resetMethod()" class="text-xs font-semibold text-blue-600 hover:underline">Ganti Metode</button>
+        {{-- Langkah 2b: Offline - lewat HRD. Status yang mungkin tampil:
+             (1) belum ada permintaan -> Penilai: tombol "Minta Kode",
+             pihak yang dinilai: menunggu Penilai,
+             (2) sudah diminta, menunggu HRD,
+             (3) kode sudah dibuat HRD -> tampil ke KEDUA pihak, masing-
+             masing menekan "Sudah Bertemu". --}}
+        <template x-if="method === 'kode'">
+            <div>
+                <div class="flex items-center justify-between mb-2">
+                    <p class="text-xs font-semibold text-slate-500">Bukti: Offline (Kode dari HRD)</p>
+                    <button type="button" x-on:click="resetMethod()" class="text-xs font-semibold text-blue-600 hover:underline">Ganti Metode</button>
+                </div>
+
+                @if ($activeCode)
+                    {{-- Kode sudah di-generate HRD & masih berlaku. --}}
+                    <div class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-center">
+                        <p class="text-[11px] font-semibold text-amber-600 mb-1">Kode dari HRD</p>
+                        <p class="text-2xl font-bold tracking-[0.3em] text-amber-700">{{ $activeCode->code }}</p>
+                        <p class="text-[11px] text-amber-600 mt-1">
+                            <span x-show="sisaDetik > 0">Berlaku <span x-text="sisaLabel"></span> lagi</span>
+                            <span x-show="sisaDetik === 0" x-cloak>Kode sudah kedaluwarsa, minta kode baru.</span>
+                        </p>
                     </div>
 
-                    @if ($activeCode && $activeCode->masihBerlaku())
-                        <div class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-center">
-                            <p class="text-[11px] font-semibold text-amber-600 mb-1">Tunjukkan kode ini</p>
-                            <p class="text-2xl font-bold tracking-[0.3em] text-amber-700">{{ $activeCode->code }}</p>
-                            <p class="text-[11px] text-amber-600 mt-1">
-                                <span x-show="sisaDetik > 0">Berlaku <span x-text="sisaLabel"></span> lagi</span>
-                                <span x-show="sisaDetik === 0" x-cloak>Kode sudah kedaluwarsa, buat yang baru.</span>
-                            </p>
-                        </div>
+                    @if ($mode === 'subject')
+                        {{-- PEGAWAI/PEJABAT: kode sudah kelihatan di layar sendiri,
+                             cukup tekan "Sudah Bertemu" (kode ikut terkirim). --}}
+                        <form method="POST" action="{{ $action }}" class="mt-2">
+                            @csrf
+                            <input type="hidden" name="evidence_type" value="kode">
+                            <input type="hidden" name="meeting_code" value="{{ $activeCode->code }}">
+                            <button type="submit"
+                                    class="w-full inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold px-4 py-2.5 transition bg-amber-500 hover:bg-amber-600 text-white">
+                                Sudah Bertemu
+                            </button>
+                        </form>
+                        @error('meeting_code')
+                            <p class="text-xs text-red-600 mt-1.5">{{ $message }}</p>
+                        @enderror
+                        <p class="text-[11px] text-slate-400 mt-2 leading-relaxed">
+                            @if ($activeCode->issuerSudahKonfirmasi())
+                                {{ ucfirst($counterpartLabel) }} sudah menekan "Sudah Bertemu".
+                            @else
+                                {{ ucfirst($counterpartLabel) }} juga perlu menekan "Sudah Bertemu" di dashboard-nya.
+                            @endif
+                        </p>
+                    @else
+                        {{-- PENILAI/ATASAN: tekan "Sudah Bertemu" tanpa mengetik
+                             apa-apa; server mencatatnya lewat
+                             MeetingCode::confirmByIssuer(). --}}
+                        <form method="POST" action="{{ $action }}" class="mt-2">
+                            @csrf
+                            <input type="hidden" name="evidence_type" value="kode">
+                            <button type="submit"
+                                    class="w-full inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold px-4 py-2.5 transition bg-amber-500 hover:bg-amber-600 text-white">
+                                Sudah Bertemu
+                            </button>
+                        </form>
+                        @error('meeting_code')
+                            <p class="text-xs text-red-600 mt-1.5">{{ $message }}</p>
+                        @enderror
+                        <p class="text-[11px] text-slate-400 mt-2 leading-relaxed">
+                            @if ($activeCode->sudahDipakai())
+                                {{ ucfirst($counterpartLabel) }} sudah menekan "Sudah Bertemu".
+                            @else
+                                {{ ucfirst($counterpartLabel) }} juga perlu menekan "Sudah Bertemu" di dashboard-nya.
+                            @endif
+                        </p>
                     @endif
-
-                    <form method="POST" action="{{ $codeAction }}" class="mt-2">
+                @elseif ($meetingRow && $meetingRow->issuer_requested_at)
+                    {{-- Sudah diminta Penilai, kode belum dibuat HRD. --}}
+                    <div class="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-xs text-blue-600">
+                        Permintaan kode sudah terkirim. Menunggu HRD membuat kodenya - halaman ini akan menampilkan kodenya setelah dibuat.
+                    </div>
+                @elseif ($mode === 'issuer')
+                    {{-- Belum ada permintaan sama sekali. --}}
+                    <form method="POST" action="{{ $requestAction }}">
                         @csrf
                         <button type="submit"
                                 class="w-full inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold px-4 py-2.5 transition bg-amber-500 hover:bg-amber-600 text-white">
-                            {{ $activeCode && $activeCode->masihBerlaku() ? 'Buat Kode Baru' : 'Buat Kode Pertemuan' }}
+                            Minta Kode
                         </button>
                     </form>
-
                     <p class="text-[11px] text-slate-400 mt-2 leading-relaxed">
-                        Kode berlaku {{ \App\Models\MeetingCode::VALID_MINUTES }} menit dan hanya tampil di layar Anda.
-                        Bacakan langsung ke orang yang Anda temui - checklist kalian berdua tercentang otomatis begitu kodenya dimasukkan.
+                        HRD akan membuat kodenya (berlaku {{ \App\Models\MeetingCode::VALID_MINUTES }} menit). Setelah bertemu, Anda dan {{ $counterpartLabel }} sama-sama menekan "Sudah Bertemu".
                     </p>
-                </div>
-            </template>
-        @else
-            {{-- Sisi PEGAWAI/PEJABAT: memasukkan kode yang ditunjukkan
-                 penilai. Satu submit ini mencentang checklist kedua
-                 belah pihak sekaligus. --}}
-            <template x-if="method === 'kode'">
-                <form method="POST" action="{{ $action }}">
-                    @csrf
-                    <input type="hidden" name="evidence_type" value="kode">
-
-                    <div class="flex items-center justify-between mb-2">
-                        <p class="text-xs font-semibold text-slate-500">Bukti: Offline (Kode)</p>
-                        <button type="button" x-on:click="resetMethod()" class="text-xs font-semibold text-blue-600 hover:underline">Ganti Metode</button>
+                @else
+                    {{-- Pihak yang dinilai: tidak meminta apa-apa, cukup menunggu. --}}
+                    <div class="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs text-slate-500">
+                        Menunggu {{ $counterpartLabel }} meminta kode ke HRD. Kodenya akan tampil di sini setelah HRD membuatnya.
                     </div>
-
-                    <label class="block text-xs font-semibold text-slate-500 mb-1">Kode Pertemuan</label>
-                    <input type="text"
-                           name="meeting_code"
-                           inputmode="latin"
-                           autocomplete="off"
-                           autocapitalize="characters"
-                           spellcheck="false"
-                           maxlength="{{ \App\Models\MeetingCode::LENGTH }}"
-                           placeholder="{{ str_repeat('X', \App\Models\MeetingCode::LENGTH) }}"
-                           x-on:input="normalizeCode($event)"
-                           class="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-center text-lg font-bold tracking-[0.3em] uppercase focus:border-amber-500 focus:ring-1 focus:ring-amber-500 outline-none">
-
-                    @error('meeting_code')
-                        <p class="text-xs text-red-600 mt-1.5">{{ $message }}</p>
-                    @enderror
-
-                    <button type="submit"
-                            class="mt-2 w-full inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold px-4 py-2.5 transition bg-amber-500 hover:bg-amber-600 text-white">
-                        Verifikasi &amp; Tandai Sudah Bertemu
-                    </button>
-
-                    <p class="text-[11px] text-slate-400 mt-2 leading-relaxed">
-                        Minta kodenya langsung ke Penilai Anda saat pertemuan. Kode hanya berlaku {{ \App\Models\MeetingCode::VALID_MINUTES }} menit.
-                    </p>
-                </form>
-            </template>
-        @endif
+                @endif
+            </div>
+        </template>
     @endif
 
     @if($checkedAt)

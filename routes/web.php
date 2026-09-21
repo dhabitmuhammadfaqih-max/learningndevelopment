@@ -277,17 +277,25 @@ Route::middleware('auth')->group(function () {
                 [OfficialController::class, 'toggleChecklistPertemuanPegawai']
             )->name('employee.checklist-pertemuan.toggle');
 
-            // Langkah pertama bukti checklist metode OFFLINE (pengganti
-            // selfie): PENILAI membuat kode pertemuan, lalu
-            // menunjukkannya langsung ke pegawai yang duduk di
-            // depannya. Pegawai yang memasukkan kode itu lewat
-            // 'employee.checklist-pertemuan.toggle' - dan saat itulah
-            // checklist KEDUA pihak tercentang sekaligus. Lihat
-            // App\Models\MeetingCode.
+            // Alur kode pertemuan lewat HRD: hanya PENILAI yang menekan
+            // "Minta Kode" untuk pegawai ini, lalu HRD men-generate
+            // kodenya (lihat App\Models\MeetingCode). Setelah itu
+            // pegawai ('employee.checklist-pertemuan.toggle') dan
+            // Penilai (route toggle di atas, evidence_type=kode) sama-
+            // sama menekan "Sudah Bertemu", masing-masing mencentang
+            // checklist-nya sendiri.
             Route::post(
-                '/pegawai/{id}/kode-pertemuan',
-                [OfficialController::class, 'generateMeetingCodePegawai']
-            )->name('employee.meeting-code.generate');
+                '/pegawai/{id}/kode-pertemuan/minta',
+                [OfficialController::class, 'requestMeetingCodePegawai']
+            )->name('employee.meeting-code.request');
+
+            // Atur Korelasi: PENILAI menentukan rekan kerja mana saja
+            // yang boleh ditanggapi pegawai binaannya. Lihat
+            // App\Models\KorelasiAssignment.
+            Route::get('/pegawai/{id}/korelasi', [OfficialController::class, 'korelasi'])
+                ->name('employee.korelasi');
+            Route::put('/pegawai/{id}/korelasi', [OfficialController::class, 'updateKorelasi'])
+                ->name('employee.korelasi.update');
         });
 
     // Catatan: role 'pegawai' ditambahkan ke middleware grup 'official.*'
@@ -368,12 +376,21 @@ Route::middleware('auth')->group(function () {
                 [SupervisorController::class, 'toggleChecklistPertemuanPejabat']
             )->name('official.checklist-pertemuan.toggle');
 
-            // Versi pejabat dari 'official.employee.meeting-code.generate'
-            // - ATASAN membuat kode pertemuan untuk pejabat binaannya.
+            // Versi pejabat dari 'official.employee.meeting-code.request'
+            // - hanya ATASAN yang menekan "Minta Kode" untuk pejabat
+            // binaannya.
             Route::post(
-                '/pejabat/{id}/kode-pertemuan',
-                [SupervisorController::class, 'generateMeetingCodePejabat']
-            )->name('official.meeting-code.generate');
+                '/pejabat/{id}/kode-pertemuan/minta',
+                [SupervisorController::class, 'requestMeetingCodePejabat']
+            )->name('official.meeting-code.request');
+
+            // Atur Korelasi untuk PEJABAT binaan - versi pejabat dari
+            // 'official.employee.korelasi'. Lihat
+            // SupervisorController::korelasi().
+            Route::get('/pejabat/{id}/korelasi', [SupervisorController::class, 'korelasi'])
+                ->name('official.korelasi');
+            Route::put('/pejabat/{id}/korelasi', [SupervisorController::class, 'updateKorelasi'])
+                ->name('official.korelasi.update');
         });
 
 
@@ -492,6 +509,20 @@ Route::middleware('auth')->group(function () {
                 '/pegawai/{id}/pdf',
                 [HrdController::class, 'pdf']
             )->name('pdf');
+
+            // Daftar permintaan kode pertemuan yang kedua pihaknya
+            // (subject & issuer) sudah sama-sama menekan "Minta Kode",
+            // dan tombol untuk HRD men-generate kodenya - lihat
+            // App\Models\MeetingCode & HrdController::meetingCodeRequests().
+            Route::get(
+                '/kode-pertemuan',
+                [HrdController::class, 'meetingCodeRequests']
+            )->name('meeting-codes');
+
+            Route::post(
+                '/kode-pertemuan/{meetingCode}/generate',
+                [HrdController::class, 'generateMeetingCode']
+            )->name('meeting-codes.generate');
         });
 
     /*

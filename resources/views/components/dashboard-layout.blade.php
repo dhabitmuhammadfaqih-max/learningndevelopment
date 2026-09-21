@@ -49,6 +49,11 @@
             'icon'  => 'grid',
         ] : null,
         $role === 'hrd' ? [
+            'route' => 'admin.meeting-codes',
+            'label' => 'Permintaan Kode',
+            'icon'  => 'key',
+        ] : null,
+        $role === 'hrd' ? [
             'route' => 'admin.settings.periode',
             'label' => 'Pengaturan Periode',
             'icon'  => 'calendar',
@@ -161,6 +166,9 @@
                                         @break
                                     @case('calendar')
                                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><rect x="3" y="4" width="18" height="18" rx="2"/><path stroke-linecap="round" stroke-linejoin="round" d="M16 2v4M8 2v4M3 10h18"/></svg>
+                                        @break
+                                    @case('key')
+                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><circle cx="8" cy="15" r="4"/><path stroke-linecap="round" stroke-linejoin="round" d="m10.5 12.5 8-8M16 6l2 2M19 3l2 2"/></svg>
                                         @break
                                     @default
                                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>

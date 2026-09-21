@@ -325,6 +325,14 @@
                                 </div>
 
                                 <div class="flex flex-col items-stretch sm:items-end gap-2 shrink-0 w-full sm:w-auto">
+                                    <a href="{{ route('official.employee.korelasi', $employee->id) }}"
+                                       class="text-center rounded-xl border border-indigo-200 text-indigo-600 text-sm font-semibold px-4 py-2.5 hover:bg-indigo-50 transition">
+                                        Atur Korelasi
+                                        <span class="ml-1 text-[11px] font-bold px-2 py-0.5 rounded-full {{ $employee->korelasi_pemberi_count > 0 ? 'bg-indigo-100 text-indigo-700' : 'bg-rose-100 text-rose-600' }}">
+                                            {{ $employee->korelasi_pemberi_count }}
+                                        </span>
+                                    </a>
+
                                     @if ($alreadyEvaluated)
                                         <a href="{{ route('official.employee', $employee->id) }}"
                                            class="text-center rounded-xl border border-blue-200 text-blue-600 text-sm font-semibold px-4 py-2.5 hover:bg-blue-50 transition">
@@ -349,21 +357,72 @@
                 </div>
             @endif
 
-            {{-- Berikan Tanggapan Teman --}}
+            {{-- Berikan Tanggapan kepada Rekan Kerja. Pilihannya HANYA rekan
+                 kerja yang ditentukan Penilai (lihat
+                 OfficialController::korelasi() & EmployeeController::index()). --}}
+            @php
+                $korelasiTotal = $korelasiTargets->count();
+                $korelasiDone  = $korelasiTargets->where('sudah_ditanggapi', true)->count();
+            @endphp
             <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 sm:p-7">
-                <h3 class="text-lg font-bold text-slate-800 mb-5">Berikan Tanggapan Teman</h3>
+                <h3 class="text-lg font-bold text-slate-800 mb-1">Berikan Tanggapan kepada Rekan Kerja</h3>
+                <p class="text-xs text-slate-400 mb-5">
+                    Anda hanya bisa menanggapi rekan kerja yang Penilai-nya menunjuk Anda sebagai korelasi.
+                </p>
 
+                {{-- Checklist rekan kerja yang ditentukan Penilai --}}
+                <div class="mb-5 rounded-2xl border border-slate-100 p-4">
+                    <div class="flex items-center justify-between mb-3">
+                        <p class="text-xs font-semibold text-slate-500">Rekan Kerja yang Perlu Anda Tanggapi</p>
+                        @if ($korelasiTotal > 0)
+                            <span class="text-[11px] font-semibold px-2.5 py-1 rounded-full {{ $korelasiDone === $korelasiTotal ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600' }}">
+                                {{ $korelasiDone }} / {{ $korelasiTotal }} sudah ditanggapi
+                            </span>
+                        @endif
+                    </div>
+
+                    @if ($korelasiTotal === 0)
+                        <p class="text-sm text-slate-400">
+                            Belum ada rekan kerja yang perlu Anda tanggapi. Anda belum ditunjuk sebagai korelasi oleh Penilai rekan kerja mana pun.
+                        </p>
+                    @else
+                        <ul class="space-y-1.5">
+                            @foreach ($korelasiTargets as $target)
+                                <li class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm {{ $target->sudah_ditanggapi ? 'bg-emerald-50/60' : 'bg-slate-50' }}">
+                                    <span class="shrink-0 w-5 h-5 rounded-md grid place-items-center text-[11px] font-bold {{ $target->sudah_ditanggapi ? 'bg-emerald-500 text-white' : 'border border-slate-300 bg-white text-transparent' }}">&#10003;</span>
+                                    <span class="flex-1 min-w-0">
+                                        <span class="block font-medium text-slate-700 truncate">{{ $target->name }}</span>
+                                        <span class="block text-[11px] text-slate-400 truncate">{{ $target->unit_kerja ?: 'Tanpa Unit' }}</span>
+                                    </span>
+                                    <span class="text-[11px] font-semibold whitespace-nowrap {{ $target->sudah_ditanggapi ? 'text-emerald-600' : 'text-amber-600' }}">
+                                        {{ $target->sudah_ditanggapi ? 'Sudah ditanggapi' : 'Belum' }}
+                                    </span>
+                                </li>
+                            @endforeach
+                        </ul>
+                    @endif
+                </div>
+
+                @if ($korelasiTotal > 0 && $employees->isEmpty())
+                    <div class="mb-4 rounded-xl bg-emerald-50 text-emerald-700 px-4 py-3 text-sm font-medium">
+                        Semua rekan kerja yang menunjuk Anda sebagai korelasi sudah Anda tanggapi.
+                    </div>
+                @endif
+
+                {{-- Form tetap dirender (script pencarian di bawah butuh elemennya),
+                     tapi dikunci kalau memang tidak ada yang bisa ditanggapi. --}}
                 <form method="POST" action="{{ route('employee.feedback') }}" id="form-feedback" class="space-y-4" data-autosave>
                     @csrf
+                    <fieldset @disabled($employees->isEmpty()) class="space-y-4 min-w-0 disabled:opacity-50">
 
                     <div>
-                        <label class="block text-xs font-semibold text-slate-500 mb-2">Pilih Pegawai</label>
+                        <label class="block text-xs font-semibold text-slate-500 mb-2">Pilih Rekan Kerja</label>
 
                         <div class="employee-picker" id="employee-picker">
                             <input
                                 type="text"
                                 id="employee-search"
-                                placeholder="Cari nama pegawai..."
+                                placeholder="Cari nama rekan kerja..."
                                 autocomplete="off"
                                 class="w-full rounded-xl border-slate-200 text-sm focus:border-blue-500 focus:ring-blue-500"
                             >
@@ -392,12 +451,12 @@
                                         </span>
                                     </div>
                                 @empty
-                                    <p class="employee-empty px-4 py-3 text-sm text-slate-400">Tidak ada pegawai lain.</p>
+                                    <p class="employee-empty px-4 py-3 text-sm text-slate-400">Belum ada rekan kerja yang perlu ditanggapi.</p>
                                 @endforelse
                             </div>
 
                             <p class="employee-empty px-1 py-2 text-sm text-slate-400" id="employee-no-result" style="display:none;">
-                                Pegawai tidak ditemukan.
+                                Rekan kerja tidak ditemukan.
                             </p>
 
                             <input type="hidden" name="employee_id" id="employee-id-input" value="{{ old('employee_id') }}" required>
@@ -428,6 +487,7 @@
                             class="inline-flex items-center justify-center rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-5 py-2.5 transition">
                         Kirim Tanggapan
                     </button>
+                    </fieldset>
                 </form>
             </div>
         </div>
@@ -479,17 +539,24 @@
                 // Terkunci begitu HRD sudah tanda tangan penilaian ini -
                 // lihat User::hrdSudahMenandatanganiPenilaian().
                 $pegawaiHrdLocked = auth()->user()->hrdSudahMenandatanganiPenilaian();
+                // Baris permintaan/kode yang masih terbuka untuk pegawai ini -
+                // lihat App\Models\MeetingCode::openFor().
+                $pegawaiMeetingRow = (! $pegawaiSudahCentang && $pegawaiBolehCentang)
+                    ? \App\Models\MeetingCode::openFor(auth()->id(), \App\Models\MeetingCode::CONTEXT_PEGAWAI, \App\Support\ActivePeriod::year())
+                    : null;
             @endphp
             <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
                 <h3 class="text-sm font-bold text-slate-800 mb-2">Checklist Pertemuan &amp; Evaluasi</h3>
                 <p class="text-xs text-slate-400 mb-4">
-                    Centang setelah Anda bertemu dan mendiskusikan hasil evaluasi dengan Penilai Anda. Untuk pertemuan offline, masukkan kode yang ditunjukkan Penilai Anda sebagai bukti.
+                    Centang setelah Anda bertemu dan mendiskusikan hasil evaluasi dengan Penilai Anda. Untuk pertemuan offline, Penilai meminta kode ke HRD, lalu kalian berdua menekan "Sudah Bertemu".
                     HRD tidak dapat mencetak PDF penilaian Anda sebelum checklist ini dicentang.
                 </p>
 
                 @include('partials.checklist-pertemuan-toggle', [
                     'action' => route('employee.checklist-pertemuan.toggle'),
                     'mode' => 'subject',
+                    'meetingRow' => $pegawaiMeetingRow,
+                    'counterpartLabel' => 'Penilai Anda',
                     'checked' => $pegawaiSudahCentang,
                     'checkedAt' => auth()->user()->pegawai_konfirmasi_pertemuan_at,
                     'selfieUrl' => auth()->user()->pegawai_konfirmasi_pertemuan_selfie ? Storage::disk('public')->url(auth()->user()->pegawai_konfirmasi_pertemuan_selfie) : null,
