@@ -60,6 +60,12 @@ class User extends Authenticatable
         'penilai_konfirmasi_pertemuan_metode',
         'pejabat_konfirmasi_pertemuan_metode',
         'atasan_konfirmasi_pertemuan_metode',
+        // Kode pertemuan Offline - pengganti selfie, lihat
+        // migration add_kode_to_checklist_pertemuan_columns.
+        'pegawai_konfirmasi_pertemuan_kode',
+        'penilai_konfirmasi_pertemuan_kode',
+        'pejabat_konfirmasi_pertemuan_kode',
+        'atasan_konfirmasi_pertemuan_kode',
         'pegawai_konfirmasi_pertemuan_tahun',
         'penilai_konfirmasi_pertemuan_tahun',
         'pejabat_konfirmasi_pertemuan_tahun',
@@ -591,12 +597,14 @@ class User extends Authenticatable
      * ditampilkan ke HRD/pegawai/penilai/pejabat/atasan - lihat kolom
      * *_konfirmasi_pertemuan_evidence_type (migration
      * add_evidence_type_to_checklist_pertemuan_columns) & partial
-     * resources/views/partials/checklist-selfie-toggle.blade.php.
-     * 'upload' = Online (upload bukti Zoom/Telpon/Chat), 'selfie' =
-     * Offline (ketemu langsung, foto selfie kamera). Data lama
+     * resources/views/partials/checklist-pertemuan-toggle.blade.php.
+     * 'upload' = Online (upload bukti Zoom/Telpon/Chat), 'kode' =
+     * Offline (ketemu langsung, verifikasi lewat kode pertemuan -
+     * lihat App\Models\MeetingCode), 'selfie' = Offline versi LAMA
+     * (foto selfie kamera, sebelum digantikan kode). Data lama
      * (sebelum fitur pilihan metode ada) selalu berasal dari selfie
-     * kamera, jadi null/tidak dikenali dianggap 'selfie' (Offline)
-     * supaya data lama tetap tampil benar.
+     * kamera, jadi null/tidak dikenali juga dianggap Offline supaya
+     * data lama tetap tampil benar.
      */
     public static function checklistEvidenceLabel(?string $evidenceType): string
     {
@@ -604,11 +612,22 @@ class User extends Authenticatable
     }
 
     /**
+     * Apakah bukti checklist ini berupa KODE pertemuan (metode Offline
+     * yang berlaku sekarang) - dipakai view untuk memilih menampilkan
+     * kode, bukan gambar. Lihat
+     * resources/views/partials/checklist-pertemuan-toggle.blade.php.
+     */
+    public static function checklistEvidenceAdalahKode(?string $evidenceType): bool
+    {
+        return $evidenceType === 'kode';
+    }
+
+    /**
      * Daftar metode pertemuan yang bisa dipilih saat bukti checklist
      * "sudah bertemu & evaluasi" adalah Online (evidence_type =
      * 'upload') - lihat migration
      * add_meeting_metode_to_checklist_pertemuan_columns & partial
-     * resources/views/partials/checklist-selfie-toggle.blade.php.
+     * resources/views/partials/checklist-pertemuan-toggle.blade.php.
      * Sekadar keterangan, tidak mempengaruhi cara file disimpan.
      */
     public const CHECKLIST_MEETING_METHODS = [

@@ -9,8 +9,15 @@ use Illuminate\Validation\ValidationException;
 
 /**
  * Shared logic untuk checklist "sudah bertemu & evaluasi": user WAJIB
- * memilih salah satu dari 2 metode bukti - Upload File ATAU Ambil
- * Selfie (lihat resources/views/partials/checklist-selfie-toggle.blade.php).
+ * memilih salah satu dari 2 metode bukti - Online (Upload File bukti
+ * Zoom/Telpon/Chat) ATAU Offline (Kode Pertemuan yang di-generate
+ * Penilai saat tatap muka, lihat App\Models\MeetingCode). Lihat
+ * resources/views/partials/checklist-pertemuan-toggle.blade.php.
+ *
+ * CATATAN: metode Offline DULU berupa selfie kamera (evidence_type
+ * 'selfie'). Sejak diganti kode pertemuan, jalur selfie tidak menerima
+ * input baru lagi - tapi data lama tetap bisa ditampilkan (path
+ * fotonya masih di *_konfirmasi_pertemuan_selfie).
  *
  * Dipakai oleh EmployeeController::toggleChecklistPertemuan(),
  * OfficialController::toggleChecklistPertemuanSaya()/
@@ -35,7 +42,7 @@ trait HandlesChecklistEvidence
      * jadi sampah menumpuk di storage selamanya:
      * 1) Saat checklist DIBATALKAN (toggle dari tercentang -> kosong) -
      *    bukti lama sudah tidak dipakai/ditampilkan di manapun setelah
-     *    dibatalkan (lihat checklist-selfie-toggle.blade.php, $selfieUrl
+     *    dibatalkan (lihat checklist-pertemuan-toggle.blade.php, $selfieUrl
      *    hanya dipakai saat $checked true), jadi aman dihapus.
      * 2) Saat checklist DICENTANG ULANG dengan bukti baru (upload/selfie
      *    baru menggantikan path lama di kolom
@@ -137,9 +144,9 @@ trait HandlesChecklistEvidence
     protected function resolveChecklistEvidence(Request $request, string $rolePrefix, int $subjectId): array
     {
         $validated = $request->validate([
-            'evidence_type'  => 'required|in:upload,selfie',
+            'evidence_type'  => 'required|in:upload,kode',
             'evidence_file'  => 'required_if:evidence_type,upload|nullable|image|max:5120',
-            'selfie'         => 'required_if:evidence_type,selfie|nullable|string',
+            'meeting_code'   => 'required_if:evidence_type,kode|nullable|string|max:16',
             'meeting_method' => 'required_if:evidence_type,upload|nullable|in:zoom,telpon,chat',
         ], [
             'evidence_type.required'    => 'Silakan pilih metode bukti checklist terlebih dahulu.',
@@ -147,7 +154,7 @@ trait HandlesChecklistEvidence
             'evidence_file.required_if' => 'Silakan pilih file untuk diupload.',
             'evidence_file.image'       => 'File yang diupload harus berupa gambar.',
             'evidence_file.max'         => 'Ukuran file maksimal 5MB.',
-            'selfie.required_if'        => 'Silakan ambil selfie terlebih dahulu.',
+            'meeting_code.required_if'  => 'Silakan masukkan kode pertemuan dari Penilai Anda.',
             'meeting_method.required_if' => 'Silakan pilih metode pertemuan (Zoom/Telpon/Chat) terlebih dahulu.',
             'meeting_method.in'          => 'Metode pertemuan tidak valid.',
         ]);
@@ -240,42 +247,23 @@ trait HandlesChecklistEvidence
                 ]);
             }
 
-            return [$path, 'upload', $meetingMethod];
+            return [$path, 'upload', $meetingMethod, null];
         }
 
-        // Metode Ambil Selfie: base64 PNG/JPEG dari canvas kamera,
-        // dikompres dulu (lihat compressChecklistImage()) sebelum
-        // disimpan.
-        if (! preg_match('/^data:image\/(png|jpe?g);base64,/', $validated['selfie'] ?? '')) {
+        // Metode Offline: tidak ada file sama sekali, yang dikirim
+        // cuma kode pertemuan yang ditunjukkan Penilai saat tatap muka.
+        // Validasi & penandaan "sudah dipakai" dilakukan di
+        // MeetingCode::redeem() (dipanggil controller) - di sini cukup
+        // normalisasi bentuknya, karena user mengetik manual dan sering
+        // menambah spasi/tanda hubung atau memakai huruf kecil.
+        $code = strtoupper(preg_replace('/[^A-Za-z0-9]/', '', $validated['meeting_code'] ?? ''));
+
+        if ($code === '') {
             throw ValidationException::withMessages([
-                'selfie' => 'Silakan ambil selfie terlebih dahulu.',
+                'meeting_code' => 'Silakan masukkan kode pertemuan dari Penilai Anda.',
             ]);
         }
 
-        $imageContent = base64_decode(substr($validated['selfie'], strpos($validated['selfie'], ',') + 1), true);
-
-        // base64_decode(..., true) balikin false kalau datanya rusak
-        // (mis. terpotong karena koneksi putus saat kamera capture) -
-        // tanpa cek ini, Storage::put() akan menyimpan file kosong/rusak
-        // tanpa ada tanda error sama sekali ke user.
-        if ($imageContent === false || $imageContent === '') {
-            throw ValidationException::withMessages([
-                'selfie' => 'Gagal memproses foto selfie, silakan ambil ulang.',
-            ]);
-        }
-
-        [$compressed, $extension] = $this->compressChecklistImage($imageContent);
-
-        $path = 'checklist-selfies/' . $rolePrefix . '_' . $subjectId . '_' . time() . '.' . $extension;
-
-        try {
-            Storage::disk('public')->put($path, $compressed);
-        } catch (\Throwable $e) {
-            throw ValidationException::withMessages([
-                'selfie' => 'Gagal menyimpan foto selfie, silakan coba lagi.',
-            ]);
-        }
-
-        return [$path, 'selfie', null];
+        return [null, 'kode', null, $code];
     }
 }

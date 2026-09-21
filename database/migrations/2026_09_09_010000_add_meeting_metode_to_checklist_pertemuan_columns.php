@@ -17,7 +17,7 @@ return new class extends Migration
      * kolom *_konfirmasi_pertemuan_selfie (existing). Dipakai untuk
      * menampilkan label "Bukti: Online (Zoom)" dsb ke HRD - lihat
      * User::checklistMeetingMethodLabel() &
-     * resources/views/partials/checklist-selfie-toggle.blade.php.
+     * resources/views/partials/checklist-pertemuan-toggle.blade.php.
      */
     public function up(): void
     {

@@ -472,8 +472,8 @@
                 // (SupervisorFeedback) sudah mengisi tanggapannya untuk
                 // pegawai ini - lihat User::checklistPertemuanBolehDiisi().
                 // Membatalkan checklist yang sudah tercentang tetap boleh
-                // kapan saja. Setiap kali DICENTANG wajib disertai selfie
-                // langsung dari kamera perangkat.
+                // kapan saja. Setiap kali DICENTANG wajib disertai bukti:
+                // kode pertemuan (Offline) atau file (Online).
                 $pegawaiSudahCentang = auth()->user()->pegawaiSudahKonfirmasiPertemuan();
                 $pegawaiBolehCentang = auth()->user()->checklistPertemuanBolehDiisi();
                 // Terkunci begitu HRD sudah tanda tangan penilaian ini -
@@ -483,19 +483,21 @@
             <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
                 <h3 class="text-sm font-bold text-slate-800 mb-2">Checklist Pertemuan &amp; Evaluasi</h3>
                 <p class="text-xs text-slate-400 mb-4">
-                    Centang setelah Anda bertemu langsung dan mendiskusikan hasil evaluasi dengan Penilai Anda. Selfie diperlukan sebagai bukti.
+                    Centang setelah Anda bertemu dan mendiskusikan hasil evaluasi dengan Penilai Anda. Untuk pertemuan offline, masukkan kode yang ditunjukkan Penilai Anda sebagai bukti.
                     HRD tidak dapat mencetak PDF penilaian Anda sebelum checklist ini dicentang.
                 </p>
 
-                @include('partials.checklist-selfie-toggle', [
+                @include('partials.checklist-pertemuan-toggle', [
                     'action' => route('employee.checklist-pertemuan.toggle'),
+                    'mode' => 'subject',
                     'checked' => $pegawaiSudahCentang,
                     'checkedAt' => auth()->user()->pegawai_konfirmasi_pertemuan_at,
                     'selfieUrl' => auth()->user()->pegawai_konfirmasi_pertemuan_selfie ? Storage::disk('public')->url(auth()->user()->pegawai_konfirmasi_pertemuan_selfie) : null,
                     'evidenceType' => auth()->user()->pegawai_konfirmasi_pertemuan_evidence_type,
                     'meetingMethod' => auth()->user()->pegawai_konfirmasi_pertemuan_metode,
+                    'meetingCode' => auth()->user()->pegawai_konfirmasi_pertemuan_kode,
                     'checkedLabel' => 'Sudah Bertemu & Evaluasi (klik untuk batalkan)',
-                    'uncheckedLabel' => 'Ambil Selfie & Tandai Sudah Bertemu',
+                    'uncheckedLabel' => 'Tandai Sudah Bertemu & Evaluasi',
                     'boleh' => $pegawaiBolehCentang,
                     'bolehMessage' => 'Belum bisa memberikan bukti evaluasi. Menunggu siap dinilai & tanggapan Atasan Penilai.',
                     'hrdLocked' => $pegawaiHrdLocked,

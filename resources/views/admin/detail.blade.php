@@ -580,23 +580,21 @@
             <p class="empty" style="margin:8px 0 0;">
                 Pejabat mencentang {{ $employee->pejabat_konfirmasi_pertemuan_at->translatedFormat('d M Y H:i') }}
             </p>
-            @if($employee->pejabat_konfirmasi_pertemuan_selfie)
-                <p class="empty" style="margin:4px 0 0;">Bukti: {{ \App\Models\User::checklistEvidenceLabel($employee->pejabat_konfirmasi_pertemuan_evidence_type) }}@if (\App\Models\User::checklistMeetingMethodLabel($employee->pejabat_konfirmasi_pertemuan_metode)) ({{ \App\Models\User::checklistMeetingMethodLabel($employee->pejabat_konfirmasi_pertemuan_metode) }})@endif</p>
-                <img src="{{ Storage::disk('public')->url($employee->pejabat_konfirmasi_pertemuan_selfie) }}"
-                     alt="Bukti checklist Pejabat"
-                     style="width:64px;height:64px;object-fit:cover;border-radius:12px;border:1px solid #e2e8f0;margin-top:6px;">
-            @endif
+            @include('partials.checklist-bukti-hrd', [
+                'user' => $employee,
+                'prefix' => 'pejabat',
+                'label' => 'Pejabat',
+            ])
         @endif
         @if($employee->atasan_konfirmasi_pertemuan_at)
             <p class="empty" style="margin:8px 0 0;">
                 Atasan mencentang {{ $employee->atasan_konfirmasi_pertemuan_at->translatedFormat('d M Y H:i') }}
             </p>
-            @if($employee->atasan_konfirmasi_pertemuan_selfie)
-                <p class="empty" style="margin:4px 0 0;">Bukti: {{ \App\Models\User::checklistEvidenceLabel($employee->atasan_konfirmasi_pertemuan_evidence_type) }}@if (\App\Models\User::checklistMeetingMethodLabel($employee->atasan_konfirmasi_pertemuan_metode)) ({{ \App\Models\User::checklistMeetingMethodLabel($employee->atasan_konfirmasi_pertemuan_metode) }})@endif</p>
-                <img src="{{ Storage::disk('public')->url($employee->atasan_konfirmasi_pertemuan_selfie) }}"
-                     alt="Bukti checklist Atasan"
-                     style="width:64px;height:64px;object-fit:cover;border-radius:12px;border:1px solid #e2e8f0;margin-top:6px;">
-            @endif
+            @include('partials.checklist-bukti-hrd', [
+                'user' => $employee,
+                'prefix' => 'atasan',
+                'label' => 'Atasan',
+            ])
         @endif
     @else
         <p class="empty" style="margin-bottom:12px;">
@@ -617,23 +615,21 @@
             <p class="empty" style="margin:8px 0 0;">
                 Pegawai mencentang {{ $employee->pegawai_konfirmasi_pertemuan_at->translatedFormat('d M Y H:i') }}
             </p>
-            @if($employee->pegawai_konfirmasi_pertemuan_selfie)
-                <p class="empty" style="margin:4px 0 0;">Bukti: {{ \App\Models\User::checklistEvidenceLabel($employee->pegawai_konfirmasi_pertemuan_evidence_type) }}@if (\App\Models\User::checklistMeetingMethodLabel($employee->pegawai_konfirmasi_pertemuan_metode)) ({{ \App\Models\User::checklistMeetingMethodLabel($employee->pegawai_konfirmasi_pertemuan_metode) }})@endif</p>
-                <img src="{{ Storage::disk('public')->url($employee->pegawai_konfirmasi_pertemuan_selfie) }}"
-                     alt="Bukti checklist Pegawai"
-                     style="width:64px;height:64px;object-fit:cover;border-radius:12px;border:1px solid #e2e8f0;margin-top:6px;">
-            @endif
+            @include('partials.checklist-bukti-hrd', [
+                'user' => $employee,
+                'prefix' => 'pegawai',
+                'label' => 'Pegawai',
+            ])
         @endif
         @if($employee->penilai_konfirmasi_pertemuan_at)
             <p class="empty" style="margin:8px 0 0;">
                 Penilai mencentang {{ $employee->penilai_konfirmasi_pertemuan_at->translatedFormat('d M Y H:i') }}
             </p>
-            @if($employee->penilai_konfirmasi_pertemuan_selfie)
-                <p class="empty" style="margin:4px 0 0;">Bukti: {{ \App\Models\User::checklistEvidenceLabel($employee->penilai_konfirmasi_pertemuan_evidence_type) }}@if (\App\Models\User::checklistMeetingMethodLabel($employee->penilai_konfirmasi_pertemuan_metode)) ({{ \App\Models\User::checklistMeetingMethodLabel($employee->penilai_konfirmasi_pertemuan_metode) }})@endif</p>
-                <img src="{{ Storage::disk('public')->url($employee->penilai_konfirmasi_pertemuan_selfie) }}"
-                     alt="Bukti checklist Penilai"
-                     style="width:64px;height:64px;object-fit:cover;border-radius:12px;border:1px solid #e2e8f0;margin-top:6px;">
-            @endif
+            @include('partials.checklist-bukti-hrd', [
+                'user' => $employee,
+                'prefix' => 'penilai',
+                'label' => 'Penilai',
+            ])
         @endif
     @endif
 </div>
@@ -846,23 +842,21 @@
         <p class="empty" style="margin:8px 0 0;">
             Pejabat mencentang {{ $employee->pejabat_konfirmasi_pertemuan_at->translatedFormat('d M Y H:i') }}
         </p>
-        @if($employee->pejabat_konfirmasi_pertemuan_selfie)
-            <p class="empty" style="margin:4px 0 0;">Bukti: {{ \App\Models\User::checklistEvidenceLabel($employee->pejabat_konfirmasi_pertemuan_evidence_type) }}@if (\App\Models\User::checklistMeetingMethodLabel($employee->pejabat_konfirmasi_pertemuan_metode)) ({{ \App\Models\User::checklistMeetingMethodLabel($employee->pejabat_konfirmasi_pertemuan_metode) }})@endif</p>
-            <img src="{{ Storage::disk('public')->url($employee->pejabat_konfirmasi_pertemuan_selfie) }}"
-                 alt="Bukti checklist Pejabat"
-                 style="width:64px;height:64px;object-fit:cover;border-radius:12px;border:1px solid #e2e8f0;margin-top:6px;">
-        @endif
+        @include('partials.checklist-bukti-hrd', [
+            'user' => $employee,
+            'prefix' => 'pejabat',
+            'label' => 'Pejabat',
+        ])
     @endif
     @if($employee->atasan_konfirmasi_pertemuan_at)
         <p class="empty" style="margin:8px 0 0;">
             Atasan mencentang {{ $employee->atasan_konfirmasi_pertemuan_at->translatedFormat('d M Y H:i') }}
         </p>
-        @if($employee->atasan_konfirmasi_pertemuan_selfie)
-            <p class="empty" style="margin:4px 0 0;">Bukti: {{ \App\Models\User::checklistEvidenceLabel($employee->atasan_konfirmasi_pertemuan_evidence_type) }}@if (\App\Models\User::checklistMeetingMethodLabel($employee->atasan_konfirmasi_pertemuan_metode)) ({{ \App\Models\User::checklistMeetingMethodLabel($employee->atasan_konfirmasi_pertemuan_metode) }})@endif</p>
-            <img src="{{ Storage::disk('public')->url($employee->atasan_konfirmasi_pertemuan_selfie) }}"
-                 alt="Bukti checklist Atasan"
-                 style="width:64px;height:64px;object-fit:cover;border-radius:12px;border:1px solid #e2e8f0;margin-top:6px;">
-        @endif
+        @include('partials.checklist-bukti-hrd', [
+            'user' => $employee,
+            'prefix' => 'atasan',
+            'label' => 'Atasan',
+        ])
     @endif
 </div>
 

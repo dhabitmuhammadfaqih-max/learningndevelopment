@@ -298,7 +298,7 @@ class EmployeeController extends Controller
      * User::checklistPertemuanBolehDiisi(). Setiap kali DICENTANG (dari
      * kosong -> tercentang) WAJIB disertai selfie langsung dari kamera
      * perangkat - lihat
-     * resources/views/partials/checklist-selfie-toggle.blade.php.
+     * resources/views/partials/checklist-pertemuan-toggle.blade.php.
      */
     public function toggleChecklistPertemuan(Request $request)
     {
@@ -338,6 +338,7 @@ class EmployeeController extends Controller
                 'pegawai_konfirmasi_pertemuan_selfie' => null,
                 'pegawai_konfirmasi_pertemuan_evidence_type' => null,
                 'pegawai_konfirmasi_pertemuan_metode' => null,
+                'pegawai_konfirmasi_pertemuan_kode' => null,
                 'pegawai_konfirmasi_pertemuan_tahun' => null,
             ]);
 
@@ -351,7 +352,25 @@ class EmployeeController extends Controller
             );
         }
 
-        [$selfiePath, $evidenceType, $meetingMethod] = $this->resolveChecklistEvidence($request, 'pegawai', $user->id);
+        [$selfiePath, $evidenceType, $meetingMethod, $meetingCode] = $this->resolveChecklistEvidence($request, 'pegawai', $user->id);
+
+        $tahun = \App\Support\ActivePeriod::year();
+
+        // Metode Offline: kode pertemuan dari Penilai. Divalidasi di
+        // sini (bukan di trait) supaya kode langsung ditandai terpakai
+        // di transaksi yang sama dengan pencentangan checklist.
+        // MeetingCode::redeem() melempar ValidationException kalau kode
+        // salah/kedaluwarsa/sudah dipakai orang lain.
+        $kodeRecord = null;
+
+        if ($evidenceType === 'kode') {
+            $kodeRecord = \App\Models\MeetingCode::redeem(
+                $meetingCode,
+                $user,
+                \App\Models\MeetingCode::CONTEXT_PEGAWAI,
+                $tahun
+            );
+        }
 
         // Hapus bukti lama (kalau ada) sebelum ditimpa - baik itu sisa
         // attempt sebelumnya di tahun yang sama, MAUPUN sisa checklist
@@ -364,8 +383,30 @@ class EmployeeController extends Controller
             'pegawai_konfirmasi_pertemuan_selfie' => $selfiePath,
             'pegawai_konfirmasi_pertemuan_evidence_type' => $evidenceType,
             'pegawai_konfirmasi_pertemuan_metode' => $meetingMethod,
-            'pegawai_konfirmasi_pertemuan_tahun' => now()->year,
+            'pegawai_konfirmasi_pertemuan_kode' => $evidenceType === 'kode' ? $meetingCode : null,
+            'pegawai_konfirmasi_pertemuan_tahun' => $tahun,
         ]);
+
+        // PENTING: satu kode = satu pertemuan yang dihadiri DUA orang.
+        // Penilai sudah membuktikan kehadirannya dengan menekan
+        // "Generate Kode" di perangkatnya sendiri, dan pegawai
+        // membuktikannya dengan mengetik kode itu - jadi checklist
+        // PENILAI ikut tercentang sekaligus di sini, tidak perlu
+        // dicentang terpisah lagi (dulu masing-masing selfie sendiri).
+        // Kalau checklist penilai sudah tercentang duluan lewat metode
+        // Online, biarkan apa adanya - jangan timpa bukti yang sudah ada.
+        if ($kodeRecord && ! $user->penilaiSudahKonfirmasiPertemuan($tahun)) {
+            $this->deleteChecklistEvidence($user->penilai_konfirmasi_pertemuan_selfie);
+
+            $user->update([
+                'penilai_konfirmasi_pertemuan_at' => now(),
+                'penilai_konfirmasi_pertemuan_selfie' => null,
+                'penilai_konfirmasi_pertemuan_evidence_type' => 'kode',
+                'penilai_konfirmasi_pertemuan_metode' => null,
+                'penilai_konfirmasi_pertemuan_kode' => $kodeRecord->code,
+                'penilai_konfirmasi_pertemuan_tahun' => $tahun,
+            ]);
+        }
 
         // Kalau checklist PENILAI untuk pegawai ini sudah lebih dulu
         // lengkap, checklist PEGAWAI barusan ini yang melengkapi syarat
@@ -373,6 +414,11 @@ class EmployeeController extends Controller
         app(NotificationTriggerService::class)
             ->triggerSiapTandaTanganHrdJikaPerlu($user);
 
-        return back()->with('success', 'Checklist pertemuan & evaluasi berhasil dicentang.');
+        return back()->with(
+            'success',
+            $evidenceType === 'kode'
+                ? 'Kode pertemuan cocok. Checklist Anda dan Penilai sudah tercentang, datanya diteruskan ke HRD.'
+                : 'Checklist pertemuan & evaluasi berhasil dicentang.'
+        );
     }
 }

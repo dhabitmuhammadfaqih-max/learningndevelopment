@@ -276,6 +276,18 @@ Route::middleware('auth')->group(function () {
                 '/pegawai/{id}/checklist-pertemuan',
                 [OfficialController::class, 'toggleChecklistPertemuanPegawai']
             )->name('employee.checklist-pertemuan.toggle');
+
+            // Langkah pertama bukti checklist metode OFFLINE (pengganti
+            // selfie): PENILAI membuat kode pertemuan, lalu
+            // menunjukkannya langsung ke pegawai yang duduk di
+            // depannya. Pegawai yang memasukkan kode itu lewat
+            // 'employee.checklist-pertemuan.toggle' - dan saat itulah
+            // checklist KEDUA pihak tercentang sekaligus. Lihat
+            // App\Models\MeetingCode.
+            Route::post(
+                '/pegawai/{id}/kode-pertemuan',
+                [OfficialController::class, 'generateMeetingCodePegawai']
+            )->name('employee.meeting-code.generate');
         });
 
     // Catatan: role 'pegawai' ditambahkan ke middleware grup 'official.*'
@@ -355,6 +367,13 @@ Route::middleware('auth')->group(function () {
                 '/pejabat/{id}/checklist-pertemuan',
                 [SupervisorController::class, 'toggleChecklistPertemuanPejabat']
             )->name('official.checklist-pertemuan.toggle');
+
+            // Versi pejabat dari 'official.employee.meeting-code.generate'
+            // - ATASAN membuat kode pertemuan untuk pejabat binaannya.
+            Route::post(
+                '/pejabat/{id}/kode-pertemuan',
+                [SupervisorController::class, 'generateMeetingCodePejabat']
+            )->name('official.meeting-code.generate');
         });
 
 

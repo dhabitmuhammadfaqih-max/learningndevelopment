@@ -1208,6 +1208,7 @@ class OfficialController extends Controller
                 'pejabat_konfirmasi_pertemuan_selfie' => null,
                 'pejabat_konfirmasi_pertemuan_evidence_type' => null,
                 'pejabat_konfirmasi_pertemuan_metode' => null,
+                'pejabat_konfirmasi_pertemuan_kode' => null,
                 'pejabat_konfirmasi_pertemuan_tahun' => null,
             ]);
 
@@ -1221,7 +1222,22 @@ class OfficialController extends Controller
             );
         }
 
-        [$selfiePath, $evidenceType, $meetingMethod] = $this->resolveChecklistEvidence($request, 'pejabat', $user->id);
+        [$selfiePath, $evidenceType, $meetingMethod, $meetingCode] = $this->resolveChecklistEvidence($request, 'pejabat', $user->id);
+
+        $tahun = \App\Support\ActivePeriod::year();
+
+        // Metode Offline: kode pertemuan dari Atasan - versi pejabat
+        // dari EmployeeController::toggleChecklistPertemuan().
+        $kodeRecord = null;
+
+        if ($evidenceType === 'kode') {
+            $kodeRecord = \App\Models\MeetingCode::redeem(
+                $meetingCode,
+                $user,
+                \App\Models\MeetingCode::CONTEXT_PEJABAT,
+                $tahun
+            );
+        }
 
         // Hapus bukti lama (attempt sebelumnya di tahun yang sama, atau
         // sisa checklist tahun lalu) sebelum ditimpa.
@@ -1232,8 +1248,25 @@ class OfficialController extends Controller
             'pejabat_konfirmasi_pertemuan_selfie' => $selfiePath,
             'pejabat_konfirmasi_pertemuan_evidence_type' => $evidenceType,
             'pejabat_konfirmasi_pertemuan_metode' => $meetingMethod,
-            'pejabat_konfirmasi_pertemuan_tahun' => now()->year,
+            'pejabat_konfirmasi_pertemuan_kode' => $evidenceType === 'kode' ? $meetingCode : null,
+            'pejabat_konfirmasi_pertemuan_tahun' => $tahun,
         ]);
+
+        // Satu kode = satu pertemuan berdua, jadi checklist ATASAN ikut
+        // tercentang sekaligus - lihat catatan lengkapnya di
+        // EmployeeController::toggleChecklistPertemuan().
+        if ($kodeRecord && ! $user->atasanSudahKonfirmasiPertemuan($tahun)) {
+            $this->deleteChecklistEvidence($user->atasan_konfirmasi_pertemuan_selfie);
+
+            $user->update([
+                'atasan_konfirmasi_pertemuan_at' => now(),
+                'atasan_konfirmasi_pertemuan_selfie' => null,
+                'atasan_konfirmasi_pertemuan_evidence_type' => 'kode',
+                'atasan_konfirmasi_pertemuan_metode' => null,
+                'atasan_konfirmasi_pertemuan_kode' => $kodeRecord->code,
+                'atasan_konfirmasi_pertemuan_tahun' => $tahun,
+            ]);
+        }
 
         // Kalau checklist ATASAN untuk pejabat ini sudah lebih dulu
         // lengkap, checklist PEJABAT barusan ini yang melengkapi syarat
@@ -1241,7 +1274,69 @@ class OfficialController extends Controller
         app(NotificationTriggerService::class)
             ->triggerSiapTandaTanganHrdPejabatJikaPerlu($user);
 
-        return back()->with('success', 'Checklist pertemuan & evaluasi berhasil dicentang.');
+        return back()->with(
+            'success',
+            $evidenceType === 'kode'
+                ? 'Kode pertemuan cocok. Checklist Anda dan Atasan sudah tercentang, datanya diteruskan ke HRD.'
+                : 'Checklist pertemuan & evaluasi berhasil dicentang.'
+        );
+    }
+
+    /**
+     * PENILAI menekan "Generate Kode" untuk pegawai ini - langkah
+     * pertama bukti checklist metode Offline, pengganti selfie.
+     *
+     * Kode hasil generate HANYA dikembalikan ke layar penilai (lewat
+     * MeetingCode::activeFor() saat halaman dirender ulang), TIDAK
+     * pernah dikirim ke pegawai lewat jalur apa pun - itulah yang
+     * membuat kode ini sah sebagai bukti pertemuan tatap muka. Lihat
+     * App\Models\MeetingCode.
+     *
+     * Syaratnya sama persis dengan mencentang checklist secara manual
+     * (toggleChecklistPertemuanPegawai di bawah): penilai yang
+     * ditugaskan, belum dikunci HRD, dan checklist memang sudah boleh
+     * diisi.
+     */
+    public function generateMeetingCodePegawai(Request $request, $id)
+    {
+        $employee = User::where('role', 'pegawai')->findOrFail($id);
+
+        if ((int) $employee->supervisor_id !== Auth::id()) {
+            abort(403, 'Anda bukan Penilai yang ditugaskan untuk pegawai ini.');
+        }
+
+        if ($employee->hrdSudahMenandatanganiPenilaian()) {
+            return back()->with(
+                'error',
+                'Kode pertemuan tidak bisa dibuat karena penilaian ini sudah ditanda-tangani HRD.'
+            );
+        }
+
+        if ($employee->penilaiSudahKonfirmasiPertemuan()) {
+            return back()->with(
+                'error',
+                'Checklist pertemuan untuk pegawai ini sudah tercentang. Batalkan dulu kalau ingin mengulang.'
+            );
+        }
+
+        if (! $employee->checklistPertemuanPenilaiBolehDiisi()) {
+            return back()->with(
+                'error',
+                'Kode pertemuan belum bisa dibuat. Tanggapan dari Atasan Penilai untuk pegawai ini belum diselesaikan.'
+            );
+        }
+
+        \App\Models\MeetingCode::issue(
+            $employee,
+            $request->user(),
+            \App\Models\MeetingCode::CONTEXT_PEGAWAI,
+            \App\Support\ActivePeriod::year()
+        );
+
+        return back()->with(
+            'success',
+            'Kode pertemuan dibuat. Tunjukkan kode di layar ini ke pegawai yang bersangkutan.'
+        );
     }
 
     /**
@@ -1297,6 +1392,7 @@ class OfficialController extends Controller
                 'penilai_konfirmasi_pertemuan_selfie' => null,
                 'penilai_konfirmasi_pertemuan_evidence_type' => null,
                 'penilai_konfirmasi_pertemuan_metode' => null,
+                'penilai_konfirmasi_pertemuan_kode' => null,
                 'penilai_konfirmasi_pertemuan_tahun' => null,
             ]);
 
@@ -1310,7 +1406,20 @@ class OfficialController extends Controller
             );
         }
 
-        [$selfiePath, $evidenceType, $meetingMethod] = $this->resolveChecklistEvidence($request, 'penilai', $employee->id);
+        // PENILAI tidak pernah MEMASUKKAN kode pertemuan - dia yang
+        // MEMBUAT kode (generateMeetingCodePegawai()), lalu
+        // checklist-nya ikut tercentang otomatis begitu pegawai
+        // memasukkan kode tsb (lihat
+        // EmployeeController::toggleChecklistPertemuan()). Jadi jalur
+        // submit manual di sini khusus metode Online saja.
+        if ($request->input('evidence_type') === 'kode') {
+            return back()->with(
+                'error',
+                'Untuk pertemuan Offline, tekan "Buat Kode Pertemuan" lalu minta pegawai memasukkan kodenya.'
+            );
+        }
+
+        [$selfiePath, $evidenceType, $meetingMethod, $meetingCode] = $this->resolveChecklistEvidence($request, 'penilai', $employee->id);
 
         $this->deleteChecklistEvidence($employee->penilai_konfirmasi_pertemuan_selfie);
 
@@ -1319,6 +1428,7 @@ class OfficialController extends Controller
             'penilai_konfirmasi_pertemuan_selfie' => $selfiePath,
             'penilai_konfirmasi_pertemuan_evidence_type' => $evidenceType,
             'penilai_konfirmasi_pertemuan_metode' => $meetingMethod,
+            'penilai_konfirmasi_pertemuan_kode' => null,
             'penilai_konfirmasi_pertemuan_tahun' => now()->year,
         ]);
 

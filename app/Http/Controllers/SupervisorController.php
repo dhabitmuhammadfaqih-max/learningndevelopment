@@ -307,6 +307,7 @@ class SupervisorController extends Controller
                 'atasan_konfirmasi_pertemuan_selfie' => null,
                 'atasan_konfirmasi_pertemuan_evidence_type' => null,
                 'atasan_konfirmasi_pertemuan_metode' => null,
+                'atasan_konfirmasi_pertemuan_kode' => null,
                 'atasan_konfirmasi_pertemuan_tahun' => null,
             ]);
 
@@ -320,7 +321,16 @@ class SupervisorController extends Controller
             );
         }
 
-        [$selfiePath, $evidenceType, $meetingMethod] = $this->resolveChecklistEvidence($request, 'atasan', $pejabat->id);
+        // ATASAN yang MEMBUAT kode pertemuan, bukan memasukkannya -
+        // lihat catatan di OfficialController::toggleChecklistPertemuanPegawai().
+        if ($request->input('evidence_type') === 'kode') {
+            return back()->with(
+                'error',
+                'Untuk pertemuan Offline, tekan "Buat Kode Pertemuan" lalu minta pejabat memasukkan kodenya.'
+            );
+        }
+
+        [$selfiePath, $evidenceType, $meetingMethod, $meetingCode] = $this->resolveChecklistEvidence($request, 'atasan', $pejabat->id);
 
         $this->deleteChecklistEvidence($pejabat->atasan_konfirmasi_pertemuan_selfie);
 
@@ -329,6 +339,7 @@ class SupervisorController extends Controller
             'atasan_konfirmasi_pertemuan_selfie' => $selfiePath,
             'atasan_konfirmasi_pertemuan_evidence_type' => $evidenceType,
             'atasan_konfirmasi_pertemuan_metode' => $meetingMethod,
+            'atasan_konfirmasi_pertemuan_kode' => null,
             'atasan_konfirmasi_pertemuan_tahun' => now()->year,
         ]);
 
@@ -338,6 +349,54 @@ class SupervisorController extends Controller
             ->triggerSiapTandaTanganHrdPejabatJikaPerlu($pejabat);
 
         return back()->with('success', 'Checklist pertemuan & evaluasi berhasil dicentang.');
+    }
+
+    /**
+     * ATASAN menekan "Buat Kode Pertemuan" untuk pejabat ini - versi
+     * pejabat dari OfficialController::generateMeetingCodePegawai().
+     * Lihat App\Models\MeetingCode untuk alur & alasan kode ini sah
+     * sebagai bukti tatap muka.
+     */
+    public function generateMeetingCodePejabat(Request $request, $id)
+    {
+        $pejabat = User::where('role', 'pejabat')->findOrFail($id);
+
+        if ((int) $pejabat->supervisor_id !== Auth::id()) {
+            abort(403, 'Anda bukan Atasan yang ditugaskan untuk menilai pejabat ini.');
+        }
+
+        if ($pejabat->hrdSudahMenandatanganiPenilaianPejabat()) {
+            return back()->with(
+                'error',
+                'Kode pertemuan tidak bisa dibuat karena penilaian ini sudah ditanda-tangani HRD.'
+            );
+        }
+
+        if ($pejabat->atasanSudahKonfirmasiPertemuan()) {
+            return back()->with(
+                'error',
+                'Checklist pertemuan untuk pejabat ini sudah tercentang. Batalkan dulu kalau ingin mengulang.'
+            );
+        }
+
+        if (! $pejabat->checklistPertemuanPejabatBolehDiisi()) {
+            return back()->with(
+                'error',
+                'Kode pertemuan belum bisa dibuat. Tanggapan dari Atasan Penilai untuk pejabat ini belum diselesaikan.'
+            );
+        }
+
+        \App\Models\MeetingCode::issue(
+            $pejabat,
+            $request->user(),
+            \App\Models\MeetingCode::CONTEXT_PEJABAT,
+            \App\Support\ActivePeriod::year()
+        );
+
+        return back()->with(
+            'success',
+            'Kode pertemuan dibuat. Tunjukkan kode di layar ini ke pejabat yang bersangkutan.'
+        );
     }
 
     /**

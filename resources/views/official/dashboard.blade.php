@@ -171,7 +171,7 @@
                                  langsung scroll ke tombol checklist kartu ini, bukan
                                  ke halaman Penilaian - lihat
                                  NotificationTriggerService::triggerSiapChecklistAtasanPejabatJikaPerlu(). --}}
-                            <div id="checklist-pejabat-{{ $pejabat->id }}" class="dashboard-searchable flex flex-col sm:flex-row sm:items-center gap-4 p-4 rounded-2xl border border-slate-100 hover:border-blue-100 hover:bg-blue-50/30 transition" data-name="{{ mb_strtolower($pejabat->name) }}">
+                            <div id="checklist-pejabat-{{ $pejabat->id }}" class="dashboard-searchable flex flex-col sm:flex-row sm:items-start gap-4 p-4 rounded-2xl border border-slate-100 hover:border-blue-100 hover:bg-blue-50/30 transition" data-name="{{ mb_strtolower($pejabat->name) }}">
                                 <div class="flex items-center gap-4 flex-1 min-w-0">
                                     <div class="w-12 h-12 rounded-2xl shrink-0 grid place-items-center text-white font-bold text-sm {{ $palettes[$i % count($palettes)] }}">
                                         {{ $initialsOf($pejabat->name) }}
@@ -219,6 +219,16 @@
                                 @php
                                     $atasanSudahCentang    = $pejabat->atasanSudahKonfirmasiPertemuan();
                                     $atasanBolehCentang    = $pejabat->checklistPertemuanPejabatBolehDiisi();
+                                    // Kode pertemuan yang masih berlaku untuk pejabat ini, supaya
+                                    // kode tetap tampil setelah halaman di-refresh tanpa perlu
+                                    // generate ulang - lihat App\Models\MeetingCode::activeFor().
+                                    // Query hanya dijalankan untuk baris yang memang masih
+                                    // butuh kode - tanpa syarat ini, halaman dengan banyak
+                                    // pejabat binaan akan menembak 1 query tambahan per baris
+                                    // walau checklist-nya sudah lama selesai.
+                                    $atasanKodeAktif       = (! $atasanSudahCentang && $atasanBolehCentang)
+                                        ? \App\Models\MeetingCode::activeFor($pejabat->id, \App\Models\MeetingCode::CONTEXT_PEJABAT)
+                                        : null;
                                     // Terkunci begitu HRD sudah tanda tangan penilaian pejabat ini -
                                     // lihat User::hrdSudahMenandatanganiPenilaianPejabat().
                                     $atasanHrdLocked       = $pejabat->hrdSudahMenandatanganiPenilaianPejabat();
@@ -226,13 +236,17 @@
 
                                 <div class="shrink-0 flex flex-col gap-2 items-stretch">
                                     {{-- Tombol Checklist Pertemuan --}}
-                                    @include('partials.checklist-selfie-toggle', [
+                                    @include('partials.checklist-pertemuan-toggle', [
                                         'action' => route('supervisor.official.checklist-pertemuan.toggle', $pejabat->id),
+                                        'mode' => 'issuer',
+                                        'codeAction' => route('supervisor.official.meeting-code.generate', $pejabat->id),
+                                        'activeCode' => $atasanKodeAktif,
                                         'checked' => $atasanSudahCentang,
                                         'checkedAt' => $pejabat->atasan_konfirmasi_pertemuan_at,
                                         'selfieUrl' => $pejabat->atasan_konfirmasi_pertemuan_selfie ? Storage::disk('public')->url($pejabat->atasan_konfirmasi_pertemuan_selfie) : null,
                                         'evidenceType' => $pejabat->atasan_konfirmasi_pertemuan_evidence_type,
                                         'meetingMethod' => $pejabat->atasan_konfirmasi_pertemuan_metode,
+                                        'meetingCode' => $pejabat->atasan_konfirmasi_pertemuan_kode,
                                         'checkedLabel' => 'Sudah Bertemu',
                                         'uncheckedLabel' => 'Tandai Pertemuan',
                                         'boleh' => $atasanBolehCentang,
@@ -288,7 +302,7 @@
                                  scroll ke tombol checklist kartu ini, bukan ke halaman
                                  Penilaian pegawai - lihat
                                  NotificationTriggerService::triggerSiapChecklistPenilaiJikaPerlu(). --}}
-                            <div id="checklist-employee-{{ $employee->id }}" class="dashboard-searchable flex flex-col sm:flex-row sm:items-center gap-4 p-4 rounded-2xl border border-slate-100 hover:border-blue-100 hover:bg-blue-50/30 transition" data-name="{{ mb_strtolower($employee->name) }}">
+                            <div id="checklist-employee-{{ $employee->id }}" class="dashboard-searchable flex flex-col sm:flex-row sm:items-start gap-4 p-4 rounded-2xl border border-slate-100 hover:border-blue-100 hover:bg-blue-50/30 transition" data-name="{{ mb_strtolower($employee->name) }}">
                                 <div class="flex items-center gap-4 flex-1 min-w-0">
                                     <div class="w-12 h-12 rounded-2xl shrink-0 grid place-items-center text-white font-bold text-sm {{ $palettes[$i % count($palettes)] }}">
                                         {{ $initialsOf($employee->name) }}
@@ -342,20 +356,30 @@
                                             // Baru boleh MULAI dicentang setelah Atasan Penilai
                                             // (SupervisorFeedback) sudah mengisi tanggapannya untuk
                                             // pegawai ini. Membatalkan checklist yang sudah tercentang
-                                            // tetap boleh kapan saja, wajib selfie setiap dicentang.
+                                            // tetap boleh kapan saja. Bukti Offline sekarang berupa kode
+                                            // pertemuan yang dibuat di sini lalu dimasukkan pegawai.
                                             $penilaiSudahCentang = $employee->penilaiSudahKonfirmasiPertemuan();
                                             $penilaiBolehCentang = $employee->checklistPertemuanPenilaiBolehDiisi();
+                                            // Kode pertemuan yang masih berlaku untuk pegawai ini -
+                                            // lihat App\Models\MeetingCode::activeFor().
+                                            $penilaiKodeAktif    = (! $penilaiSudahCentang && $penilaiBolehCentang)
+                                                ? \App\Models\MeetingCode::activeFor($employee->id, \App\Models\MeetingCode::CONTEXT_PEGAWAI)
+                                                : null;
                                             // Terkunci begitu HRD sudah tanda tangan penilaian pegawai ini -
                                             // lihat User::hrdSudahMenandatanganiPenilaian().
                                             $penilaiHrdLocked    = $employee->hrdSudahMenandatanganiPenilaian();
                                         @endphp
-                                        @include('partials.checklist-selfie-toggle', [
+                                        @include('partials.checklist-pertemuan-toggle', [
                                             'action' => route('official.employee.checklist-pertemuan.toggle', $employee->id),
+                                            'mode' => 'issuer',
+                                            'codeAction' => route('official.employee.meeting-code.generate', $employee->id),
+                                            'activeCode' => $penilaiKodeAktif,
                                             'checked' => $penilaiSudahCentang,
                                             'checkedAt' => $employee->penilai_konfirmasi_pertemuan_at,
                                             'selfieUrl' => $employee->penilai_konfirmasi_pertemuan_selfie ? Storage::disk('public')->url($employee->penilai_konfirmasi_pertemuan_selfie) : null,
                                             'evidenceType' => $employee->penilai_konfirmasi_pertemuan_evidence_type,
                                             'meetingMethod' => $employee->penilai_konfirmasi_pertemuan_metode,
+                                            'meetingCode' => $employee->penilai_konfirmasi_pertemuan_kode,
                                             'checkedLabel' => 'Sudah Bertemu & Evaluasi',
                                             'uncheckedLabel' => 'Tandai Sudah Bertemu & Evaluasi',
                                             'boleh' => $penilaiBolehCentang,

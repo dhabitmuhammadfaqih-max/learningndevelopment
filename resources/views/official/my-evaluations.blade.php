@@ -53,19 +53,21 @@
     <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 sm:p-7 mb-8">
         <h3 class="text-lg font-bold text-slate-800 mb-2">Checklist Pertemuan &amp; Evaluasi</h3>
         <p class="text-sm text-slate-400 mb-4">
-            Centang setelah Anda bertemu langsung dan mendiskusikan hasil evaluasi dengan Atasan Anda. Selfie diperlukan sebagai bukti.
+            Centang setelah Anda bertemu dan mendiskusikan hasil evaluasi dengan Atasan Anda. Untuk pertemuan offline, masukkan kode yang ditunjukkan Atasan Anda sebagai bukti.
             HRD tidak dapat mencetak PDF penilaian Anda sebelum checklist ini dicentang.
         </p>
 
-        @include('partials.checklist-selfie-toggle', [
+        @include('partials.checklist-pertemuan-toggle', [
             'action' => route('official.checklist-pertemuan-saya.toggle'),
+            'mode' => 'subject',
             'checked' => $pejabatSudahCentang,
             'checkedAt' => auth()->user()->pejabat_konfirmasi_pertemuan_at,
             'selfieUrl' => auth()->user()->pejabat_konfirmasi_pertemuan_selfie ? Storage::disk('public')->url(auth()->user()->pejabat_konfirmasi_pertemuan_selfie) : null,
             'evidenceType' => auth()->user()->pejabat_konfirmasi_pertemuan_evidence_type,
             'meetingMethod' => auth()->user()->pejabat_konfirmasi_pertemuan_metode,
+            'meetingCode' => auth()->user()->pejabat_konfirmasi_pertemuan_kode,
             'checkedLabel' => 'Sudah Bertemu & Evaluasi (klik untuk batalkan)',
-            'uncheckedLabel' => 'Ambil Selfie & Tandai Sudah Bertemu',
+            'uncheckedLabel' => 'Tandai Sudah Bertemu & Evaluasi',
             'boleh' => $pejabatBolehCentang,
             'bolehMessage' => 'Belum bisa memberikan bukti evaluasi. Menunggu siap dinilai & tanggapan Atasan Penilai.',
             'hrdLocked' => $pejabatHrdLocked,

@@ -16,7 +16,7 @@ return new class extends Migration
      * baru. Kolom ini hanya menyimpan METODE-nya, dipakai HRD untuk
      * menampilkan label "Bukti: Upload File" / "Bukti: Selfie" - lihat
      * resources/views/admin/detail.blade.php &
-     * resources/views/partials/checklist-selfie-toggle.blade.php.
+     * resources/views/partials/checklist-pertemuan-toggle.blade.php.
      */
     public function up(): void
     {
