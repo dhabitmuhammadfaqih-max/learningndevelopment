@@ -674,6 +674,9 @@
         @if ($evaluation && $evaluation->recommendationLabel() !== 'Tidak Ada')
             <p class="rekomendasi-highlight">{{ $evaluation->recommendationLabel() }}</p>
         @endif
+        @if ($evaluation && $evaluation->kenaikan_gaji_amount)
+            <p>Nominal Kenaikan Gaji: Rp {{ number_format($evaluation->kenaikan_gaji_amount, 0, ',', '.') }}</p>
+        @endif
         <div class="korelasi-ttd">
             @if(!empty($signatures['pejabat']))
                 <img src="{{ $signatures['pejabat'] }}" class="ttd-signature-img">
@@ -696,10 +699,13 @@
             // tidak baru fallback ke SupervisorFeedback ($atasanFeedback,
             // jalur normal).
             $finalRecommendationLabel = null;
+            $finalKenaikanGajiAmount = null;
             if ($atasanEvaluation && $atasanEvaluation->recommendationLabel() !== 'Tidak Ada') {
                 $finalRecommendationLabel = $atasanEvaluation->recommendationLabel();
+                $finalKenaikanGajiAmount = $atasanEvaluation->kenaikan_gaji_amount;
             } elseif ($atasanFeedback && $atasanFeedback->recommendationLabel() !== 'Tidak Ada') {
                 $finalRecommendationLabel = $atasanFeedback->recommendationLabel();
+                $finalKenaikanGajiAmount = $atasanFeedback->kenaikan_gaji_amount;
             }
         @endphp
         @if ($atasanEvaluation && $atasanEvaluation->feedback)
@@ -708,6 +714,9 @@
             </div>
             @if ($finalRecommendationLabel)
                 <p class="rekomendasi-highlight">{{ $finalRecommendationLabel }}</p>
+            @endif
+            @if ($finalKenaikanGajiAmount)
+                <p>Nominal Kenaikan Gaji: Rp {{ number_format($finalKenaikanGajiAmount, 0, ',', '.') }}</p>
             @endif
             <div class="korelasi-ttd">
                 @if(!empty($signatures['atasan']))
@@ -725,6 +734,9 @@
             @if ($finalRecommendationLabel)
                 <p class="rekomendasi-highlight">{{ $finalRecommendationLabel }}</p>
             @endif
+            @if ($finalKenaikanGajiAmount)
+                <p>Nominal Kenaikan Gaji: Rp {{ number_format($finalKenaikanGajiAmount, 0, ',', '.') }}</p>
+            @endif
             <div class="korelasi-ttd">
                 @if(!empty($signatures['atasan']))
                     <img src="{{ $signatures['atasan'] }}" class="ttd-signature-img">
@@ -738,6 +750,9 @@
             @if ($finalRecommendationLabel)
                 <p class="rekomendasi-highlight">{{ $finalRecommendationLabel }}</p>
             @endif
+            @if ($finalKenaikanGajiAmount)
+                <p>Nominal Kenaikan Gaji: Rp {{ number_format($finalKenaikanGajiAmount, 0, ',', '.') }}</p>
+            @endif
             <div class="komentar">&nbsp;</div>
             <div class="korelasi-ttd">
                 <span class="nama">( {{ $employee->atasanPejabat->name ?? 'Ishana Mahisa' }} )</span>
@@ -745,6 +760,9 @@
         @else
             @if ($finalRecommendationLabel)
                 <p class="rekomendasi-highlight">{{ $finalRecommendationLabel }}</p>
+            @endif
+            @if ($finalKenaikanGajiAmount)
+                <p>Nominal Kenaikan Gaji: Rp {{ number_format($finalKenaikanGajiAmount, 0, ',', '.') }}</p>
             @endif
             <div class="korelasi-ttd">
                 <span class="nama">( Ishana Mahisa )</span>

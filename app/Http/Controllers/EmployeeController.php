@@ -7,6 +7,7 @@ use App\Models\Feedback;
 use App\Models\Evaluation;
 use App\Models\SupervisorFeedback;
 use App\Services\NotificationTriggerService;
+use App\Support\AccountSignature;
 use App\Http\Controllers\Concerns\HandlesChecklistEvidence;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -147,8 +148,17 @@ class EmployeeController extends Controller
         $validated = $request->validate([
             'employee_id' => 'required|exists:users,id',
             'feedback'    => 'required|string|min:10',
-            'signature'   => 'required|string',
         ]);
+
+        // Tanda tangan sekarang diambil otomatis dari tanda tangan akun
+        // yang sudah tersimpan (lihat App\Support\AccountSignature &
+        // partials.signature-setup-modal) - tidak perlu digambar lagi di
+        // setiap submit. Modal penyimpanan tanda tangan wajib diisi lebih
+        // dulu sebelum halaman ini bisa dipakai, jadi seharusnya selalu ada;
+        // dicek lagi di sini sebagai lapisan aman terakhir.
+        if (! Auth::user()->hasSavedSignature()) {
+            return back()->withErrors(['employee_id' => 'Tanda tangan akun Anda belum tersimpan. Silakan muat ulang halaman.'])->withInput();
+        }
 
         if ((int) $validated['employee_id'] === (int) Auth::id()) {
             return back()
@@ -170,14 +180,7 @@ class EmployeeController extends Controller
                 ->withInput();
         }
 
-        // Pastikan data yang dikirim benar-benar gambar base64 dari canvas
-        if (! preg_match('/^data:image\/png;base64,/', $validated['signature'])) {
-            return back()->withErrors(['signature' => 'Format tanda tangan tidak valid.'])->withInput();
-        }
-
-        $imageContent = base64_decode(substr($validated['signature'], strpos($validated['signature'], ',') + 1));
-        $signaturePath = 'signatures/feedback_' . $validated['employee_id'] . '_' . Auth::id() . '_' . time() . '.png';
-        Storage::disk('public')->put($signaturePath, $imageContent);
+        $signaturePath = AccountSignature::copyFor(Auth::user(), 'feedback_' . $validated['employee_id'] . '_' . Auth::id());
 
         try {
             Feedback::create([
@@ -265,17 +268,15 @@ class EmployeeController extends Controller
 
         $validated = $request->validate([
             'employee_response' => 'required|string|min:5',
-            'employee_signature' => 'required|string',
         ]);
 
-        // Pastikan data yang dikirim benar-benar gambar base64 dari canvas
-        if (! preg_match('/^data:image\/png;base64,/', $validated['employee_signature'])) {
-            return back()->withErrors(['employee_signature' => 'Format tanda tangan tidak valid.'])->withInput();
+        // Tanda tangan diambil otomatis dari tanda tangan akun yang sudah
+        // tersimpan - lihat catatan di method feedback() di atas.
+        if (! Auth::user()->hasSavedSignature()) {
+            return back()->withErrors(['employee_response' => 'Tanda tangan akun Anda belum tersimpan. Silakan muat ulang halaman.'])->withInput();
         }
 
-        $imageContent = base64_decode(substr($validated['employee_signature'], strpos($validated['employee_signature'], ',') + 1));
-        $signaturePath = 'signatures/evaluation_response_' . $evaluation->id . '_' . time() . '.png';
-        Storage::disk('public')->put($signaturePath, $imageContent);
+        $signaturePath = AccountSignature::copyFor(Auth::user(), 'evaluation_response_' . $evaluation->id);
 
         $evaluation->update([
             'employee_response'    => $validated['employee_response'],

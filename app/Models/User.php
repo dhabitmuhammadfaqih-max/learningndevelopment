@@ -64,6 +64,8 @@ class User extends Authenticatable
         'penilai_konfirmasi_pertemuan_tahun',
         'pejabat_konfirmasi_pertemuan_tahun',
         'atasan_konfirmasi_pertemuan_tahun',
+        'signature_path',
+        'signature_saved_at',
     ];
 
     protected $hidden = [
@@ -87,7 +89,32 @@ class User extends Authenticatable
         'pejabat_konfirmasi_pertemuan_tahun' => 'integer',
         'atasan_konfirmasi_pertemuan_tahun' => 'integer',
         'tanggal_masuk' => 'date',
+        'signature_saved_at' => 'datetime',
     ];
+
+    /**
+     * Apakah user ini sudah punya tanda tangan tersimpan di akunnya.
+     * Dipakai untuk memutuskan apakah modal "simpan tanda tangan" perlu
+     * ditampilkan, dan apakah alur-alur tanda tangan (tanggapan, penilaian,
+     * dsb) sudah bisa jalan tanpa minta gambar ulang.
+     */
+    public function hasSavedSignature(): bool
+    {
+        return ! empty($this->signature_path)
+            && \Illuminate\Support\Facades\Storage::disk('public')->exists($this->signature_path);
+    }
+
+    /**
+     * URL publik tanda tangan tersimpan milik user ini, atau null kalau
+     * belum ada. Sama untuk user ini di device manapun dia login, karena
+     * disimpan di kolom akun (bukan di session/localStorage device).
+     */
+    public function getSignatureUrlAttribute(): ?string
+    {
+        return $this->hasSavedSignature()
+            ? \Illuminate\Support\Facades\Storage::disk('public')->url($this->signature_path)
+            : null;
+    }
 
     // Kolom jumlah kehadiran yang bisa diisi hrd (masing-masing kategori
     // dihitung terpisah, bukan satu status tunggal).

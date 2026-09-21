@@ -85,18 +85,26 @@
 
     <div class="mt-4 max-w-[280px]" x-show="selected.includes('kenaikan_gaji')" x-cloak>
         <label class="block text-sm font-bold text-slate-700 mb-1.5">Nominal Kenaikan Gaji</label>
+        {{--
+            Input yang TERLIHAT ini cuma untuk tampilan (diberi titik ribuan
+            otomatis, mis. "3.000.000") supaya user gampang mengecek jumlah
+            nol-nya dan tidak salah ketik nominal. Field ini SENGAJA tidak
+            punya atribut "name" - yang dikirim ke server adalah hidden
+            input "kenaikan_gaji_amount" di bawah, isinya angka murni tanpa
+            titik (kenaikanGaji), supaya validasi server (nullable|integer)
+            tidak perlu diubah sama sekali.
+        --}}
         <input
             type="text"
             inputmode="numeric"
-            pattern="[0-9]*"
-            name="kenaikan_gaji_amount"
-            min="1"
-            x-model="kenaikanGaji"
+            :value="kenaikanGaji ? new Intl.NumberFormat('id-ID').format(kenaikanGaji) : ''"
             @keydown="if (!/^[0-9]$/.test($event.key) && !['Backspace','Delete','ArrowLeft','ArrowRight','Tab','Home','End'].includes($event.key) && !$event.metaKey && !$event.ctrlKey) $event.preventDefault()"
-            @input="kenaikanGaji = kenaikanGaji.replace(/[^0-9]/g, '')"
+            @input="kenaikanGaji = $event.target.value.replace(/[^0-9]/g, '')"
             @paste="setTimeout(() => kenaikanGaji = kenaikanGaji.replace(/[^0-9]/g, ''))"
+            placeholder="Contoh: 500.000"
             class="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none"
         >
+        <input type="hidden" name="kenaikan_gaji_amount" min="1" x-model="kenaikanGaji">
         @error('kenaikan_gaji_amount')
             <p class="text-xs text-red-600 mt-1">{{ $message }}</p>
         @enderror

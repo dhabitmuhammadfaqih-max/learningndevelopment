@@ -1,3 +1,15 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/*
+ * Wajib ada supaya atribut x-cloak (dipakai di modal tanda tangan,
+ * recommendation-fields, dsb) benar-benar menyembunyikan elemen SEBELUM
+ * Alpine.js selesai load. Tanpa rule ini, x-cloak cuma atribut HTML
+ * kosong tanpa efek apa-apa - elemen yang seharusnya tersembunyi (mis.
+ * modal edit tanda tangan) akan sempat "flash" muncul sekilas di setiap
+ * page load, baru disembunyikan Alpine setelah JS-nya jalan.
+ */
+[x-cloak] {
+    display: none !important;
+}

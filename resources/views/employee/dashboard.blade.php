@@ -236,12 +236,11 @@
 
                                     <div>
                                         <label class="block text-xs font-semibold text-slate-500 mb-2">Tanda Tangan</label>
-                                        <canvas id="eval-signature-pad" class="signature-canvas rounded-xl border border-slate-200 bg-white touch-none cursor-crosshair block w-full max-w-[400px] sm:w-[400px] sm:h-[150px]" style="aspect-ratio: 400 / 150;"></canvas>
-                                        <div class="flex items-center justify-between mt-2">
-                                            <span class="text-xs text-slate-400">Gambar tanda tangan di kotak di atas</span>
-                                            <button type="button" id="btn-clear-eval-signature" class="text-xs font-medium text-slate-500 underline hover:text-slate-800">Hapus &amp; ulangi</button>
-                                        </div>
-                                        <input type="hidden" name="employee_signature" id="eval-signature-input">
+                                        <img src="{{ auth()->user()->signature_url }}" alt="Tanda tangan Anda"
+                                             class="rounded-xl border border-slate-200 bg-white block w-full max-w-[400px] h-[150px] object-contain">
+                                        <p class="text-xs text-slate-400 mt-2">
+                                            Tanda tangan akun Anda akan otomatis dipakai untuk tanggapan ini.
+                                        </p>
                                     </div>
 
                                     <button type="submit"
@@ -265,12 +264,11 @@
 
                                     <div>
                                         <label class="block text-xs font-semibold text-slate-500 mb-2">Tanda Tangan</label>
-                                        <canvas id="eval-signature-pad-edit" class="signature-canvas rounded-xl border border-slate-200 bg-white touch-none cursor-crosshair block w-full max-w-[400px] sm:w-[400px] sm:h-[150px]" style="aspect-ratio: 400 / 150;"></canvas>
-                                        <div class="flex items-center justify-between mt-2">
-                                            <span class="text-xs text-slate-400">Gambar ulang tanda tangan di kotak di atas</span>
-                                            <button type="button" id="btn-clear-eval-signature-edit" class="text-xs font-medium text-slate-500 underline hover:text-slate-800">Hapus &amp; ulangi</button>
-                                        </div>
-                                        <input type="hidden" name="employee_signature" id="eval-signature-input-edit">
+                                        <img src="{{ auth()->user()->signature_url }}" alt="Tanda tangan Anda"
+                                             class="rounded-xl border border-slate-200 bg-white block w-full max-w-[400px] h-[150px] object-contain">
+                                        <p class="text-xs text-slate-400 mt-2">
+                                            Tanda tangan akun Anda akan otomatis dipakai untuk tanggapan ini.
+                                        </p>
                                     </div>
 
                                     <button type="submit"
@@ -416,12 +414,14 @@
 
                     <div>
                         <label class="block text-xs font-semibold text-slate-500 mb-2">Tanda Tangan</label>
-                        <canvas id="signature-pad" class="signature-canvas rounded-xl border border-slate-200 bg-white touch-none cursor-crosshair block w-full max-w-[400px] sm:w-[400px] sm:h-[150px]" style="aspect-ratio: 400 / 150;"></canvas>
-                        <div class="flex items-center justify-between mt-2">
-                            <span class="text-xs text-slate-400">Gambar tanda tangan di kotak di atas</span>
-                            <button type="button" id="btn-clear-signature" class="text-xs font-medium text-slate-500 underline hover:text-slate-800">Hapus &amp; ulangi</button>
-                        </div>
-                        <input type="hidden" name="signature" id="signature-input">
+                        {{-- Tanda tangan diambil otomatis dari tanda tangan akun yang
+                             sudah tersimpan (lihat partials.signature-setup-modal) -
+                             tidak perlu digambar lagi setiap kali kirim tanggapan. --}}
+                        <img src="{{ auth()->user()->signature_url }}" alt="Tanda tangan Anda"
+                             class="rounded-xl border border-slate-200 bg-white block w-full max-w-[400px] h-[150px] object-contain">
+                        <p class="text-xs text-slate-400 mt-2">
+                            Tanda tangan akun Anda akan otomatis dipakai untuk tanggapan ini.
+                        </p>
                     </div>
 
                     <button type="submit"
@@ -578,213 +578,6 @@
     </div>
 
     <script>
-        // Fungsi reusable untuk pad tanda tangan (dipakai di form tanggapan
-        // teman & form tanggapan atas penilaian).
-        function initSignaturePad(canvasId, clearBtnId) {
-            const canvas = document.getElementById(canvasId);
-            if (!canvas) return null;
-
-            const ctx = canvas.getContext('2d', { alpha: true });
-            let drawing = false;
-            let last = null;
-            let hasStroke = false;
-            let ratio = Math.max(window.devicePixelRatio || 1, 1);
-
-            function setupCanvas(keepDrawing = false) {
-                const rect = canvas.getBoundingClientRect();
-                const cssWidth = Math.max(Math.round(rect.width), 1);
-                const cssHeight = Math.max(Math.round(rect.height), 1);
-
-                ratio = Math.max(window.devicePixelRatio || 1, 1);
-
-                // Canvas bitmap mengikuti ukuran CSS agar koordinat sentuhan
-                // tetap 1:1 dengan posisi yang terlihat di layar.
-                const oldImage = keepDrawing && canvas.width && canvas.height
-                    ? canvas.toDataURL('image/png')
-                    : null;
-
-                canvas.width = Math.round(cssWidth * ratio);
-                canvas.height = Math.round(cssHeight * ratio);
-
-                ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
-                ctx.lineCap = 'round';
-                ctx.lineJoin = 'round';
-                ctx.lineWidth = 2.2;
-                ctx.strokeStyle = '#111';
-
-                if (oldImage) {
-                    const image = new Image();
-                    image.onload = function () {
-                        ctx.drawImage(image, 0, 0, cssWidth, cssHeight);
-                    };
-                    image.src = oldImage;
-                }
-            }
-
-            // Jalankan setelah layout benar-benar selesai. Ini penting jika
-            // canvas berada di modal/container yang awalnya tersembunyi.
-            requestAnimationFrame(() => setupCanvas(false));
-
-            if ('ResizeObserver' in window) {
-                const observer = new ResizeObserver(() => {
-                    if (!drawing) setupCanvas(true);
-                });
-                observer.observe(canvas);
-            }
-
-            window.addEventListener('resize', () => {
-                if (!drawing) setupCanvas(true);
-            });
-
-            function getPos(e) {
-                const rect = canvas.getBoundingClientRect();
-
-                // PointerEvent menggunakan koordinat viewport yang sama dengan
-                // getBoundingClientRect(), jadi tidak perlu membagi lagi dengan DPR.
-                return {
-                    x: e.clientX - rect.left,
-                    y: e.clientY - rect.top
-                };
-            }
-
-            function start(e) {
-                if (e.pointerType === 'mouse' && e.button !== 0) return;
-
-                e.preventDefault();
-                drawing = true;
-                hasStroke = true;
-                last = getPos(e);
-
-                if (canvas.setPointerCapture) {
-                    try { canvas.setPointerCapture(e.pointerId); } catch (_) {}
-                }
-            }
-
-            function move(e) {
-                if (!drawing) return;
-
-                e.preventDefault();
-
-                const pos = getPos(e);
-
-                ctx.beginPath();
-                ctx.moveTo(last.x, last.y);
-                ctx.lineTo(pos.x, pos.y);
-                ctx.stroke();
-
-                last = pos;
-            }
-
-            function end(e) {
-                if (e) e.preventDefault();
-                drawing = false;
-                last = null;
-            }
-
-            // Pointer Events menangani mouse, touch, dan stylus dengan
-            // koordinat yang konsisten di desktop maupun mobile.
-            canvas.style.touchAction = 'none';
-            canvas.addEventListener('pointerdown', start);
-            canvas.addEventListener('pointermove', move);
-            canvas.addEventListener('pointerup', end);
-            canvas.addEventListener('pointercancel', end);
-            canvas.addEventListener('pointerleave', function (e) {
-                // Jangan langsung memutus gambar saat jari/stylus masih
-                // aktif; pointer capture akan menjaga event tetap masuk.
-                if (drawing && e.pointerType === 'mouse') end(e);
-            });
-
-            const clearBtn = document.getElementById(clearBtnId);
-            if (clearBtn) {
-                clearBtn.addEventListener('click', function () {
-                    // clearRect harus memakai koordinat bitmap, bukan koordinat
-                    // CSS yang sedang terkena transform DPR.
-                    ctx.save();
-                    ctx.setTransform(1, 0, 0, 1, 0, 0);
-                    ctx.clearRect(0, 0, canvas.width, canvas.height);
-                    ctx.restore();
-
-                    // Kembalikan transform dan konfigurasi drawing.
-                    const rect = canvas.getBoundingClientRect();
-                    ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
-                    ctx.lineCap = 'round';
-                    ctx.lineJoin = 'round';
-                    ctx.lineWidth = 2.2;
-                    ctx.strokeStyle = '#111';
-
-                    drawing = false;
-                    last = null;
-                    hasStroke = false;
-                });
-            }
-
-            return {
-                hasStroke: () => hasStroke,
-                toDataURL: () => canvas.toDataURL('image/png'),
-            };
-        }
-
-        const feedbackPad = initSignaturePad('signature-pad', 'btn-clear-signature');
-        const evalPad = initSignaturePad('eval-signature-pad', 'btn-clear-eval-signature');
-        // Pad edit tanggapan ada di dalam elemen x-show (disembunyikan
-        // via display:none saat awal render), jadi ukurannya baru pas
-        // dihitung ulang saat form edit ditampilkan - lihat listener
-        // 'eval-edit-shown' yang di-dispatch dari tombol "Edit Tanggapan".
-        let evalEditPad = initSignaturePad('eval-signature-pad-edit', 'btn-clear-eval-signature-edit');
-        window.addEventListener('eval-edit-shown', function () {
-            evalEditPad = initSignaturePad('eval-signature-pad-edit', 'btn-clear-eval-signature-edit');
-        });
-
-        const form = document.getElementById('form-feedback');
-        const signatureInput = document.getElementById('signature-input');
-
-        if (form && feedbackPad) {
-            form.addEventListener('submit', function (e) {
-                if (!employeeIdInput.value) {
-                    e.preventDefault();
-                    alert('Silakan pilih pegawai terlebih dahulu.');
-                    return;
-                }
-
-                if (!feedbackPad.hasStroke()) {
-                    e.preventDefault();
-                    alert('Tanda tangan wajib diisi sebelum mengirim tanggapan.');
-                    return;
-                }
-                signatureInput.value = feedbackPad.toDataURL();
-            });
-        }
-
-        const evalForm = document.getElementById('form-eval-response');
-        const evalSignatureInput = document.getElementById('eval-signature-input');
-
-        if (evalForm && evalPad) {
-            evalForm.addEventListener('submit', function (e) {
-                if (!evalPad.hasStroke()) {
-                    e.preventDefault();
-                    alert('Tanda tangan wajib diisi sebelum mengirim tanggapan.');
-                    return;
-                }
-                evalSignatureInput.value = evalPad.toDataURL();
-            });
-        }
-
-        const evalEditForm = document.getElementById('form-eval-response-edit');
-        const evalEditSignatureInput = document.getElementById('eval-signature-input-edit');
-
-        if (evalEditForm) {
-            evalEditForm.addEventListener('submit', function (e) {
-                if (!evalEditPad || !evalEditPad.hasStroke()) {
-                    e.preventDefault();
-                    alert('Tanda tangan wajib diisi sebelum menyimpan perubahan.');
-                    return;
-                }
-                evalEditSignatureInput.value = evalEditPad.toDataURL();
-            });
-        }
-    </script>
-
-    <script>
         // Fitur pencarian & filter unit kerja untuk memilih pegawai
         const employeeSearch = document.getElementById('employee-search');
         const employeeList = document.getElementById('employee-list');
@@ -820,6 +613,16 @@
                 employeeIdInput.value = opt.dataset.id;
             });
         });
+
+        const feedbackForm = document.getElementById('form-feedback');
+        if (feedbackForm) {
+            feedbackForm.addEventListener('submit', function (e) {
+                if (!employeeIdInput.value) {
+                    e.preventDefault();
+                    alert('Silakan pilih pegawai terlebih dahulu.');
+                }
+            });
+        }
     </script>
 
     <script>

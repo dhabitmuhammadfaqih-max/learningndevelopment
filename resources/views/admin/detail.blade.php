@@ -541,12 +541,11 @@
             <input type="hidden" name="tahun" value="{{ $tahun }}">
 
             <div class="signature-wrap">
-                <canvas id="hrd-signature-pad" class="signature-canvas"></canvas>
-                <div class="signature-actions">
-                    <span class="signature-hint">Gambar tanda tangan di kotak di atas</span>
-                    <button type="button" class="signature-clear" id="btn-clear-hrd-signature">Hapus &amp; ulangi</button>
-                </div>
-                <input type="hidden" name="hrd_signature" id="hrd-signature-input">
+                <img src="{{ auth()->user()->signature_url }}" alt="Tanda tangan Anda"
+                     class="signature-saved" style="display:block;">
+                <p class="signature-hint" style="margin-top:8px;">
+                    Tanda tangan akun Anda akan otomatis dipakai untuk pengesahan ini.
+                </p>
             </div>
 
             <div style="margin-top:14px;">
@@ -811,12 +810,11 @@
             <input type="hidden" name="tahun" value="{{ $tahun }}">
 
             <div class="signature-wrap">
-                <canvas id="hrd-signature-pad-official" class="signature-canvas"></canvas>
-                <div class="signature-actions">
-                    <span class="signature-hint">Gambar tanda tangan di kotak di atas</span>
-                    <button type="button" class="signature-clear" id="btn-clear-hrd-signature-official">Hapus &amp; ulangi</button>
-                </div>
-                <input type="hidden" name="hrd_signature" id="hrd-signature-input-official">
+                <img src="{{ auth()->user()->signature_url }}" alt="Tanda tangan Anda"
+                     class="signature-saved" style="display:block;">
+                <p class="signature-hint" style="margin-top:8px;">
+                    Tanda tangan akun Anda akan otomatis dipakai untuk pengesahan ini.
+                </p>
             </div>
 
             <div style="margin-top:14px;">
@@ -946,148 +944,5 @@
 
 </div>
 
-<script>
-    const hrdCanvas = document.getElementById('hrd-signature-pad');
-
-    if (hrdCanvas) {
-        const ctx = hrdCanvas.getContext('2d');
-        const ratio = window.devicePixelRatio || 1;
-
-        function resizeHrdCanvas() {
-            hrdCanvas.width = hrdCanvas.clientWidth * ratio;
-            hrdCanvas.height = hrdCanvas.clientHeight * ratio;
-            ctx.scale(ratio, ratio);
-            ctx.lineCap = 'round';
-            ctx.lineJoin = 'round';
-            ctx.lineWidth = 2.2;
-            ctx.strokeStyle = '#111';
-        }
-        resizeHrdCanvas();
-
-        let drawing = false;
-        let last = null;
-        let hasStroke = false;
-
-        function getPos(e) {
-            const rect = hrdCanvas.getBoundingClientRect();
-            const point = e.touches ? e.touches[0] : e;
-            return { x: point.clientX - rect.left, y: point.clientY - rect.top };
-        }
-
-        function start(e) {
-            e.preventDefault();
-            drawing = true;
-            hasStroke = true;
-            last = getPos(e);
-        }
-
-        function move(e) {
-            if (!drawing) return;
-            e.preventDefault();
-            const pos = getPos(e);
-            ctx.beginPath();
-            ctx.moveTo(last.x, last.y);
-            ctx.lineTo(pos.x, pos.y);
-            ctx.stroke();
-            last = pos;
-        }
-
-        function end() {
-            drawing = false;
-        }
-
-        hrdCanvas.addEventListener('mousedown', start);
-        hrdCanvas.addEventListener('mousemove', move);
-        hrdCanvas.addEventListener('mouseup', end);
-        hrdCanvas.addEventListener('mouseleave', end);
-        hrdCanvas.addEventListener('touchstart', start);
-        hrdCanvas.addEventListener('touchmove', move);
-        hrdCanvas.addEventListener('touchend', end);
-
-        document.getElementById('btn-clear-hrd-signature').addEventListener('click', function () {
-            ctx.clearRect(0, 0, hrdCanvas.clientWidth, hrdCanvas.clientHeight);
-            hasStroke = false;
-        });
-
-        const hrdForm = document.getElementById('form-hrd-sign');
-        const hrdSignatureInput = document.getElementById('hrd-signature-input');
-
-        hrdForm.addEventListener('submit', function (e) {
-            if (!hasStroke) {
-                e.preventDefault();
-                alert('Tanda tangan wajib diisi.');
-                return;
-            }
-            hrdSignatureInput.value = hrdCanvas.toDataURL('image/png');
-        });
-    }
-
-    // Signature pad untuk tanda tangan HRD pejabat
-    const hrdCanvasOfficial = document.getElementById('hrd-signature-pad-official');
-
-    if (hrdCanvasOfficial) {
-        const ctxO = hrdCanvasOfficial.getContext('2d');
-        const ratioO = window.devicePixelRatio || 1;
-
-        function resizeHrdCanvasOfficial() {
-            hrdCanvasOfficial.width = hrdCanvasOfficial.clientWidth * ratioO;
-            hrdCanvasOfficial.height = hrdCanvasOfficial.clientHeight * ratioO;
-            ctxO.scale(ratioO, ratioO);
-            ctxO.lineCap = 'round';
-            ctxO.lineJoin = 'round';
-            ctxO.lineWidth = 2.2;
-            ctxO.strokeStyle = '#111';
-        }
-        resizeHrdCanvasOfficial();
-
-        let drawingO = false;
-        let lastO = null;
-        let hasStrokeO = false;
-
-        function getPosO(e) {
-            const rect = hrdCanvasOfficial.getBoundingClientRect();
-            const point = e.touches ? e.touches[0] : e;
-            return { x: point.clientX - rect.left, y: point.clientY - rect.top };
-        }
-
-        function startO(e) { e.preventDefault(); drawingO = true; hasStrokeO = true; lastO = getPosO(e); }
-        function moveO(e) {
-            if (!drawingO) return;
-            e.preventDefault();
-            const pos = getPosO(e);
-            ctxO.beginPath();
-            ctxO.moveTo(lastO.x, lastO.y);
-            ctxO.lineTo(pos.x, pos.y);
-            ctxO.stroke();
-            lastO = pos;
-        }
-        function endO() { drawingO = false; }
-
-        hrdCanvasOfficial.addEventListener('mousedown', startO);
-        hrdCanvasOfficial.addEventListener('mousemove', moveO);
-        hrdCanvasOfficial.addEventListener('mouseup', endO);
-        hrdCanvasOfficial.addEventListener('mouseleave', endO);
-        hrdCanvasOfficial.addEventListener('touchstart', startO);
-        hrdCanvasOfficial.addEventListener('touchmove', moveO);
-        hrdCanvasOfficial.addEventListener('touchend', endO);
-
-        document.getElementById('btn-clear-hrd-signature-official').addEventListener('click', function () {
-            ctxO.clearRect(0, 0, hrdCanvasOfficial.clientWidth, hrdCanvasOfficial.clientHeight);
-            hasStrokeO = false;
-        });
-
-        const hrdFormOfficial = document.getElementById('form-hrd-sign-official');
-        const hrdSignatureInputOfficial = document.getElementById('hrd-signature-input-official');
-
-        hrdFormOfficial.addEventListener('submit', function (e) {
-            if (!hasStrokeO) {
-                e.preventDefault();
-                alert('Tanda tangan wajib diisi.');
-                return;
-            }
-            hrdSignatureInputOfficial.value = hrdCanvasOfficial.toDataURL('image/png');
-        });
-    }
-</script>
 
 </x-dashboard-layout>

@@ -280,6 +280,18 @@
                         </div>
                     </div>
 
+                    @if (auth()->user()->hasSavedSignature())
+                        {{-- Pakai dispatchEvent langsung (bukan Alpine @click="$dispatch(...)")
+                             karena tombol ini tidak berada di dalam elemen ber-x-data manapun,
+                             jadi magic $dispatch Alpine tidak tersedia di sini. --}}
+                        <button type="button" onclick="window.dispatchEvent(new CustomEvent('open-signature-edit'))" title="Edit Tanda Tangan"
+                                class="p-2.5 rounded-xl text-slate-500 hover:bg-slate-100 transition">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536M9 11l6.586-6.586a2 2 0 1 1 2.828 2.828L11.828 13.828a4 4 0 0 1-1.414.943l-3.114 1.2 1.2-3.114A4 4 0 0 1 9 11ZM5 19h14" />
+                            </svg>
+                        </button>
+                    @endif
+
                     <div class="flex items-center gap-3 pl-3 sm:pl-4 border-l border-slate-200">
                         <div class="text-right hidden sm:block">
                             <p class="text-sm font-bold text-slate-800 leading-tight">{{ auth()->user()->name }}</p>
@@ -298,6 +310,10 @@
             </main>
         </div>
     </div>
+
+    @include('partials.signature-setup-modal')
+
+    @include('partials.signature-edit-modal')
 
     @include('partials.confirm-modal')
 

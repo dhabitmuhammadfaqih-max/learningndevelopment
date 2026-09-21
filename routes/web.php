@@ -99,6 +99,17 @@ Route::middleware('auth')->group(function () {
 
     /*
     |--------------------------------------------------------------------------
+    | TANDA TANGAN AKUN (semua role yang login)
+    |--------------------------------------------------------------------------
+    | Disimpan sekali per akun, lalu dipakai ulang otomatis di semua alur
+    | tanda tangan (tanggapan, penilaian, pengesahan HRD, dsb) - lihat
+    | AccountSignatureController & App\Support\AccountSignature.
+    */
+    Route::post('/akun/tanda-tangan', [\App\Http\Controllers\AccountSignatureController::class, 'store'])
+        ->name('account-signature.store');
+
+    /*
+    |--------------------------------------------------------------------------
     | PEGAWAI
     |--------------------------------------------------------------------------
     */

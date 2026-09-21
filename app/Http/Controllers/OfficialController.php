@@ -9,6 +9,7 @@ use App\Models\OfficialEvaluation;
 use App\Models\SupervisorFeedback;
 use App\Models\OfficialSupervisorFeedback;
 use App\Services\NotificationTriggerService;
+use App\Support\AccountSignature;
 use App\Http\Controllers\Concerns\HandlesChecklistEvidence;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -242,8 +243,11 @@ class OfficialController extends Controller
         $validated = $request->validate([
             'official_id' => 'required|exists:users,id',
             'feedback'    => 'required|string|min:10',
-            'signature'   => 'required|string',
         ]);
+
+        if (! Auth::user()->hasSavedSignature()) {
+            return back()->withErrors(['official_id' => 'Tanda tangan akun Anda belum tersimpan. Silakan muat ulang halaman.'])->withInput();
+        }
 
         $targetOfficial = User::where('role', 'pejabat')->findOrFail($validated['official_id']);
 
@@ -267,14 +271,7 @@ class OfficialController extends Controller
                 ->withInput();
         }
 
-        // Pastikan data yang dikirim benar-benar gambar base64 dari canvas
-        if (! preg_match('/^data:image\/png;base64,/', $validated['signature'])) {
-            return back()->withErrors(['signature' => 'Format tanda tangan tidak valid.'])->withInput();
-        }
-
-        $imageContent = base64_decode(substr($validated['signature'], strpos($validated['signature'], ',') + 1));
-        $signaturePath = 'signatures/official_feedback_' . $targetOfficial->id . '_' . Auth::id() . '_' . time() . '.png';
-        Storage::disk('public')->put($signaturePath, $imageContent);
+        $signaturePath = AccountSignature::copyFor(Auth::user(), 'official_feedback_' . $targetOfficial->id . '_' . Auth::id());
 
         try {
             Feedback::create([
@@ -378,18 +375,15 @@ class OfficialController extends Controller
 
         $validated = $request->validate([
             'employee_response'  => 'required|string|min:5',
-            'employee_signature' => 'required|string',
         ]);
 
-        // Pastikan data yang dikirim benar-benar gambar base64 dari canvas
-        // (sama seperti EmployeeController::respondEvaluation).
-        if (! preg_match('/^data:image\/png;base64,/', $validated['employee_signature'])) {
-            return back()->withErrors(['employee_signature' => 'Format tanda tangan tidak valid.'])->withInput();
+        // Tanda tangan diambil otomatis dari tanda tangan akun yang sudah
+        // tersimpan (sama seperti EmployeeController::respondEvaluation).
+        if (! Auth::user()->hasSavedSignature()) {
+            return back()->withErrors(['employee_response' => 'Tanda tangan akun Anda belum tersimpan. Silakan muat ulang halaman.'])->withInput();
         }
 
-        $imageContent = base64_decode(substr($validated['employee_signature'], strpos($validated['employee_signature'], ',') + 1));
-        $signaturePath = 'signatures/official_evaluation_response_' . $evaluation->id . '_' . time() . '.png';
-        Storage::disk('public')->put($signaturePath, $imageContent);
+        $signaturePath = AccountSignature::copyFor(Auth::user(), 'official_evaluation_response_' . $evaluation->id);
 
         $evaluation->update([
             'employee_response'    => $validated['employee_response'],
@@ -531,20 +525,17 @@ class OfficialController extends Controller
             );
         }
 
+        if (! Auth::user()->hasSavedSignature()) {
+            return back()->withErrors(['signature' => 'Tanda tangan akun Anda belum tersimpan. Silakan muat ulang halaman.'])->withInput();
+        }
+
         [$validated, $recommendationValue, $kenaikanGajiAmount, $promosiKeterangan, $demosiKeterangan, $mutasiKeterangan, $error] = $this->validateEvaluationInput($request, $employee);
 
         if ($error) {
             return $error;
         }
 
-        // Pastikan data yang dikirim benar-benar gambar base64 dari canvas
-        if (! preg_match('/^data:image\/png;base64,/', $validated['signature'])) {
-            return back()->withErrors(['signature' => 'Format tanda tangan tidak valid.'])->withInput();
-        }
-
-        $imageContent = base64_decode(substr($validated['signature'], strpos($validated['signature'], ',') + 1));
-        $signaturePath = "signatures/evaluation_{$employee->id}_" . Auth::id() . '_' . time() . '.png';
-        Storage::disk('public')->put($signaturePath, $imageContent);
+        $signaturePath = AccountSignature::copyFor(Auth::user(), "evaluation_{$employee->id}_" . Auth::id());
 
         $score = Evaluation::calculateScore($validated);
 
@@ -645,25 +636,10 @@ class OfficialController extends Controller
             return $error;
         }
 
+        // Tanda tangan sudah diisi otomatis dari tanda tangan akun saat
+        // penilaian ini pertama kali dibuat (lihat evaluate() di atas) -
+        // pada edit ini tidak perlu digambar/diganti lagi.
         $signaturePath = $evaluation->signature;
-
-        // Tanda tangan baru bersifat opsional saat mengedit; kalau pejabat
-        // menggambar ulang, ganti file lama dengan yang baru.
-        if (! empty($validated['signature'])) {
-            if (! preg_match('/^data:image\/png;base64,/', $validated['signature'])) {
-                return back()->withErrors(['signature' => 'Format tanda tangan tidak valid.'])->withInput();
-            }
-
-            $imageContent = base64_decode(substr($validated['signature'], strpos($validated['signature'], ',') + 1));
-            $newSignaturePath = "signatures/evaluation_{$employee->id}_" . Auth::id() . '_' . time() . '.png';
-            Storage::disk('public')->put($newSignaturePath, $imageContent);
-
-            if ($signaturePath) {
-                Storage::disk('public')->delete($signaturePath);
-            }
-
-            $signaturePath = $newSignaturePath;
-        }
 
         $score = Evaluation::calculateScore($validated);
 
@@ -835,8 +811,11 @@ class OfficialController extends Controller
             'promosi_keterangan'   => 'nullable|string|max:255',
             'demosi_keterangan'     => 'nullable|string|max:255',
             'mutasi_keterangan'     => 'nullable|string|max:255',
-            'signature'            => 'required|string',
         ]);
+
+        if (! Auth::user()->hasSavedSignature()) {
+            return back()->withErrors(['feedback' => 'Tanda tangan akun Anda belum tersimpan. Silakan muat ulang halaman.'])->withInput();
+        }
 
         $recommendations = $validated['recommendation'] ?? [];
 
@@ -898,13 +877,7 @@ class OfficialController extends Controller
             ? trim($validated['mutasi_keterangan'])
             : null;
 
-        if (! preg_match('/^data:image\/png;base64,/', $validated['signature'])) {
-            return back()->withErrors(['signature' => 'Format tanda tangan tidak valid.'])->withInput();
-        }
-
-        $imageContent = base64_decode(substr($validated['signature'], strpos($validated['signature'], ',') + 1));
-        $signaturePath = 'signatures/atasan_penilai_' . $id . '_' . Auth::id() . '_' . time() . '.png';
-        Storage::disk('public')->put($signaturePath, $imageContent);
+        $signaturePath = AccountSignature::copyFor(Auth::user(), 'atasan_penilai_' . $id . '_' . Auth::id());
 
         // Diubah jadi per tahun: kalau tahun ini sudah pernah mengisi, baris
         // tahun ini yang di-update (masih boleh dikoreksi selama tahun
@@ -1080,8 +1053,11 @@ class OfficialController extends Controller
             'promosi_keterangan'   => 'nullable|string|max:255',
             'demosi_keterangan'     => 'nullable|string|max:255',
             'mutasi_keterangan'     => 'nullable|string|max:255',
-            'signature'            => 'required|string',
         ]);
+
+        if (! Auth::user()->hasSavedSignature()) {
+            return back()->withErrors(['feedback' => 'Tanda tangan akun Anda belum tersimpan. Silakan muat ulang halaman.'])->withInput();
+        }
 
         $recommendations = $validated['recommendation'] ?? [];
 
@@ -1143,13 +1119,7 @@ class OfficialController extends Controller
             ? trim($validated['mutasi_keterangan'])
             : null;
 
-        if (! preg_match('/^data:image\/png;base64,/', $validated['signature'])) {
-            return back()->withErrors(['signature' => 'Format tanda tangan tidak valid.'])->withInput();
-        }
-
-        $imageContent = base64_decode(substr($validated['signature'], strpos($validated['signature'], ',') + 1));
-        $signaturePath = 'signatures/atasan_penilai_pejabat_' . $id . '_' . Auth::id() . '_' . time() . '.png';
-        Storage::disk('public')->put($signaturePath, $imageContent);
+        $signaturePath = AccountSignature::copyFor(Auth::user(), 'atasan_penilai_pejabat_' . $id . '_' . Auth::id());
 
         // Diubah jadi per tahun: kalau tahun ini sudah pernah mengisi, baris
         // tahun ini yang di-update (masih boleh dikoreksi selama tahun
@@ -1408,7 +1378,11 @@ class OfficialController extends Controller
             'promosi_keterangan'          => 'nullable|string|max:255',
             'demosi_keterangan'           => 'nullable|string|max:255',
             'mutasi_keterangan'           => 'nullable|string|max:255',
-            'signature'                   => ($signatureRequired ? 'required' : 'nullable') . '|string',
+            // Tanda tangan tidak lagi dikirim dari form (lihat
+            // App\Support\AccountSignature) - dibiarkan nullable,
+            // keberadaan tanda tangan akun dicek terpisah lewat
+            // Auth::user()->hasSavedSignature().
+            'signature'                   => 'nullable|string',
         ]);
 
         $recommendations = $validated['recommendation'] ?? [];

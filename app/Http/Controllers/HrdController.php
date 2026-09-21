@@ -6,6 +6,7 @@ use App\Http\Concerns\FiltersByTahun;
 use App\Models\User;
 use App\Models\Feedback;
 use App\Services\NotificationTriggerService;
+use App\Support\AccountSignature;
 use App\Models\Evaluation;
 use App\Models\SupervisorFeedback;
 use App\Models\OfficialEvaluation;
@@ -1968,18 +1969,14 @@ class HrdController extends Controller
             );
         }
 
-        $validated = $request->validate([
-            'hrd_signature' => 'required|string',
-        ]);
-
-        // Pastikan data yang dikirim benar-benar gambar base64 dari canvas
-        if (! preg_match('/^data:image\/png;base64,/', $validated['hrd_signature'])) {
-            return back()->withErrors(['hrd_signature' => 'Format tanda tangan tidak valid.']);
+        if (! Auth::user()->hasSavedSignature()) {
+            return back()->with(
+                'error',
+                'Tanda tangan akun Anda belum tersimpan. Silakan muat ulang halaman.'
+            );
         }
 
-        $imageContent = base64_decode(substr($validated['hrd_signature'], strpos($validated['hrd_signature'], ',') + 1));
-        $signaturePath = 'signatures/hrd_' . $evaluation->id . '_' . time() . '.png';
-        Storage::disk('public')->put($signaturePath, $imageContent);
+        $signaturePath = AccountSignature::copyFor(Auth::user(), 'hrd_' . $evaluation->id);
 
         $evaluation->update([
             'hrd_id'         => Auth::id(),
@@ -2060,17 +2057,14 @@ class HrdController extends Controller
             );
         }
 
-        $validated = $request->validate([
-            'hrd_signature' => 'required|string',
-        ]);
-
-        if (! preg_match('/^data:image\/png;base64,/', $validated['hrd_signature'])) {
-            return back()->withErrors(['hrd_signature' => 'Format tanda tangan tidak valid.']);
+        if (! Auth::user()->hasSavedSignature()) {
+            return back()->with(
+                'error',
+                'Tanda tangan akun Anda belum tersimpan. Silakan muat ulang halaman.'
+            );
         }
 
-        $imageContent = base64_decode(substr($validated['hrd_signature'], strpos($validated['hrd_signature'], ',') + 1));
-        $signaturePath = 'signatures/hrd_official_' . $officialEvaluation->id . '_' . time() . '.png';
-        Storage::disk('public')->put($signaturePath, $imageContent);
+        $signaturePath = AccountSignature::copyFor(Auth::user(), 'hrd_official_' . $officialEvaluation->id);
 
         $officialEvaluation->update([
             'hrd_id'         => Auth::id(),
