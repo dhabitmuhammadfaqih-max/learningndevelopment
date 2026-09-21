@@ -9,6 +9,7 @@ use App\Models\OfficialEvaluation;
 use App\Models\SupervisorFeedback;
 use App\Models\OfficialSupervisorFeedback;
 use App\Services\NotificationTriggerService;
+use App\Support\AccountSignature;
 use App\Http\Controllers\Concerns\HandlesChecklistEvidence;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -242,8 +243,11 @@ class OfficialController extends Controller
         $validated = $request->validate([
             'official_id' => 'required|exists:users,id',
             'feedback'    => 'required|string|min:10',
-            'signature'   => 'required|string',
         ]);
+
+        if (! Auth::user()->hasSavedSignature()) {
+            return back()->withErrors(['official_id' => 'Tanda tangan akun Anda belum tersimpan. Silakan muat ulang halaman.'])->withInput();
+        }
 
         $targetOfficial = User::where('role', 'pejabat')->findOrFail($validated['official_id']);
 
@@ -267,14 +271,7 @@ class OfficialController extends Controller
                 ->withInput();
         }
 
-        // Pastikan data yang dikirim benar-benar gambar base64 dari canvas
-        if (! preg_match('/^data:image\/png;base64,/', $validated['signature'])) {
-            return back()->withErrors(['signature' => 'Format tanda tangan tidak valid.'])->withInput();
-        }
-
-        $imageContent = base64_decode(substr($validated['signature'], strpos($validated['signature'], ',') + 1));
-        $signaturePath = 'signatures/official_feedback_' . $targetOfficial->id . '_' . Auth::id() . '_' . time() . '.png';
-        Storage::disk('public')->put($signaturePath, $imageContent);
+        $signaturePath = AccountSignature::copyFor(Auth::user(), 'official_feedback_' . $targetOfficial->id . '_' . Auth::id());
 
         try {
             Feedback::create([
@@ -364,20 +361,29 @@ class OfficialController extends Controller
             );
         }
 
-        $validated = $request->validate([
-            'employee_response'  => 'required|string|min:5',
-            'employee_signature' => 'required|string',
-        ]);
-
-        // Pastikan data yang dikirim benar-benar gambar base64 dari canvas
-        // (sama seperti EmployeeController::respondEvaluation).
-        if (! preg_match('/^data:image\/png;base64,/', $validated['employee_signature'])) {
-            return back()->withErrors(['employee_signature' => 'Format tanda tangan tidak valid.'])->withInput();
+        // Sekali tanggapan & tanda tangan pejabat tersimpan, tidak boleh
+        // ditimpa lagi lewat request ini - sama pola-nya seperti
+        // EmployeeController::respondEvaluation(). Penting karena HRD bisa
+        // saja sudah menandatangani (HrdController::signAsHrdOfficial())
+        // berdasarkan tanggapan versi lama.
+        if ($evaluation->employee_signature) {
+            return back()->with(
+                'error',
+                'Tanggapan Anda sudah dikirim dan tidak bisa diubah lagi.'
+            );
         }
 
-        $imageContent = base64_decode(substr($validated['employee_signature'], strpos($validated['employee_signature'], ',') + 1));
-        $signaturePath = 'signatures/official_evaluation_response_' . $evaluation->id . '_' . time() . '.png';
-        Storage::disk('public')->put($signaturePath, $imageContent);
+        $validated = $request->validate([
+            'employee_response'  => 'required|string|min:5',
+        ]);
+
+        // Tanda tangan diambil otomatis dari tanda tangan akun yang sudah
+        // tersimpan (sama seperti EmployeeController::respondEvaluation).
+        if (! Auth::user()->hasSavedSignature()) {
+            return back()->withErrors(['employee_response' => 'Tanda tangan akun Anda belum tersimpan. Silakan muat ulang halaman.'])->withInput();
+        }
+
+        $signaturePath = AccountSignature::copyFor(Auth::user(), 'official_evaluation_response_' . $evaluation->id);
 
         $evaluation->update([
             'employee_response'    => $validated['employee_response'],
@@ -519,20 +525,17 @@ class OfficialController extends Controller
             );
         }
 
-        [$validated, $recommendationValue, $kenaikanGajiAmount, $promosiKeterangan, $demosiKeterangan, $error] = $this->validateEvaluationInput($request, $employee);
+        if (! Auth::user()->hasSavedSignature()) {
+            return back()->withErrors(['signature' => 'Tanda tangan akun Anda belum tersimpan. Silakan muat ulang halaman.'])->withInput();
+        }
+
+        [$validated, $recommendationValue, $kenaikanGajiAmount, $promosiKeterangan, $demosiKeterangan, $mutasiKeterangan, $error] = $this->validateEvaluationInput($request, $employee);
 
         if ($error) {
             return $error;
         }
 
-        // Pastikan data yang dikirim benar-benar gambar base64 dari canvas
-        if (! preg_match('/^data:image\/png;base64,/', $validated['signature'])) {
-            return back()->withErrors(['signature' => 'Format tanda tangan tidak valid.'])->withInput();
-        }
-
-        $imageContent = base64_decode(substr($validated['signature'], strpos($validated['signature'], ',') + 1));
-        $signaturePath = "signatures/evaluation_{$employee->id}_" . Auth::id() . '_' . time() . '.png';
-        Storage::disk('public')->put($signaturePath, $imageContent);
+        $signaturePath = AccountSignature::copyFor(Auth::user(), "evaluation_{$employee->id}_" . Auth::id());
 
         $score = Evaluation::calculateScore($validated);
 
@@ -566,6 +569,7 @@ class OfficialController extends Controller
                 'kenaikan_gaji_amount'        => $kenaikanGajiAmount,
                 'promosi_keterangan'          => $promosiKeterangan,
                 'demosi_keterangan'           => $demosiKeterangan,
+                'mutasi_keterangan'           => $mutasiKeterangan,
                 'signature'                   => $signaturePath,
             ]);
         } catch (\Illuminate\Database\QueryException $e) {
@@ -583,6 +587,10 @@ class OfficialController extends Controller
         // SETELAH tersimpan - notifikasi bersifat tambahan, bukan blocking.
         app(NotificationTriggerService::class)
             ->triggerSiapTanggapanAtasanPenilaiJikaPerlu($employee);
+
+        // Beri tahu pegawai yang dinilai bahwa nilainya sudah muncul.
+        app(NotificationTriggerService::class)
+            ->triggerNilaiMunculPegawai($employee, $score);
 
         return back()->with('success', 'Penilaian berhasil disimpan. Nilai akhir: '.$score);
     }
@@ -622,31 +630,16 @@ class OfficialController extends Controller
             );
         }
 
-        [$validated, $recommendationValue, $kenaikanGajiAmount, $promosiKeterangan, $demosiKeterangan, $error] = $this->validateEvaluationInput($request, $employee, signatureRequired: false);
+        [$validated, $recommendationValue, $kenaikanGajiAmount, $promosiKeterangan, $demosiKeterangan, $mutasiKeterangan, $error] = $this->validateEvaluationInput($request, $employee, signatureRequired: false);
 
         if ($error) {
             return $error;
         }
 
+        // Tanda tangan sudah diisi otomatis dari tanda tangan akun saat
+        // penilaian ini pertama kali dibuat (lihat evaluate() di atas) -
+        // pada edit ini tidak perlu digambar/diganti lagi.
         $signaturePath = $evaluation->signature;
-
-        // Tanda tangan baru bersifat opsional saat mengedit; kalau pejabat
-        // menggambar ulang, ganti file lama dengan yang baru.
-        if (! empty($validated['signature'])) {
-            if (! preg_match('/^data:image\/png;base64,/', $validated['signature'])) {
-                return back()->withErrors(['signature' => 'Format tanda tangan tidak valid.'])->withInput();
-            }
-
-            $imageContent = base64_decode(substr($validated['signature'], strpos($validated['signature'], ',') + 1));
-            $newSignaturePath = "signatures/evaluation_{$employee->id}_" . Auth::id() . '_' . time() . '.png';
-            Storage::disk('public')->put($newSignaturePath, $imageContent);
-
-            if ($signaturePath) {
-                Storage::disk('public')->delete($signaturePath);
-            }
-
-            $signaturePath = $newSignaturePath;
-        }
 
         $score = Evaluation::calculateScore($validated);
 
@@ -676,6 +669,7 @@ class OfficialController extends Controller
             'kenaikan_gaji_amount'        => $kenaikanGajiAmount,
             'promosi_keterangan'          => $promosiKeterangan,
             'demosi_keterangan'           => $demosiKeterangan,
+            'mutasi_keterangan'           => $mutasiKeterangan,
             'signature'                   => $signaturePath,
         ]);
 
@@ -816,8 +810,12 @@ class OfficialController extends Controller
             'kenaikan_gaji_amount' => 'nullable|integer|min:1',
             'promosi_keterangan'   => 'nullable|string|max:255',
             'demosi_keterangan'     => 'nullable|string|max:255',
-            'signature'            => 'required|string',
+            'mutasi_keterangan'     => 'nullable|string|max:255',
         ]);
+
+        if (! Auth::user()->hasSavedSignature()) {
+            return back()->withErrors(['feedback' => 'Tanda tangan akun Anda belum tersimpan. Silakan muat ulang halaman.'])->withInput();
+        }
 
         $recommendations = $validated['recommendation'] ?? [];
 
@@ -858,6 +856,13 @@ class OfficialController extends Controller
                 ->withInput();
         }
 
+        // Kalau rekomendasi "Mutasi" dicentang, keterangan tujuan mutasi wajib diisi.
+        if (in_array('mutasi', $recommendations, true) && empty(trim((string) ($validated['mutasi_keterangan'] ?? '')))) {
+            return back()
+                ->withErrors(['mutasi_keterangan' => 'Keterangan tujuan mutasi wajib diisi (mis. posisi/unit kerja tujuan).'])
+                ->withInput();
+        }
+
         $recommendationValue = empty($recommendations) ? 'tidak_ada' : implode(',', $recommendations);
         $kenaikanGajiAmount = in_array('kenaikan_gaji', $recommendations, true)
             ? (int) $validated['kenaikan_gaji_amount']
@@ -868,14 +873,11 @@ class OfficialController extends Controller
         $demosiKeterangan = in_array('demosi', $recommendations, true)
             ? trim($validated['demosi_keterangan'])
             : null;
+        $mutasiKeterangan = in_array('mutasi', $recommendations, true)
+            ? trim($validated['mutasi_keterangan'])
+            : null;
 
-        if (! preg_match('/^data:image\/png;base64,/', $validated['signature'])) {
-            return back()->withErrors(['signature' => 'Format tanda tangan tidak valid.'])->withInput();
-        }
-
-        $imageContent = base64_decode(substr($validated['signature'], strpos($validated['signature'], ',') + 1));
-        $signaturePath = 'signatures/atasan_penilai_' . $id . '_' . Auth::id() . '_' . time() . '.png';
-        Storage::disk('public')->put($signaturePath, $imageContent);
+        $signaturePath = AccountSignature::copyFor(Auth::user(), 'atasan_penilai_' . $id . '_' . Auth::id());
 
         // Diubah jadi per tahun: kalau tahun ini sudah pernah mengisi, baris
         // tahun ini yang di-update (masih boleh dikoreksi selama tahun
@@ -903,6 +905,7 @@ class OfficialController extends Controller
                 'kenaikan_gaji_amount'  => $kenaikanGajiAmount,
                 'promosi_keterangan'    => $promosiKeterangan,
                 'demosi_keterangan'     => $demosiKeterangan,
+                'mutasi_keterangan'     => $mutasiKeterangan,
                 'signature'             => $signaturePath,
             ]
         );
@@ -1049,8 +1052,12 @@ class OfficialController extends Controller
             'kenaikan_gaji_amount' => 'nullable|integer|min:1',
             'promosi_keterangan'   => 'nullable|string|max:255',
             'demosi_keterangan'     => 'nullable|string|max:255',
-            'signature'            => 'required|string',
+            'mutasi_keterangan'     => 'nullable|string|max:255',
         ]);
+
+        if (! Auth::user()->hasSavedSignature()) {
+            return back()->withErrors(['feedback' => 'Tanda tangan akun Anda belum tersimpan. Silakan muat ulang halaman.'])->withInput();
+        }
 
         $recommendations = $validated['recommendation'] ?? [];
 
@@ -1091,6 +1098,13 @@ class OfficialController extends Controller
                 ->withInput();
         }
 
+        // Kalau rekomendasi "Mutasi" dicentang, keterangan tujuan mutasi wajib diisi.
+        if (in_array('mutasi', $recommendations, true) && empty(trim((string) ($validated['mutasi_keterangan'] ?? '')))) {
+            return back()
+                ->withErrors(['mutasi_keterangan' => 'Keterangan tujuan mutasi wajib diisi (mis. posisi/unit kerja tujuan).'])
+                ->withInput();
+        }
+
         $recommendationValue = empty($recommendations) ? 'tidak_ada' : implode(',', $recommendations);
         $kenaikanGajiAmount = in_array('kenaikan_gaji', $recommendations, true)
             ? (int) $validated['kenaikan_gaji_amount']
@@ -1101,14 +1115,11 @@ class OfficialController extends Controller
         $demosiKeterangan = in_array('demosi', $recommendations, true)
             ? trim($validated['demosi_keterangan'])
             : null;
+        $mutasiKeterangan = in_array('mutasi', $recommendations, true)
+            ? trim($validated['mutasi_keterangan'])
+            : null;
 
-        if (! preg_match('/^data:image\/png;base64,/', $validated['signature'])) {
-            return back()->withErrors(['signature' => 'Format tanda tangan tidak valid.'])->withInput();
-        }
-
-        $imageContent = base64_decode(substr($validated['signature'], strpos($validated['signature'], ',') + 1));
-        $signaturePath = 'signatures/atasan_penilai_pejabat_' . $id . '_' . Auth::id() . '_' . time() . '.png';
-        Storage::disk('public')->put($signaturePath, $imageContent);
+        $signaturePath = AccountSignature::copyFor(Auth::user(), 'atasan_penilai_pejabat_' . $id . '_' . Auth::id());
 
         // Diubah jadi per tahun: kalau tahun ini sudah pernah mengisi, baris
         // tahun ini yang di-update (masih boleh dikoreksi selama tahun
@@ -1136,6 +1147,7 @@ class OfficialController extends Controller
                 'kenaikan_gaji_amount'  => $kenaikanGajiAmount,
                 'promosi_keterangan'    => $promosiKeterangan,
                 'demosi_keterangan'     => $demosiKeterangan,
+                'mutasi_keterangan'     => $mutasiKeterangan,
                 'signature'             => $signaturePath,
             ]
         );
@@ -1195,6 +1207,7 @@ class OfficialController extends Controller
                 'pejabat_konfirmasi_pertemuan_at' => null,
                 'pejabat_konfirmasi_pertemuan_selfie' => null,
                 'pejabat_konfirmasi_pertemuan_evidence_type' => null,
+                'pejabat_konfirmasi_pertemuan_metode' => null,
                 'pejabat_konfirmasi_pertemuan_tahun' => null,
             ]);
 
@@ -1208,7 +1221,7 @@ class OfficialController extends Controller
             );
         }
 
-        [$selfiePath, $evidenceType] = $this->resolveChecklistEvidence($request, 'pejabat', $user->id);
+        [$selfiePath, $evidenceType, $meetingMethod] = $this->resolveChecklistEvidence($request, 'pejabat', $user->id);
 
         // Hapus bukti lama (attempt sebelumnya di tahun yang sama, atau
         // sisa checklist tahun lalu) sebelum ditimpa.
@@ -1218,8 +1231,15 @@ class OfficialController extends Controller
             'pejabat_konfirmasi_pertemuan_at' => now(),
             'pejabat_konfirmasi_pertemuan_selfie' => $selfiePath,
             'pejabat_konfirmasi_pertemuan_evidence_type' => $evidenceType,
+            'pejabat_konfirmasi_pertemuan_metode' => $meetingMethod,
             'pejabat_konfirmasi_pertemuan_tahun' => now()->year,
         ]);
+
+        // Kalau checklist ATASAN untuk pejabat ini sudah lebih dulu
+        // lengkap, checklist PEJABAT barusan ini yang melengkapi syarat
+        // - beri tahu HRD bahwa penilaian ini sudah siap ditandatangani.
+        app(NotificationTriggerService::class)
+            ->triggerSiapTandaTanganHrdPejabatJikaPerlu($user);
 
         return back()->with('success', 'Checklist pertemuan & evaluasi berhasil dicentang.');
     }
@@ -1276,6 +1296,7 @@ class OfficialController extends Controller
                 'penilai_konfirmasi_pertemuan_at' => null,
                 'penilai_konfirmasi_pertemuan_selfie' => null,
                 'penilai_konfirmasi_pertemuan_evidence_type' => null,
+                'penilai_konfirmasi_pertemuan_metode' => null,
                 'penilai_konfirmasi_pertemuan_tahun' => null,
             ]);
 
@@ -1289,7 +1310,7 @@ class OfficialController extends Controller
             );
         }
 
-        [$selfiePath, $evidenceType] = $this->resolveChecklistEvidence($request, 'penilai', $employee->id);
+        [$selfiePath, $evidenceType, $meetingMethod] = $this->resolveChecklistEvidence($request, 'penilai', $employee->id);
 
         $this->deleteChecklistEvidence($employee->penilai_konfirmasi_pertemuan_selfie);
 
@@ -1297,8 +1318,14 @@ class OfficialController extends Controller
             'penilai_konfirmasi_pertemuan_at' => now(),
             'penilai_konfirmasi_pertemuan_selfie' => $selfiePath,
             'penilai_konfirmasi_pertemuan_evidence_type' => $evidenceType,
+            'penilai_konfirmasi_pertemuan_metode' => $meetingMethod,
             'penilai_konfirmasi_pertemuan_tahun' => now()->year,
         ]);
+
+        // Kalau checklist PEGAWAI sudah lebih dulu lengkap, checklist
+        // PENILAI barusan ini yang melengkapi syarat - beri tahu HRD.
+        app(NotificationTriggerService::class)
+            ->triggerSiapTandaTanganHrdJikaPerlu($employee);
 
         return back()->with('success', 'Checklist pertemuan & evaluasi berhasil dicentang.');
     }
@@ -1350,7 +1377,12 @@ class OfficialController extends Controller
             'kenaikan_gaji_amount'        => 'nullable|integer|min:1',
             'promosi_keterangan'          => 'nullable|string|max:255',
             'demosi_keterangan'           => 'nullable|string|max:255',
-            'signature'                   => ($signatureRequired ? 'required' : 'nullable') . '|string',
+            'mutasi_keterangan'           => 'nullable|string|max:255',
+            // Tanda tangan tidak lagi dikirim dari form (lihat
+            // App\Support\AccountSignature) - dibiarkan nullable,
+            // keberadaan tanda tangan akun dicek terpisah lewat
+            // Auth::user()->hasSavedSignature().
+            'signature'                   => 'nullable|string',
         ]);
 
         $recommendations = $validated['recommendation'] ?? [];
@@ -1362,7 +1394,7 @@ class OfficialController extends Controller
                 ->withErrors(['recommendation' => 'Rekomendasi Promosi dan Demosi tidak bisa dipilih bersamaan.'])
                 ->withInput();
 
-            return [$validated, null, null, null, null, $error];
+            return [$validated, null, null, null, null, null, $error];
         }
 
         // "Kontrak Dagsap ke Tetap" hanya boleh diajukan kalau status
@@ -1375,7 +1407,7 @@ class OfficialController extends Controller
                 ->withErrors(['recommendation' => 'Rekomendasi "Kontrak Dagsap ke Tetap" tidak bisa diajukan karena status pegawai ini bukan Kontrak Dagsap (masih PHL atau Kontrak OS).'])
                 ->withInput();
 
-            return [$validated, null, null, null, null, $error];
+            return [$validated, null, null, null, null, null, $error];
         }
 
         // Kalau rekomendasi "Kenaikan Gaji" dicentang, nominalnya wajib diisi.
@@ -1384,7 +1416,7 @@ class OfficialController extends Controller
                 ->withErrors(['kenaikan_gaji_amount' => 'Nominal kenaikan gaji wajib diisi.'])
                 ->withInput();
 
-            return [$validated, null, null, null, null, $error];
+            return [$validated, null, null, null, null, null, $error];
         }
 
         // Kalau rekomendasi "Promosi" dicentang, keterangan tujuan promosi wajib diisi.
@@ -1393,7 +1425,7 @@ class OfficialController extends Controller
                 ->withErrors(['promosi_keterangan' => 'Keterangan tujuan promosi wajib diisi (mis. jabatan/posisi tujuan).'])
                 ->withInput();
 
-            return [$validated, null, null, null, null, $error];
+            return [$validated, null, null, null, null, null, $error];
         }
 
         // Kalau rekomendasi "Demosi" dicentang, keterangan tujuan demosi wajib diisi.
@@ -1402,7 +1434,16 @@ class OfficialController extends Controller
                 ->withErrors(['demosi_keterangan' => 'Keterangan tujuan demosi wajib diisi (mis. jabatan/posisi tujuan).'])
                 ->withInput();
 
-            return [$validated, null, null, null, null, $error];
+            return [$validated, null, null, null, null, null, $error];
+        }
+
+        // Kalau rekomendasi "Mutasi" dicentang, keterangan tujuan mutasi wajib diisi.
+        if (in_array('mutasi', $recommendations, true) && empty(trim((string) ($validated['mutasi_keterangan'] ?? '')))) {
+            $error = back()
+                ->withErrors(['mutasi_keterangan' => 'Keterangan tujuan mutasi wajib diisi (mis. posisi/unit kerja tujuan).'])
+                ->withInput();
+
+            return [$validated, null, null, null, null, null, $error];
         }
 
         $recommendationValue = empty($recommendations) ? 'tidak_ada' : implode(',', $recommendations);
@@ -1415,7 +1456,10 @@ class OfficialController extends Controller
         $demosiKeterangan = in_array('demosi', $recommendations, true)
             ? trim($validated['demosi_keterangan'])
             : null;
+        $mutasiKeterangan = in_array('mutasi', $recommendations, true)
+            ? trim($validated['mutasi_keterangan'])
+            : null;
 
-        return [$validated, $recommendationValue, $kenaikanGajiAmount, $promosiKeterangan, $demosiKeterangan, null];
+        return [$validated, $recommendationValue, $kenaikanGajiAmount, $promosiKeterangan, $demosiKeterangan, $mutasiKeterangan, null];
     }
 }

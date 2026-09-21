@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <style>
         body {
-            font-family: DejaVu Sans, sans-serif;
+            font-family: Arial;
             font-size: 10px;
             color: #000;
             margin: 0;
@@ -42,6 +42,7 @@
             width: 30%;
             font-size: 10px;
             padding: 0 !important;
+            vertical-align: middle;
         }
 
         .header-meta table {
@@ -52,10 +53,16 @@
             border: none;
             border-bottom: 1px solid #000;
             padding: 3px 6px;
+            font-size: 8.5px;
+            white-space: nowrap;
         }
 
         .header-meta table td:first-child {
-            width: 45%;
+            width: 50%;
+        }
+
+        .header-meta table td:last-child {
+            width: 50%;
         }
 
         .header-meta table tr:last-child td {
@@ -70,7 +77,7 @@
         }
 
         .periode {
-            text-align: center;
+            text-align: left;
             margin-bottom: 8px;
         }
 
@@ -202,7 +209,8 @@
         }
 
         .korelasi-ttd img {
-            height: 45px;
+            width: 110px;
+            height: 65px;
         }
 
         .korelasi-ttd .nama {
@@ -210,23 +218,46 @@
             font-weight: bold;
             font-size: 9px;
         }
+
+        .tanggal-waktu {
+            display: block;
+            font-weight: normal;
+            font-style: italic;
+            font-size: 8px;
+            color: #555;
+            margin-top: 2px;
+        }
     </style>
 </head>
 <body>
 
+@php
+    // Format NIK jadi kelompok 4 digit dipisah titik, mis. "12345678"
+    // -> "1234.5678". Kalau panjangnya bukan kelipatan 4 (sisa di
+    // akhir), sisa itu tetap ikut ditampilkan di grup terakhir apa
+    // adanya supaya tidak ada karakter yang hilang.
+    $formatNik = function ($nik) {
+        if (! $nik) {
+            return '-';
+        }
+
+        return implode('.', str_split($nik, 4));
+    };
+@endphp
+
 <!-- HEADER DOKUMEN -->
 <table class="header-table">
     <tr>
-        <td class="header-logo">
-            <img src="{{ public_path('images/logo-dagsap.png') }}" alt="Logo Dagsap" style="height:45px; margin-bottom:2px;"><br>
+        <td class="header-logo" valign="middle">
+            <img src="{{ public_path('images/logo-dagsap.png') }}" alt="Logo Dagsap" style="height:65px; margin-bottom:2px;"><br>
             PT. DAGSAP ENDURA EATORE
         </td>
-        <td class="header-title">
+        <td class="header-title" valign="middle">
             FORM<br>
             PENILAIAN KINERJA<br>
             PEJABAT DAN PEGAWAI
         </td>
-        <td class="header-meta">
+        <td class="header-meta" valign="middle">
             <table>
                 <tr><td>Nomor Dokumen</td><td>: FRM.HRD.03.06</td></tr>
                 <tr><td>Revisi</td><td>: 0</td></tr>
@@ -253,7 +284,7 @@
             <tr>
                 <td class="label">NIK</td>
                 <td class="colon">:</td>
-                <td>{{ $employee->nik ?? '-' }}</td>
+                <td>{{ $formatNik($employee->nik) }}</td>
             </tr>
             <tr>
                 <td class="label">JABATAN</td>
@@ -282,7 +313,7 @@
             <tr>
                 <td class="label">NIK</td>
                 <td class="colon">:</td>
-                <td>{{ $evaluation->official->nik ?? '-' }}</td>
+                <td>{{ $formatNik($evaluation->official->nik ?? null) }}</td>
             </tr>
             <tr>
                 <td class="label">JABATAN</td>
@@ -396,21 +427,21 @@
             <td style="border:1px solid #000; padding:3px;">{{ $kolom === 'B' ? $nilaiMentah : '' }}</td>
             <td style="border:1px solid #000; padding:3px;">{{ $kolom === 'C' ? $nilaiMentah : '' }}</td>
             <td style="border:1px solid #000; padding:3px;">{{ $kolom === 'D' ? $nilaiMentah : '' }}</td>
-            <td style="border:1px solid #000; padding:3px;">{{ $nilaiTertimbang }}</td>
+            <td style="border:1px solid #000; padding:3px; font-weight:bold;">{{ $nilaiTertimbang }}</td>
             <td style="border:1px solid #000; padding:3px;"></td>
         </tr>
     @endforeach
 
     {{-- Baris TOTAL --}}
     <tr style="font-size:9px; text-align:center;">
-        <td colspan="2" style="border:1px solid #000; padding:3px; text-align:left; padding-left:6px;">TOTAL</td>
+        <td colspan="2" style="border:1px solid #000; padding:3px; text-align:left; padding-left:6px; font-weight:bold;">TOTAL</td>
         <td style="border:1px solid #000; padding:3px;">{{ rtrim(rtrim(number_format($totalBobot, 1), '0'), '.') }}%</td>
         <td style="border:1px solid #000; padding:3px;"></td>
         <td style="border:1px solid #000; padding:3px;"></td>
         <td style="border:1px solid #000; padding:3px;"></td>
         <td style="border:1px solid #000; padding:3px;"></td>
         <td style="border:1px solid #000; padding:3px;"></td>
-        <td style="border:1px solid #000; padding:3px;">{{ $evaluation->score ?? 0 }}</td>
+        <td style="border:1px solid #000; padding:3px; font-weight:bold;">{{ $evaluation->score ?? 0 }}</td>
         <td style="border:1px solid #000; padding:3px;"></td>
     </tr>
 
@@ -430,7 +461,7 @@
         <td style="border:1px solid #000; padding:6px 2px;">{{ $jumlahIzin }}</td>
         <td style="border:1px solid #000; padding:6px 2px;">{{ $jumlahAlpa }}</td>
         <td style="border:1px solid #000; padding:6px 2px;">{{ $jumlahTerlambat }}</td>
-        <td colspan="2" style="border:1px solid #000; border-top:none; padding:6px 2px;">{{ $jumlahKetidakhadiran }}</td>
+        <td colspan="2" style="border:1px solid #000; border-top:none; padding:6px 2px; font-weight:bold;">{{ $jumlahKetidakhadiran }}</td>
     </tr>
 
     {{-- Baris JUMLAH PENGURANG --}}
@@ -550,7 +581,20 @@
                 @endif
             </td>
             <td></td>
-            <td style="text-align:center; height:46px; vertical-align:bottom; padding:0 8px;">
+            <td style="text-align:center; height:58px; vertical-align:bottom; padding:0 4px;">
+                @if(!empty($signatures['korelasi']) && count($signatures['korelasi']))
+                    <table style="width:100%; border-collapse:collapse;">
+                        <tr>
+                            @foreach ($signatures['korelasi']->take(3) as $korelasi)
+                                <td style="width:{{ number_format(100 / min($signatures['korelasi']->count(), 3), 2) }}%; text-align:center; vertical-align:bottom; height:58px; padding:0 2px;">
+                                    @if(!empty($korelasi['signature']))
+                                        <img src="{{ $korelasi['signature'] }}" style="width:75px; height:56px;">
+                                    @endif
+                                </td>
+                            @endforeach
+                        </tr>
+                    </table>
+                @endif
             </td>
         </tr>
 
@@ -560,8 +604,18 @@
                 <span style="display:inline-block; border-bottom:1px solid #000; min-width:140px; padding-bottom:1px;">&nbsp;</span>
             </td>
             <td></td>
-            <td style="text-align:center; padding:0 8px;">
-                <span style="display:inline-block; border-bottom:1px solid #000; min-width:140px; padding-bottom:1px;">&nbsp;</span>
+            <td style="text-align:center; padding:0 4px;">
+                @if(!empty($signatures['korelasi']) && count($signatures['korelasi']))
+                    <table style="width:100%; border-collapse:collapse;">
+                        <tr>
+                            @foreach ($signatures['korelasi']->take(3) as $korelasi)
+                                <td style="width:{{ number_format(100 / min($signatures['korelasi']->count(), 3), 2) }}%; text-align:center; padding:0 2px;">
+                                    <span style="display:inline-block; border-bottom:1px solid #000; min-width:36px; font-size:7px; padding-bottom:1px;">{{ $korelasi['nama'] ?? '' }}</span>
+                                </td>
+                            @endforeach
+                        </tr>
+                    </table>
+                @endif
             </td>
         </tr>
 
@@ -570,6 +624,20 @@
 
 <!-- HALAMAN 2: CATATAN -->
 <div class="page-break"></div>
+
+@php
+    // Helper format tanggal & waktu (mis. "19-07-2025 pukul 19:00") untuk
+    // menandai kapan tepatnya masing-masing pihak memberikan tanggapan.
+    // Dibiarkan null kalau memang belum ada tanggapan, supaya tidak
+    // menampilkan tanggal palsu untuk kolom yang masih kosong.
+    $formatTanggalWaktu = function ($datetime) {
+        if (! $datetime) {
+            return null;
+        }
+
+        return \Carbon\Carbon::parse($datetime)->format('d-m-Y \p\u\k\u\l H:i');
+    };
+@endphp
 
 <div class="catatan-box">
     <div class="catatan-header">CATATAN</div>
@@ -587,6 +655,9 @@
                 <img src="{{ $signatures['pegawai'] }}" class="ttd-signature-img">
             @endif
             <span class="nama">( {{ $employee->name }} )</span>
+            @if ($evaluation && $formatTanggalWaktu($evaluation->employee_response_at))
+                <span class="tanggal-waktu">{{ $formatTanggalWaktu($evaluation->employee_response_at) }}</span>
+            @endif
         </div>
     </div>
 
@@ -603,11 +674,17 @@
         @if ($evaluation && $evaluation->recommendationLabel() !== 'Tidak Ada')
             <p class="rekomendasi-highlight">{{ $evaluation->recommendationLabel() }}</p>
         @endif
+        @if ($evaluation && $evaluation->kenaikan_gaji_amount)
+            <p>Nominal Kenaikan Gaji: Rp {{ number_format($evaluation->kenaikan_gaji_amount, 0, ',', '.') }}</p>
+        @endif
         <div class="korelasi-ttd">
             @if(!empty($signatures['pejabat']))
                 <img src="{{ $signatures['pejabat'] }}" class="ttd-signature-img">
             @endif
             <span class="nama">( {{ $evaluation->official->name ?? ($employee->supervisor->name ?? '-') }} )</span>
+            @if ($evaluation && $formatTanggalWaktu($evaluation->updated_at))
+                <span class="tanggal-waktu">{{ $formatTanggalWaktu($evaluation->updated_at) }}</span>
+            @endif
         </div>
     </div>
 
@@ -622,10 +699,13 @@
             // tidak baru fallback ke SupervisorFeedback ($atasanFeedback,
             // jalur normal).
             $finalRecommendationLabel = null;
+            $finalKenaikanGajiAmount = null;
             if ($atasanEvaluation && $atasanEvaluation->recommendationLabel() !== 'Tidak Ada') {
                 $finalRecommendationLabel = $atasanEvaluation->recommendationLabel();
+                $finalKenaikanGajiAmount = $atasanEvaluation->kenaikan_gaji_amount;
             } elseif ($atasanFeedback && $atasanFeedback->recommendationLabel() !== 'Tidak Ada') {
                 $finalRecommendationLabel = $atasanFeedback->recommendationLabel();
+                $finalKenaikanGajiAmount = $atasanFeedback->kenaikan_gaji_amount;
             }
         @endphp
         @if ($atasanEvaluation && $atasanEvaluation->feedback)
@@ -635,11 +715,17 @@
             @if ($finalRecommendationLabel)
                 <p class="rekomendasi-highlight">{{ $finalRecommendationLabel }}</p>
             @endif
+            @if ($finalKenaikanGajiAmount)
+                <p>Nominal Kenaikan Gaji: Rp {{ number_format($finalKenaikanGajiAmount, 0, ',', '.') }}</p>
+            @endif
             <div class="korelasi-ttd">
                 @if(!empty($signatures['atasan']))
                     <img src="{{ $signatures['atasan'] }}" class="ttd-signature-img">
                 @endif
                 <span class="nama">( {{ $atasanEvaluation->official->name ?? '-' }} )</span>
+                @if ($formatTanggalWaktu($atasanEvaluation->updated_at))
+                    <span class="tanggal-waktu">{{ $formatTanggalWaktu($atasanEvaluation->updated_at) }}</span>
+                @endif
             </div>
         @elseif ($atasanFeedback && $atasanFeedback->feedback)
             <div class="komentar">
@@ -648,15 +734,24 @@
             @if ($finalRecommendationLabel)
                 <p class="rekomendasi-highlight">{{ $finalRecommendationLabel }}</p>
             @endif
+            @if ($finalKenaikanGajiAmount)
+                <p>Nominal Kenaikan Gaji: Rp {{ number_format($finalKenaikanGajiAmount, 0, ',', '.') }}</p>
+            @endif
             <div class="korelasi-ttd">
                 @if(!empty($signatures['atasan']))
                     <img src="{{ $signatures['atasan'] }}" class="ttd-signature-img">
                 @endif
                 <span class="nama">( {{ $atasanFeedback->supervisor->name ?? '-' }} )</span>
+                @if ($formatTanggalWaktu($atasanFeedback->updated_at))
+                    <span class="tanggal-waktu">{{ $formatTanggalWaktu($atasanFeedback->updated_at) }}</span>
+                @endif
             </div>
         @elseif ($employee->tanggapanAtasanManual())
             @if ($finalRecommendationLabel)
                 <p class="rekomendasi-highlight">{{ $finalRecommendationLabel }}</p>
+            @endif
+            @if ($finalKenaikanGajiAmount)
+                <p>Nominal Kenaikan Gaji: Rp {{ number_format($finalKenaikanGajiAmount, 0, ',', '.') }}</p>
             @endif
             <div class="komentar">&nbsp;</div>
             <div class="korelasi-ttd">
@@ -665,6 +760,9 @@
         @else
             @if ($finalRecommendationLabel)
                 <p class="rekomendasi-highlight">{{ $finalRecommendationLabel }}</p>
+            @endif
+            @if ($finalKenaikanGajiAmount)
+                <p>Nominal Kenaikan Gaji: Rp {{ number_format($finalKenaikanGajiAmount, 0, ',', '.') }}</p>
             @endif
             <div class="korelasi-ttd">
                 <span class="nama">( Ishana Mahisa )</span>
@@ -690,6 +788,9 @@
                                         <img src="{{ $korelasiSig }}">
                                     @endif
                                     <span class="nama">( {{ $feedback->reviewer->name ?? '-' }} )</span>
+                                    @if ($formatTanggalWaktu($feedback->updated_at))
+                                        <span class="tanggal-waktu">{{ $formatTanggalWaktu($feedback->updated_at) }}</span>
+                                    @endif
                                 </div>
                             </td>
                         @endforeach

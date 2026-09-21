@@ -269,7 +269,7 @@
                             <form method="POST"
                                   action="{{ route('admin.account.toggleStatusKontrak', $account->id) }}"
                                   style="display:inline;"
-                                  onsubmit="return confirm('{{ $account->statusKontrakTerbuka() ? 'Tutup' : 'Buka' }} Status untuk akun ini? Kalau ditutup, {{ $account->name }} tidak akan bisa melihat badge Status siapapun - baik miliknya sendiri maupun pegawai/pejabat lain - selama login.');">
+                                  onsubmit="return confirmDialog(event, '{{ $account->statusKontrakTerbuka() ? 'Tutup' : 'Buka' }} Status untuk akun ini? Kalau ditutup, {{ $account->name }} tidak akan bisa melihat badge Status siapapun - baik miliknya sendiri maupun pegawai/pejabat lain - selama login.');">
                                 @csrf
                                 @method('PATCH')
 
@@ -293,7 +293,7 @@
                         @else
                             <form method="POST"
                                   action="{{ route('admin.account.destroy', $account->id) }}"
-                                  onsubmit="return confirm('Apakah Anda yakin ingin menghapus akun ini? Semua data penilaian dan tanggapan terkait juga akan dihapus.');">
+                                  onsubmit="return confirmDialog(event, 'Apakah Anda yakin ingin menghapus akun ini? Semua data penilaian dan tanggapan terkait juga akan dihapus.');">
                                 @csrf
                                 @method('DELETE')
 

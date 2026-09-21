@@ -28,6 +28,7 @@ class Evaluation extends Model
         'kenaikan_gaji_amount',
         'promosi_keterangan',
         'demosi_keterangan',
+        'mutasi_keterangan',
         'employee_response',
         'employee_response_at',
         'employee_signature',
@@ -62,7 +63,7 @@ class Evaluation extends Model
      */
     public function scopeTahunAktif($query, ?int $tahun = null)
     {
-        return $query->where('tahun', $tahun ?? now()->year);
+        return $query->where('tahun', $tahun ?? \App\Support\ActivePeriod::year());
     }
 
     // Bobot setiap komponen penilaian (total harus 100)
@@ -95,14 +96,14 @@ class Evaluation extends Model
     // pada form penilaian pejabat.
     public const DESCRIPTIONS = [
         'pengetahuan_kerja'           => 'Kemampuan dalam memahami dan melaksanakan pekerjaan secara efisien dan efektif.',
-        'penguasaan_peralatan'        => 'Kemampuan dalam menggunakan dan mengoperasikan peralatan/perangkat kerja dengan baik dan benar.',
-        'volume_kerja'                => 'Jumlah/kuantitas pekerjaan yang mampu diselesaikan sesuai target yang ditetapkan.',
-        'mutu_tanggung_jawab'         => 'Kualitas hasil pekerjaan serta rasa tanggung jawab terhadap tugas yang diberikan.',
-        'disiplin_dedikasi_loyalitas' => 'Ketaatan terhadap peraturan kerja serta dedikasi dan loyalitas terhadap perusahaan.',
-        'prakarsa'                    => 'Inisiatif dalam menyelesaikan pekerjaan tanpa harus selalu menunggu perintah atasan.',
-        'daya_serap'                  => 'Kemampuan memahami dan menyerap instruksi maupun pengetahuan baru dengan cepat.',
-        'kerajinan'                   => 'Ketekunan dan keuletan dalam menjalankan tugas sehari-hari.',
-        'kerjasama'                   => 'Kemampuan bekerja sama dan berkoordinasi dengan rekan kerja maupun tim.',
+        'penguasaan_peralatan'        => 'Kemampuan dalam menguasai alat kerja yang digunakan.',
+        'volume_kerja'                => 'Kemampuan dalam menyelesaikan tugas/pekerjaan sesuai dengan waktu yang sudah ditetapkan.',
+        'mutu_tanggung_jawab'         => 'Kesanggupan menyelesaikan pekerjaan dengan sebaik-baiknya dan tepat waktu serta bertanggungjawab atas pekerjaannya.',
+        'disiplin_dedikasi_loyalitas' => 'Kesadaran dan kesediaan dalam menaati semua peraturan yang berlaku pada perusahaan.',
+        'prakarsa'                    => 'Langkah-langkah atau melaksanakan sesuatu tindakan yang diperlukan dalam melaksanakan tugas pokok tanpa menunggu perintah (inisiatif).',
+        'daya_serap'                  => 'Kemampuan dalam menyerap atau memahami tugas/pekerjaan yang diberikan.',
+        'kerajinan'                   => 'Kemampuan melakukan pekerjaan dengan sungguh-sungguh untuk mencapai tujuan/target yang diberikan.',
+        'kerjasama'                   => 'Kemampuan untuk bekerja bersama-sama dalam menyelesaikan tugas sehingga mencapai dayaguna dan hasilguna yang lebih maksimal.',
     ];
 
     // Skala index penilaian (I/A/B/C/D) beserta rentang nilai & keterangannya.
@@ -120,7 +121,7 @@ class Evaluation extends Model
         'review_3_bulan'               => 'Review 3 Bulan',
         'review_6_bulan'               => 'Review 6 Bulan',
         'tidak_diperpanjang'           => 'Tidak Diperpanjang',
-        'phl_ke_kontrak'               => 'PHL ke Kontrak',
+        'phl_ke_kontrak'               => 'PHL OS ke Kontrak OS',
         'perpanjang_kontrak_os'        => 'Perpanjang Kontrak OS',
         'kontrak_os_ke_kontrak_dagsap' => 'Kontrak OS ke Kontrak Dagsap',
         'perpanjang_kontrak_dagsap'    => 'Perpanjang Kontrak Dagsap',
@@ -201,6 +202,10 @@ class Evaluation extends Model
 
             if ($value === 'demosi' && $this->demosi_keterangan) {
                 $label .= ' (ke ' . $this->demosi_keterangan . ')';
+            }
+
+            if ($value === 'mutasi' && $this->mutasi_keterangan) {
+                $label .= ' (ke ' . $this->mutasi_keterangan . ')';
             }
 
             return $label;

@@ -28,6 +28,7 @@ class OfficialEvaluation extends Model
         'kenaikan_gaji_amount',
         'promosi_keterangan',
         'demosi_keterangan',
+        'mutasi_keterangan',
         'employee_response',
         'employee_response_at',
         'employee_signature',
@@ -81,15 +82,15 @@ class OfficialEvaluation extends Model
     // Deskripsi tiap faktor penilaian, ditampilkan di bawah nama faktor
     // pada form penilaian atasan.
     public const DESCRIPTIONS = [
-        'kepemimpinan'                                    => 'Kemampuan memimpin, mengarahkan, dan menjadi teladan bagi bawahan.',
-        'kemampuan_merencanakan_mengoordinasikan'          => 'Kemampuan menyusun rencana kerja serta mengoordinasikan pelaksanaannya.',
-        'kemampuan_analisa_evaluasi_pengambilan_keputusan' => 'Kemampuan menganalisa situasi, mengevaluasi hasil, dan mengambil keputusan yang tepat.',
-        'kemampuan_memotivasi_aplikasi_manajemen'          => 'Kemampuan memotivasi tim dan menerapkan prinsip-prinsip manajemen dalam pekerjaan.',
-        'tanggung_jawab_manajemen'                         => 'Rasa tanggung jawab terhadap tugas dan hasil kerja unit yang dipimpin.',
-        'kerjasama'                                        => 'Kemampuan bekerja sama dan berkoordinasi dengan rekan kerja maupun unit lain.',
-        'prakarsa'                                         => 'Inisiatif dalam menyelesaikan pekerjaan tanpa harus selalu menunggu perintah.',
-        'integritas'                                       => 'Kejujuran, konsistensi antara ucapan dan tindakan, serta kepatuhan terhadap aturan.',
-        'pengetahuan_teknik_operasi'                       => 'Pemahaman terhadap teknik dan proses operasional di bidang tugasnya.',
+        'kepemimpinan'                                    => 'Kemampuan meyakinkan orang lain sehingga dapat dikerahkan secara maksimal untuk melaksanakan tugas dan tanggungjawab.',
+        'kemampuan_merencanakan_mengoordinasikan'          => 'Kemampuan membuat rencana dan atau konsep serta dapat mengkoordinasikan anggota/tim untuk mencapai tujuan yang telah ditetapkan.',
+        'kemampuan_analisa_evaluasi_pengambilan_keputusan' => 'Proses berpikir yang melibatkan pemecahan masalah, pengumpulan, dan analisis data atau informasi secara sistematis untuk mencapai pemahaman yang lebih mendalam tentang suatu permasalahan.',
+        'kemampuan_memotivasi_aplikasi_manajemen'          => 'Motivasi dan semangat dalam menggunakan aplikasi (sistem) yang ditetapkan.',
+        'tanggung_jawab_manajemen'                         => 'Kesanggupan menyelesaikan pekerjaan dengan sebaik-baiknya dan tepat waktu serta bertanggungjawab atas keputusan yang diambil dan tindakan yang dilakukan.',
+        'kerjasama'                                        => 'Kemampuan untuk bekerja bersama-sama dalam menyelesaikan tugas sehingga mencapai dayaguna dan hasilguna yang lebih maksimal.',
+        'prakarsa'                                         => 'Langkah-langkah atau melaksanakan sesuatu tindakan yang diperlukan dalam melaksanakan tugas tanpa menunggu perintah (inisiatif).',
+        'integritas'                                       => 'Mutu, sifat, atau keadaan yang menunjukan kesatuan yang utuh, sehingga memiliki potensi dan kemampuan yang mencerminkan kewibawaan dan kejujuran.',
+        'pengetahuan_teknik_operasi'                       => 'Kemampuan yang digunakan untuk memilih suatu pilihan atau mengambil keputusan agar hasilnya optimal.',
     ];
 
     // Skala index penilaian (I/A/B/C/D), disamakan dengan Evaluation::SCALE.
@@ -107,7 +108,7 @@ class OfficialEvaluation extends Model
         'review_3_bulan'               => 'Review 3 Bulan',
         'review_6_bulan'               => 'Review 6 Bulan',
         'tidak_diperpanjang'           => 'Tidak Diperpanjang',
-        'phl_ke_kontrak'               => 'PHL ke Kontrak',
+        'phl_ke_kontrak'               => 'PHL OS ke Kontrak OS',
         'perpanjang_kontrak_os'        => 'Perpanjang Kontrak OS',
         'kontrak_os_ke_kontrak_dagsap' => 'Kontrak OS ke Kontrak Dagsap',
         'perpanjang_kontrak_dagsap'    => 'Perpanjang Kontrak Dagsap',
@@ -161,7 +162,7 @@ class OfficialEvaluation extends Model
      */
     public function scopeTahunAktif($query, ?int $tahun = null)
     {
-        return $query->where('tahun', $tahun ?? now()->year);
+        return $query->where('tahun', $tahun ?? \App\Support\ActivePeriod::year());
     }
 
     /**
@@ -194,6 +195,10 @@ class OfficialEvaluation extends Model
 
             if ($value === 'demosi' && $this->demosi_keterangan) {
                 $label .= ' (ke ' . $this->demosi_keterangan . ')';
+            }
+
+            if ($value === 'mutasi' && $this->mutasi_keterangan) {
+                $label .= ' (ke ' . $this->mutasi_keterangan . ')';
             }
 
             return $label;

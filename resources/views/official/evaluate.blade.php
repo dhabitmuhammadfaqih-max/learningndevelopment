@@ -264,6 +264,7 @@
                         $kenaikanGajiValue = old('kenaikan_gaji_amount', $isEdit ? $myEvaluation->kenaikan_gaji_amount : '');
                         $promosiKeteranganValue = old('promosi_keterangan', $isEdit ? $myEvaluation->promosi_keterangan : '');
                         $demosiKeteranganValue = old('demosi_keterangan', $isEdit ? $myEvaluation->demosi_keterangan : '');
+        $mutasiKeteranganValue = old('mutasi_keterangan', $isEdit ? $myEvaluation->mutasi_keterangan : '');
                         $teguranPernahValue = old('teguran_pernah', $isEdit && $myEvaluation->teguran ? 'ya' : 'tidak');
                         $teguranKeteranganValue = old('teguran', $isEdit ? $myEvaluation->teguran : '');
                     @endphp
@@ -338,6 +339,7 @@
                             'kenaikanGajiValue' => $kenaikanGajiValue,
                             'promosiKeteranganValue' => $promosiKeteranganValue,
                             'demosiKeteranganValue' => $demosiKeteranganValue,
+                            'mutasiKeteranganValue' => $mutasiKeteranganValue,
                             'recommendations' => \App\Models\Evaluation::RECOMMENDATIONS,
                             'recommendationDescriptions' => \App\Models\Evaluation::RECOMMENDATION_DESCRIPTIONS,
                             'subjectLabel' => 'pegawai',
@@ -347,25 +349,18 @@
 
                         <div class="mt-5 max-w-md">
                             <label class="block text-sm font-bold text-slate-700 mb-1.5">Tanda Tangan Penilai</label>
-                            <canvas id="signature-pad" class="rounded-xl border border-slate-200 bg-white cursor-crosshair block w-full max-w-[400px] sm:w-[400px] sm:h-[150px]" style="touch-action:none; aspect-ratio: 400 / 150;"></canvas>
-                            <div class="flex items-center justify-between mt-2">
-                                <span class="text-xs text-slate-400">
-                                    @if ($isEdit)
-                                        Kosongkan jika tidak ingin mengganti tanda tangan sebelumnya
-                                    @else
-                                        Gambar tanda tangan di kotak di atas
-                                    @endif
-                                </span>
-                                <button type="button" id="btn-clear-signature" class="text-xs text-slate-500 hover:text-slate-800 underline">Hapus &amp; ulangi</button>
-                            </div>
-                            <input type="hidden" name="signature" id="signature-input">
-                            @error('signature')
-                                <p class="text-xs text-red-600 mt-1.5">{{ $message }}</p>
-                            @enderror
-
                             @if ($isEdit && $myEvaluation->signature)
-                                <img src="{{ Storage::disk('public')->url($myEvaluation->signature) }}"
-                                     class="mt-3 w-full max-w-[220px] h-24 object-contain border border-slate-200 rounded-xl bg-slate-50">
+                                <img src="{{ Storage::disk('public')->url($myEvaluation->signature) }}" alt="Tanda tangan Anda"
+                                     class="rounded-xl border border-slate-200 bg-white block w-full max-w-[400px] h-[150px] object-contain">
+                                <p class="text-xs text-slate-400 mt-2">
+                                    Tanda tangan ini diambil dari tanda tangan akun Anda saat pertama kali menilai.
+                                </p>
+                            @else
+                                <img src="{{ auth()->user()->signature_url }}" alt="Tanda tangan Anda"
+                                     class="rounded-xl border border-slate-200 bg-white block w-full max-w-[400px] h-[150px] object-contain">
+                                <p class="text-xs text-slate-400 mt-2">
+                                    Tanda tangan akun Anda akan otomatis dipakai untuk penilaian ini.
+                                </p>
                             @endif
                         </div>
 
@@ -504,90 +499,6 @@
         });
 
         hitungTotal();
-
-        // ---- Signature pad ----
-        const canvas = document.getElementById('signature-pad');
-
-        if (canvas) {
-            const ctx = canvas.getContext('2d');
-            const ratio = window.devicePixelRatio || 1;
-
-            function resizeCanvas() {
-                canvas.width = canvas.clientWidth * ratio;
-                canvas.height = canvas.clientHeight * ratio;
-                ctx.scale(ratio, ratio);
-                ctx.lineCap = 'round';
-                ctx.lineJoin = 'round';
-                ctx.lineWidth = 2.2;
-                ctx.strokeStyle = '#111';
-            }
-            resizeCanvas();
-
-            let drawing = false;
-            let last = null;
-            let hasStroke = false;
-
-            function getPos(e) {
-                const rect = canvas.getBoundingClientRect();
-                const point = e.touches ? e.touches[0] : e;
-                return { x: point.clientX - rect.left, y: point.clientY - rect.top };
-            }
-
-            function start(e) {
-                e.preventDefault();
-                drawing = true;
-                hasStroke = true;
-                last = getPos(e);
-            }
-
-            function move(e) {
-                if (!drawing) return;
-                e.preventDefault();
-                const pos = getPos(e);
-                ctx.beginPath();
-                ctx.moveTo(last.x, last.y);
-                ctx.lineTo(pos.x, pos.y);
-                ctx.stroke();
-                last = pos;
-            }
-
-            function end() {
-                drawing = false;
-            }
-
-            canvas.addEventListener('mousedown', start);
-            canvas.addEventListener('mousemove', move);
-            canvas.addEventListener('mouseup', end);
-            canvas.addEventListener('mouseleave', end);
-            canvas.addEventListener('touchstart', start);
-            canvas.addEventListener('touchmove', move);
-            canvas.addEventListener('touchend', end);
-
-            const clearBtn = document.getElementById('btn-clear-signature');
-            if (clearBtn) {
-                clearBtn.addEventListener('click', function () {
-                    ctx.clearRect(0, 0, canvas.clientWidth, canvas.clientHeight);
-                    hasStroke = false;
-                });
-            }
-
-            const form = document.getElementById('form-penilaian');
-            const signatureInput = document.getElementById('signature-input');
-            const isEditForm = {{ $isEdit ? 'true' : 'false' }};
-
-            if (form) {
-                form.addEventListener('submit', function (e) {
-                    if (!hasStroke && !isEditForm) {
-                        e.preventDefault();
-                        alert('Tanda tangan wajib diisi sebelum menyimpan penilaian.');
-                        return;
-                    }
-                    if (hasStroke) {
-                        signatureInput.value = canvas.toDataURL('image/png');
-                    }
-                });
-            }
-        }
     </script>
 
 </x-dashboard-layout>

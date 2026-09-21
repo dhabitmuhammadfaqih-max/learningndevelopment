@@ -38,24 +38,43 @@ if (firebaseConfig.apiKey && firebaseConfig.projectId) {
 
     // Notifikasi saat TAB TIDAK AKTIF / browser di background.
     //
-    // PENTING: server SENGAJA mengirim data-only message (tidak ada
-    // field `notification`) - lihat catatan di
-    // FirebaseCloudMessagingService::sendToToken(). Kalau payload
-    // punya field `notification`, browser otomatis menampilkan
-    // notifikasi sendiri SELAIN showNotification() manual di bawah ini,
-    // sehingga satu push muncul sebagai DUA notifikasi (bug "double
-    // kirim"). Selama server tetap kirim data-only, baca title/body
-    // dari payload.data, BUKAN payload.notification.
-    messaging.onBackgroundMessage((payload) => {
-        const title = payload.data?.title || 'Notifikasi';
-        const body = payload.data?.body || '';
-        const url = payload.fcmOptions?.link || payload.data?.url || '/';
+    // Server mengirim data-only payload (lihat
+    // FirebaseCloudMessagingService::sendToToken()) - sengaja BUKAN
+    // notification+data, supaya browser/OS tidak ikut auto-display
+    // sendiri di level platform. Ini satu-satunya tempat yang menampilkan
+    // notifikasi untuk kondisi background, persis sekali per push.
+    self.addEventListener('push', (event) => {
+        if (!event.data) {
+            return;
+        }
 
-        self.registration.showNotification(title, {
-            body,
-            icon: '/images/logo-dagsap.png',
-            data: { url },
-        });
+        let payload;
+        try {
+            payload = event.data.json();
+        } catch (e) {
+            return;
+        }
+
+        // Jaga-jaga kalau suatu saat ada pengirim lain (bukan
+        // FirebaseCloudMessagingService di atas) yang masih mengirim
+        // notification payload ke token yang sama - jangan tampilkan
+        // dobel dengan auto-display bawaan FCM untuk notification message.
+        if (payload.notification) {
+            return;
+        }
+
+        const data = payload.data || {};
+        const title = data.title || 'Notifikasi';
+        const body = data.body || '';
+        const url = data.url || '/';
+
+        event.waitUntil(
+            self.registration.showNotification(title, {
+                body,
+                icon: '/images/logo-dagsap.png',
+                data: { url },
+            })
+        );
     });
 
     // Klik notifikasi -> fokuskan tab yang sudah terbuka, atau buka tab baru

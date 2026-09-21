@@ -16,6 +16,7 @@ class SupervisorFeedback extends Model
         'kenaikan_gaji_amount',
         'promosi_keterangan',
         'demosi_keterangan',
+        'mutasi_keterangan',
         'signature',
     ];
 
@@ -61,6 +62,10 @@ class SupervisorFeedback extends Model
                 $label .= ' (ke ' . $this->demosi_keterangan . ')';
             }
 
+            if ($value === 'mutasi' && $this->mutasi_keterangan) {
+                $label .= ' (ke ' . $this->mutasi_keterangan . ')';
+            }
+
             return $label;
         }, $list);
 
@@ -74,6 +79,6 @@ class SupervisorFeedback extends Model
      */
     public function scopeTahunAktif($query, ?int $tahun = null)
     {
-        return $query->where('tahun', $tahun ?? now()->year);
+        return $query->where('tahun', $tahun ?? \App\Support\ActivePeriod::year());
     }
 }

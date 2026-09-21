@@ -48,6 +48,11 @@
             'label' => 'Semua Akun',
             'icon'  => 'grid',
         ] : null,
+        $role === 'hrd' ? [
+            'route' => 'admin.settings.periode',
+            'label' => 'Pengaturan Periode',
+            'icon'  => 'calendar',
+        ] : null,
     ])->filter()->values();
 
     // Badge notifikasi "bisa ditanggapi/dinilai" per menu - lihat
@@ -69,13 +74,36 @@
 
     <title>{{ $title }} · {{ config('app.name', 'Learning & Development') }}</title>
 
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="{{ asset('images/logo-dagsap.png') }}">
+    <link rel="apple-touch-icon" href="{{ asset('images/logo-dagsap.png') }}">
+
+    <!-- PWA: wajib ada di SEMUA halaman (termasuk dashboard) supaya Safari iOS
+         menganggap halaman ini standalone saat dibuka dari Home Screen, dan
+         supaya Notification API / FCM push bisa jalan. Disamakan dengan
+         layouts/app.blade.php & layouts/guest.blade.php. -->
+    <link rel="manifest" href="{{ asset('manifest.json') }}">
+    <meta name="theme-color" content="#1d4ed8">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Learning & Development">
+
+    <!-- Open Graph / Link Sharing Preview -->
+    <meta property="og:title" content="{{ $title }} · {{ config('app.name', 'Learning & Development') }}">
+    <meta property="og:site_name" content="{{ config('app.name', 'Learning & Development') }}">
+    <meta property="og:description" content="{{ config('app.name', 'Learning & Development') }} - Platform Pembelajaran dan Pengembangan">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="{{ url()->current() }}">
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="{{ $title }} · {{ config('app.name', 'Learning & Development') }}">
+    <meta name="twitter:description" content="{{ config('app.name', 'Learning & Development') }} - Platform Pembelajaran dan Pengembangan">
+
     <link rel="preconnect" href="https://fonts.bunny.net">
     <link href="https://fonts.bunny.net/css?family=figtree:400,500,600,700,800&display=swap" rel="stylesheet" />
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body class="font-sans antialiased bg-[#eef3fb] text-slate-700">
-
     <div class="min-h-screen lg:flex">
 
         <!-- Sidebar -->
@@ -131,6 +159,9 @@
                                     @case('grid')
                                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
                                         @break
+                                    @case('calendar')
+                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><rect x="3" y="4" width="18" height="18" rx="2"/><path stroke-linecap="round" stroke-linejoin="round" d="M16 2v4M8 2v4M3 10h18"/></svg>
+                                        @break
                                     @default
                                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
                                 @endswitch
@@ -159,9 +190,21 @@
         <div class="flex-1 min-w-0">
 
             <!-- Topbar -->
-            <header class="bg-white/70 backdrop-blur border-b border-slate-100 px-5 sm:px-8 py-5 flex items-center justify-between gap-4">
+            <header class="relative z-30 bg-white/70 backdrop-blur border-b border-slate-100 px-5 sm:px-8 py-5 flex items-center justify-between gap-4">
                 <div>
                     <h1 class="text-xl sm:text-2xl font-extrabold text-slate-800">{{ $title }}</h1>
+                    {{--
+                        Badge periode penilaian aktif - lihat App\Support\ActivePeriod.
+                        Ditaruh di layout (bukan per-halaman dashboard) supaya SEMUA
+                        role (pegawai/pejabat/hrd) selalu tahu data tahun berapa yang
+                        sedang mereka lihat, terutama penting saat Januari-Februari
+                        kalau periode tahun lalu belum ditutup HRD (jadi bukan berarti
+                        sistem "salah tahun", memang sengaja belum ditutup).
+                    --}}
+                    <p class="text-xs text-slate-400 mt-0.5 flex items-center gap-1">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-3 h-3"><rect x="3" y="4" width="18" height="18" rx="2"/><path stroke-linecap="round" stroke-linejoin="round" d="M16 2v4M8 2v4M3 10h18"/></svg>
+                        Periode Penilaian {{ \App\Support\ActivePeriod::year() }}
+                    </p>
                 </div>
 
                 <div class="flex items-center gap-3 sm:gap-4">
@@ -170,6 +213,83 @@
                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-3.5 h-3.5"><path stroke-linecap="round" stroke-linejoin="round" d="m5 13 4 4L19 7"/></svg>
                             Tersimpan
                         </span>
+                    @endif
+
+                    {{-- Lonceng notifikasi in-app - lihat NotificationController & Notification model --}}
+                    <div x-data="{
+                            open: false,
+                            unread: 0,
+                            items: [],
+                            loading: false,
+                            fetchPreview() {
+                                if (document.hidden) return;
+                                this.loading = true;
+                                fetch('{{ route('notifications.preview') }}', { headers: { Accept: 'application/json' } })
+                                    .then(res => res.json())
+                                    .then(data => { this.unread = data.unread_count; this.items = data.items; })
+                                    .finally(() => this.loading = false);
+                            },
+                            toggle() {
+                                this.open = !this.open;
+                                if (this.open) this.fetchPreview();
+                            }
+                         }"
+                         x-init="fetchPreview(); setInterval(() => fetchPreview(), 60000); document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') fetchPreview(); })"
+                         @click.outside="open = false"
+                         class="relative">
+
+                        <button @click="toggle()" type="button"
+                                class="relative p-2.5 rounded-xl text-slate-500 hover:bg-slate-100 transition">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M13.73 21a2 2 0 0 1-3.46 0"/>
+                            </svg>
+                            <span x-show="unread > 0" x-cloak
+                                  x-text="unread > 99 ? '99+' : unread"
+                                  class="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] leading-[18px] font-bold text-center"></span>
+                        </button>
+
+                        <div x-show="open" x-cloak x-transition
+                             class="absolute -right-1 sm:right-0 mt-2 w-[70vw] max-w-[500px] bg-white rounded-2xl border border-slate-100 shadow-xl z-50 overflow-hidden">
+                            <div class="px-4 py-3 border-b border-slate-50 flex items-center justify-between">
+                                <p class="text-sm font-bold text-slate-800">Notifikasi</p>
+                                <a href="{{ route('notifications.index') }}" class="text-xs font-semibold text-blue-600 hover:text-blue-700">Lihat semua</a>
+                            </div>
+
+                            <div class="max-h-80 overflow-y-auto divide-y divide-slate-50">
+                                <template x-if="!loading && items.length === 0">
+                                    <p class="px-4 py-8 text-center text-xs text-slate-400">Belum ada notifikasi</p>
+                                </template>
+
+                                <template x-for="item in items" :key="item.id">
+                                    <a :href="'{{ url('notifikasi') }}/' + item.id + '/baca'"
+                                       @click.prevent="
+                                            fetch('{{ url('notifikasi') }}/' + item.id + '/baca', {
+                                                method: 'POST',
+                                                headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}', Accept: 'application/json' }
+                                            }).then(() => { if (item.url) window.location.href = item.url; else { open = false; fetchPreview(); } });
+                                       "
+                                       class="block px-4 py-3 hover:bg-slate-50 transition"
+                                       :class="!item.is_read ? 'bg-blue-50/40' : ''">
+                                        <p class="text-sm font-semibold text-slate-800" x-text="item.title"></p>
+                                        <p class="text-xs text-slate-500 mt-0.5" x-text="item.body"></p>
+                                        <p class="text-[11px] text-slate-400 mt-1" x-text="item.time_ago"></p>
+                                    </a>
+                                </template>
+                            </div>
+                        </div>
+                    </div>
+
+                    @if (auth()->user()->hasSavedSignature())
+                        {{-- Pakai dispatchEvent langsung (bukan Alpine @click="$dispatch(...)")
+                             karena tombol ini tidak berada di dalam elemen ber-x-data manapun,
+                             jadi magic $dispatch Alpine tidak tersedia di sini. --}}
+                        <button type="button" onclick="window.dispatchEvent(new CustomEvent('open-signature-edit'))" title="Edit Tanda Tangan"
+                                class="p-2.5 rounded-xl text-slate-500 hover:bg-slate-100 transition">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536M9 11l6.586-6.586a2 2 0 1 1 2.828 2.828L11.828 13.828a4 4 0 0 1-1.414.943l-3.114 1.2 1.2-3.114A4 4 0 0 1 9 11ZM5 19h14" />
+                            </svg>
+                        </button>
                     @endif
 
                     <div class="flex items-center gap-3 pl-3 sm:pl-4 border-l border-slate-200">
@@ -191,6 +311,16 @@
         </div>
     </div>
 
+    @include('partials.signature-setup-modal')
+
+    @include('partials.signature-edit-modal')
+
+    @include('partials.confirm-modal')
+
+    @include('partials.reload-overlay')
+
     @include('partials.fcm-scripts')
+
+    @include('partials.notification-permission-banner')
 </body>
 </html>

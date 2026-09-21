@@ -63,6 +63,7 @@
             'checkedAt' => auth()->user()->pejabat_konfirmasi_pertemuan_at,
             'selfieUrl' => auth()->user()->pejabat_konfirmasi_pertemuan_selfie ? Storage::disk('public')->url(auth()->user()->pejabat_konfirmasi_pertemuan_selfie) : null,
             'evidenceType' => auth()->user()->pejabat_konfirmasi_pertemuan_evidence_type,
+            'meetingMethod' => auth()->user()->pejabat_konfirmasi_pertemuan_metode,
             'checkedLabel' => 'Sudah Bertemu & Evaluasi (klik untuk batalkan)',
             'uncheckedLabel' => 'Ambil Selfie & Tandai Sudah Bertemu',
             'boleh' => $pejabatBolehCentang,
@@ -268,12 +269,11 @@
 
                                     <div>
                                         <label class="block text-xs font-semibold text-slate-500 mb-2">Tanda Tangan</label>
-                                        <canvas id="eval-signature-pad-edit-{{ $evaluation->id }}" class="signature-canvas rounded-xl border border-slate-200 bg-white touch-none cursor-crosshair block w-full max-w-[400px] sm:w-[400px] sm:h-[150px]" style="aspect-ratio: 400 / 150;"></canvas>
-                                        <div class="flex items-center justify-between mt-2">
-                                            <span class="text-xs text-slate-400">Gambar ulang tanda tangan di kotak di atas</span>
-                                            <button type="button" id="btn-clear-eval-signature-edit-{{ $evaluation->id }}" class="text-xs font-medium text-slate-500 underline hover:text-slate-800">Hapus &amp; ulangi</button>
-                                        </div>
-                                        <input type="hidden" name="employee_signature" id="eval-signature-input-edit-{{ $evaluation->id }}">
+                                        <img src="{{ auth()->user()->signature_url }}" alt="Tanda tangan Anda"
+                                             class="rounded-xl border border-slate-200 bg-white block w-full max-w-[400px] h-[150px] object-contain">
+                                        <p class="text-xs text-slate-400 mt-2">
+                                            Tanda tangan akun Anda akan otomatis dipakai untuk tanggapan ini.
+                                        </p>
                                     </div>
 
                                     <button type="submit"
@@ -281,29 +281,6 @@
                                         Simpan Perubahan
                                     </button>
                                 </form>
-
-                                <script>
-                                    (function () {
-                                        function wireEditPad() {
-                                            const pad = initSignaturePad('eval-signature-pad-edit-{{ $evaluation->id }}', 'btn-clear-eval-signature-edit-{{ $evaluation->id }}');
-                                            const form = document.getElementById('{{ $evalEditFormId }}');
-                                            const input = document.getElementById('eval-signature-input-edit-{{ $evaluation->id }}');
-
-                                            if (form && pad && ! form.dataset.wired) {
-                                                form.dataset.wired = '1';
-                                                form.addEventListener('submit', function (e) {
-                                                    if (!pad.hasStroke()) {
-                                                        e.preventDefault();
-                                                        alert('Tanda tangan wajib diisi sebelum menyimpan perubahan.');
-                                                        return;
-                                                    }
-                                                    input.value = pad.toDataURL();
-                                                });
-                                            }
-                                        }
-                                        window.addEventListener('eval-edit-shown-{{ $evaluation->id }}', wireEditPad);
-                                    })();
-                                </script>
                             </div>
                         @else
                             @php
@@ -331,50 +308,18 @@
 
                                     <div>
                                         <label class="block text-xs font-semibold text-slate-500 mb-2">Tanda Tangan</label>
-                                        <canvas id="eval-signature-pad-{{ $evaluation->id }}" class="signature-canvas rounded-xl border border-slate-200 bg-white touch-none cursor-crosshair block w-full max-w-[400px] sm:w-[400px] sm:h-[150px]" style="aspect-ratio: 400 / 150;"></canvas>
-                                        <div class="flex items-center justify-between mt-2">
-                                            <span class="text-xs text-slate-400">Gambar tanda tangan di kotak di atas</span>
-                                            <button type="button" id="btn-clear-eval-signature-{{ $evaluation->id }}" class="text-xs font-medium text-slate-500 underline hover:text-slate-800">Hapus &amp; ulangi</button>
-                                        </div>
-                                        <input type="hidden" name="employee_signature" id="eval-signature-input-{{ $evaluation->id }}">
+                                        <img src="{{ auth()->user()->signature_url }}" alt="Tanda tangan Anda"
+                                             class="rounded-xl border border-slate-200 bg-white block w-full max-w-[400px] h-[150px] object-contain">
+                                        <p class="text-xs text-slate-400 mt-2">
+                                            Tanda tangan akun Anda akan otomatis dipakai untuk tanggapan ini.
+                                        </p>
                                     </div>
-
-                                    <p class="text-xs text-slate-400">
-                                        Tanggapan &amp; tanda tangan dapat diubah kembali lewat "Edit Tanggapan" setelah dikirim.
-                                    </p>
 
                                     <button type="submit"
                                             class="inline-flex items-center justify-center rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-5 py-2.5 transition">
                                         Kirim Tanggapan
                                     </button>
                                 </form>
-
-                                <script>
-                                    (function () {
-                                        // initSignaturePad didefinisikan di blok <script> paling
-                                        // bawah halaman ini (setelah loop foreach ini selesai).
-                                        // Panggilan yang dieksekusi langsung di sini (bukan di dalam event
-                                        // listener) butuh fungsinya sudah ada duluan, jadi jangan
-                                        // panggil langsung - tunggu sampai seluruh script halaman
-                                        // selesai dimuat (DOMContentLoaded) supaya urutannya aman.
-                                        document.addEventListener('DOMContentLoaded', function () {
-                                            const pad = initSignaturePad('eval-signature-pad-{{ $evaluation->id }}', 'btn-clear-eval-signature-{{ $evaluation->id }}');
-                                            const form = document.getElementById('{{ $evalFormId }}');
-                                            const input = document.getElementById('eval-signature-input-{{ $evaluation->id }}');
-
-                                            if (form && pad) {
-                                                form.addEventListener('submit', function (e) {
-                                                    if (!pad.hasStroke()) {
-                                                        e.preventDefault();
-                                                        alert('Tanda tangan wajib diisi sebelum mengirim tanggapan.');
-                                                        return;
-                                                    }
-                                                    input.value = pad.toDataURL();
-                                                });
-                                            }
-                                        });
-                                    })();
-                                </script>
                             @endif
                         @endif
                     </div>
@@ -385,140 +330,6 @@
     @endif
 
     <script>
-        // Fungsi reusable untuk pad tanda tangan (sama pola-nya seperti di
-        // employee/dashboard.blade.php, supervisor/evaluate_official.blade.php,
-        // dsb.). Dipakai oleh form "Tanggapan Saya Atas Penilaian Ini" di atas.
-        function initSignaturePad(canvasId, clearBtnId) {
-            const canvas = document.getElementById(canvasId);
-            if (!canvas) return null;
-
-            const ctx = canvas.getContext('2d', { alpha: true });
-            let drawing = false;
-            let last = null;
-            let hasStroke = false;
-            let ratio = Math.max(window.devicePixelRatio || 1, 1);
-
-            function setupCanvas(keepDrawing = false) {
-                const rect = canvas.getBoundingClientRect();
-                const cssWidth = Math.max(Math.round(rect.width), 1);
-                const cssHeight = Math.max(Math.round(rect.height), 1);
-
-                ratio = Math.max(window.devicePixelRatio || 1, 1);
-
-                const oldImage = keepDrawing && canvas.width && canvas.height
-                    ? canvas.toDataURL('image/png')
-                    : null;
-
-                canvas.width = Math.round(cssWidth * ratio);
-                canvas.height = Math.round(cssHeight * ratio);
-
-                ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
-                ctx.lineCap = 'round';
-                ctx.lineJoin = 'round';
-                ctx.lineWidth = 2.2;
-                ctx.strokeStyle = '#111';
-
-                if (oldImage) {
-                    const image = new Image();
-                    image.onload = function () {
-                        ctx.drawImage(image, 0, 0, cssWidth, cssHeight);
-                    };
-                    image.src = oldImage;
-                }
-            }
-
-            requestAnimationFrame(() => setupCanvas(false));
-
-            if ('ResizeObserver' in window) {
-                const observer = new ResizeObserver(() => {
-                    if (!drawing) setupCanvas(true);
-                });
-                observer.observe(canvas);
-            }
-
-            window.addEventListener('resize', () => {
-                if (!drawing) setupCanvas(true);
-            });
-
-            function getPos(e) {
-                const rect = canvas.getBoundingClientRect();
-
-                return {
-                    x: e.clientX - rect.left,
-                    y: e.clientY - rect.top
-                };
-            }
-
-            function start(e) {
-                if (e.pointerType === 'mouse' && e.button !== 0) return;
-
-                e.preventDefault();
-                drawing = true;
-                hasStroke = true;
-                last = getPos(e);
-
-                if (canvas.setPointerCapture) {
-                    try { canvas.setPointerCapture(e.pointerId); } catch (_) {}
-                }
-            }
-
-            function move(e) {
-                if (!drawing) return;
-
-                e.preventDefault();
-
-                const pos = getPos(e);
-
-                ctx.beginPath();
-                ctx.moveTo(last.x, last.y);
-                ctx.lineTo(pos.x, pos.y);
-                ctx.stroke();
-
-                last = pos;
-            }
-
-            function end(e) {
-                if (e) e.preventDefault();
-                drawing = false;
-                last = null;
-            }
-
-            canvas.style.touchAction = 'none';
-            canvas.addEventListener('pointerdown', start);
-            canvas.addEventListener('pointermove', move);
-            canvas.addEventListener('pointerup', end);
-            canvas.addEventListener('pointercancel', end);
-            canvas.addEventListener('pointerleave', function (e) {
-                if (drawing && e.pointerType === 'mouse') end(e);
-            });
-
-            const clearBtn = document.getElementById(clearBtnId);
-            if (clearBtn) {
-                clearBtn.addEventListener('click', function () {
-                    ctx.save();
-                    ctx.setTransform(1, 0, 0, 1, 0, 0);
-                    ctx.clearRect(0, 0, canvas.width, canvas.height);
-                    ctx.restore();
-
-                    const rect = canvas.getBoundingClientRect();
-                    ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
-                    ctx.lineCap = 'round';
-                    ctx.lineJoin = 'round';
-                    ctx.lineWidth = 2.2;
-                    ctx.strokeStyle = '#111';
-
-                    drawing = false;
-                    last = null;
-                    hasStroke = false;
-                });
-            }
-
-            return {
-                hasStroke: () => hasStroke,
-                toDataURL: () => canvas.toDataURL('image/png'),
-            };
-        }
-
         function toggleDetailNilai(detailId, btnId) {
             const detail = document.getElementById(detailId);
             const btn = document.getElementById(btnId);

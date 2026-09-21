@@ -8,6 +8,23 @@
  * Membutuhkan window.__FCM_CONFIG__ (diisi inline oleh Blade, lihat
  * resources/views/partials/fcm-scripts.blade.php) dan Firebase compat SDK
  * sudah dimuat lewat <script> CDN sebelum file ini.
+ *
+ * CATATAN PENTING (Safari iOS):
+ * Safari di iOS HANYA mengizinkan Notification.requestPermission()
+ * dipanggil sebagai respons LANGSUNG dari user gesture (tap/klik).
+ * Kalau dipanggil otomatis saat halaman load, atau dipanggil setelah
+ * `await` lain (mis. registrasi service worker), Safari akan menolak
+ * diam-diam TANPA menampilkan popup izin sama sekali. Karena itu:
+ *   - initFcm() TIDAK dipanggil otomatis dengan requestPermission saat
+ *     page load. Auto-init saat load HANYA jalan kalau izin sudah
+ *     'granted' sebelumnya (lihat paling bawah file ini) - jalur itu
+ *     TIDAK memanggil requestPermission() sama sekali.
+ *   - initFcm({ requestPermission: true }) dipanggil dari onclick tombol
+ *     "Aktifkan Notifikasi" (lihat notification-permission-banner.blade.php).
+ *     requestPermission() dipanggil PALING AWAL di initFcm() (sebelum
+ *     `await` apapun) HANYA kalau requestPermission: true DAN status izin
+ *     masih 'default', supaya masih dianggap "dalam" user gesture oleh
+ *     Safari.
  */
 (function () {
     const config = window.__FCM_CONFIG__;
@@ -25,7 +42,27 @@
     firebase.initializeApp(config);
     const messaging = firebase.messaging();
 
+    function isIOS() {
+        return /iPhone|iPad|iPod/i.test(navigator.userAgent)
+            || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    }
+
+    function isStandalonePwa() {
+        return window.navigator.standalone === true
+            || window.matchMedia('(display-mode: standalone)').matches;
+    }
+
+    // Dipakai ulang oleh foreground handler (onMessage) supaya bisa pakai
+    // registration.showNotification() - BUKAN `new Notification()`, karena
+    // constructor itu tidak didukung sama sekali di Safari iOS (baik tab
+    // biasa maupun PWA standalone).
+    let swRegistration = null;
+
     function registerServiceWorker() {
+        if (swRegistration) {
+            return Promise.resolve(swRegistration);
+        }
+
         // Kirim config Firebase lewat query string ke service worker
         // (lihat public/firebase-messaging-sw.js).
         const params = new URLSearchParams({
@@ -37,7 +74,11 @@
             appId: config.appId || '',
         });
 
-        return navigator.serviceWorker.register(`/firebase-messaging-sw.js?${params.toString()}`);
+        return navigator.serviceWorker.register(`/firebase-messaging-sw.js?${params.toString()}`)
+            .then((registration) => {
+                swRegistration = registration;
+                return registration;
+            });
     }
 
     function sendTokenToBackend(token) {
@@ -57,16 +98,39 @@
         });
     }
 
-    async function initFcm() {
+    async function initFcm({ requestPermission = false } = {}) {
         try {
-            const registration = await registerServiceWorker();
+            let permission = Notification.permission;
 
-            const permission = await Notification.requestPermission();
+            // Cuma minta izin (munculin popup native) kalau eksplisit
+            // dipanggil dari user gesture (klik tombol "Aktifkan") DAN
+            // izin belum pernah diputuskan sama sekali. WAJIB baris ini
+            // yang paling awal dieksekusi, sebelum `await` apapun -
+            // lihat catatan di atas soal user gesture requirement Safari
+            // iOS: begitu ada `await` lain sebelumnya, Safari udah
+            // nganggep ini di luar konteks klik user dan bakal nolak
+            // diam-diam tanpa nampilin popup sama sekali.
+            if (permission === 'default' && requestPermission) {
+                // IMPORTANT: this call must happen immediately from the button
+                // click path on iOS. Do not put any await before it.
+                if (isIOS() && !isStandalonePwa()) {
+                    throw new Error('Di iPhone, notifikasi hanya bisa diaktifkan dari Web App yang dibuka dari Home Screen.');
+                }
+
+                permission = await Notification.requestPermission();
+            }
 
             if (permission !== 'granted') {
-                console.warn('[FCM] Izin notifikasi ditolak/belum diberikan oleh user.');
+                console.warn('[FCM] Izin notifikasi belum diberikan oleh user.');
                 window.dispatchEvent(new CustomEvent('fcm:permission-denied'));
                 return;
+            }
+
+            // Baru register service worker SETELAH izin granted.
+            const registration = await registerServiceWorker();
+
+            if (!config.vapidKey) {
+                throw new Error('FIREBASE_VAPID_KEY belum tersedia di konfigurasi client.');
             }
 
             const token = await messaging.getToken({
@@ -90,44 +154,50 @@
         }
     }
 
-    // Notifikasi saat TAB SEDANG AKTIF (foreground) - tidak lewat service
-    // worker, jadi ditampilkan manual lewat Notification API.
+    // Notifikasi saat TAB SEDANG AKTIF (foreground) - tidak lewat event
+    // background service worker, jadi ditampilkan manual di sini.
     //
-    // PENTING: server mengirim data-only message (tanpa field
-    // `notification`) supaya tidak dobel dengan showNotification() di
-    // firebase-messaging-sw.js saat background - lihat catatan di
+    // PENTING: pakai registration.showNotification(), BUKAN
+    // `new Notification()`. Constructor Notification() TIDAK didukung di
+    // Safari iOS sama sekali (selalu throw), sedangkan
+    // ServiceWorkerRegistration.showNotification() didukung di semua
+    // browser modern termasuk Safari iOS 16.4+.
+    //
+    // Server mengirim data-only message (tanpa field `notification`)
+    // supaya tidak dobel dengan handler background di
+    // firebase-messaging-sw.js - lihat catatan di
     // FirebaseCloudMessagingService::sendToToken(). Karena itu title/body
     // dibaca dari payload.data, BUKAN payload.notification.
     messaging.onMessage((payload) => {
+        if (Notification.permission !== 'granted' || !swRegistration) {
+            return;
+        }
+
         const title = payload.data?.title || 'Notifikasi';
         const body = payload.data?.body || '';
-        const url = payload.fcmOptions?.link || payload.data?.url;
+        const url = payload.fcmOptions?.link || payload.data?.url || '/';
 
-        if (Notification.permission === 'granted') {
-            const notif = new Notification(title, {
-                body,
-                icon: '/images/logo-dagsap.png',
-            });
-
-            if (url) {
-                notif.onclick = () => {
-                    window.focus();
-                    window.location.href = url;
-                };
-            }
-        }
+        swRegistration.showNotification(title, {
+            body,
+            icon: '/images/logo-dagsap.png',
+            data: { url },
+        });
     });
 
     window.initFcm = initFcm;
 
-    // Registrasi token otomatis saat halaman dashboard dimuat (dulu ini
-    // hanya terjadi lewat tombol "Test Notifikasi" yang sudah dihapus).
-    // Tanpa ini, tidak ada token FCM yang pernah tersimpan ke database,
-    // sehingga notification "Penilaian Baru Tersedia" tidak akan pernah
-    // sampai ke siapapun.
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', initFcm);
-    } else {
+    // Kalau izin SUDAH granted dari kunjungan sebelumnya (Android yang
+    // sudah pernah Allow, atau iPhone yang sudah pernah tap Aktifkan +
+    // Allow), refresh token otomatis saat halaman dimuat - ini AMAN
+    // dipanggil otomatis karena tidak memunculkan popup baru (izin
+    // sudah ada, requestPermission tidak pernah dipanggil di jalur ini).
+    //
+    // Kalau izin masih 'default' (belum pernah ditanya) atau 'denied',
+    // JANGAN dipanggil otomatis sama sekali - tunggu user tap tombol
+    // "Aktifkan Notifikasi" (lihat notification-permission-banner.blade.php)
+    // supaya requestPermission() dipanggil dalam konteks user gesture dan
+    // popup native iOS bisa muncul.
+    if (Notification.permission === 'granted') {
         initFcm();
     }
 })();

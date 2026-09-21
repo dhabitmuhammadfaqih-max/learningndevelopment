@@ -3,6 +3,7 @@
     $kenaikanGajiValue = $kenaikanGajiValue ?? '';
     $promosiKeteranganValue = $promosiKeteranganValue ?? '';
     $demosiKeteranganValue = $demosiKeteranganValue ?? '';
+    $mutasiKeteranganValue = $mutasiKeteranganValue ?? '';
     $recommendations = $recommendations ?? [];
     $recommendationDescriptions = $recommendationDescriptions ?? [];
     $subjectLabel = $subjectLabel ?? 'pegawai';
@@ -27,9 +28,10 @@
         kenaikanGaji: {{ Illuminate\Support\Js::from((string) $kenaikanGajiValue) }},
         promosiKeterangan: {{ Illuminate\Support\Js::from((string) $promosiKeteranganValue) }},
         demosiKeterangan: {{ Illuminate\Support\Js::from((string) $demosiKeteranganValue) }},
+        mutasiKeterangan: {{ Illuminate\Support\Js::from((string) $mutasiKeteranganValue) }},
         eligibleDagsapTetap: {{ Illuminate\Support\Js::from($eligibleForDagsapTetap) }},
     }"
-    x-effect="if (!selected.includes('kenaikan_gaji')) kenaikanGaji = ''; if (!selected.includes('promosi')) promosiKeterangan = ''; if (!selected.includes('demosi')) demosiKeterangan = ''"
+    x-effect="if (!selected.includes('kenaikan_gaji')) kenaikanGaji = ''; if (!selected.includes('promosi')) promosiKeterangan = ''; if (!selected.includes('demosi')) demosiKeterangan = ''; if (!selected.includes('mutasi')) mutasiKeterangan = ''"
     x-init="if (!eligibleDagsapTetap) selected = selected.filter(v => v !== 'kontrak_dagsap_ke_tetap')"
     @change="if ($event.target.value === 'promosi' && $event.target.checked) { selected = selected.filter(v => v !== 'demosi'); } if ($event.target.value === 'demosi' && $event.target.checked) { selected = selected.filter(v => v !== 'promosi'); } if ($event.target.value === 'kontrak_dagsap_ke_tetap' && $event.target.checked && !eligibleDagsapTetap) { selected = selected.filter(v => v !== 'kontrak_dagsap_ke_tetap'); $event.target.checked = false; }"
 >
@@ -83,18 +85,26 @@
 
     <div class="mt-4 max-w-[280px]" x-show="selected.includes('kenaikan_gaji')" x-cloak>
         <label class="block text-sm font-bold text-slate-700 mb-1.5">Nominal Kenaikan Gaji</label>
+        {{--
+            Input yang TERLIHAT ini cuma untuk tampilan (diberi titik ribuan
+            otomatis, mis. "3.000.000") supaya user gampang mengecek jumlah
+            nol-nya dan tidak salah ketik nominal. Field ini SENGAJA tidak
+            punya atribut "name" - yang dikirim ke server adalah hidden
+            input "kenaikan_gaji_amount" di bawah, isinya angka murni tanpa
+            titik (kenaikanGaji), supaya validasi server (nullable|integer)
+            tidak perlu diubah sama sekali.
+        --}}
         <input
             type="text"
             inputmode="numeric"
-            pattern="[0-9]*"
-            name="kenaikan_gaji_amount"
-            min="1"
-            x-model="kenaikanGaji"
+            :value="kenaikanGaji ? new Intl.NumberFormat('id-ID').format(kenaikanGaji) : ''"
             @keydown="if (!/^[0-9]$/.test($event.key) && !['Backspace','Delete','ArrowLeft','ArrowRight','Tab','Home','End'].includes($event.key) && !$event.metaKey && !$event.ctrlKey) $event.preventDefault()"
-            @input="kenaikanGaji = kenaikanGaji.replace(/[^0-9]/g, '')"
+            @input="kenaikanGaji = $event.target.value.replace(/[^0-9]/g, '')"
             @paste="setTimeout(() => kenaikanGaji = kenaikanGaji.replace(/[^0-9]/g, ''))"
+            placeholder="Contoh: 500.000"
             class="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none"
         >
+        <input type="hidden" name="kenaikan_gaji_amount" min="1" x-model="kenaikanGaji">
         @error('kenaikan_gaji_amount')
             <p class="text-xs text-red-600 mt-1">{{ $message }}</p>
         @enderror
@@ -132,6 +142,24 @@
             Jelaskan jabatan/posisi tujuan demosi {{ $subjectLabel }} ini.
         </p>
         @error('demosi_keterangan')
+            <p class="text-xs text-red-600 mt-1">{{ $message }}</p>
+        @enderror
+    </div>
+
+    <div class="mt-4 max-w-md" x-show="selected.includes('mutasi')" x-cloak>
+        <label class="block text-sm font-bold text-slate-700 mb-1.5">Mutasi Kemana</label>
+        <input
+            type="text"
+            name="mutasi_keterangan"
+            x-model="mutasiKeterangan"
+            maxlength="255"
+            placeholder="Contoh: Cabang Yogyakarta / Divisi Produksi"
+            class="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none"
+        >
+        <p class="text-xs text-slate-400 mt-1">
+            Jelaskan posisi/unit kerja/lokasi tujuan mutasi {{ $subjectLabel }} ini.
+        </p>
+        @error('mutasi_keterangan')
             <p class="text-xs text-red-600 mt-1">{{ $message }}</p>
         @enderror
     </div>

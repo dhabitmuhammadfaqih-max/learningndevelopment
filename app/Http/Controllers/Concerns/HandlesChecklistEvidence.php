@@ -122,18 +122,25 @@ trait HandlesChecklistEvidence
     /**
      * Validasi input bukti checklist dari request, simpan filenya ke
      * disk 'public' (folder checklist-selfies/, sama seperti selfie
-     * existing), dan kembalikan [$path, $evidenceType].
+     * existing), dan kembalikan [$path, $evidenceType, $meetingMethod].
      *
-     * @return array{0: string, 1: string}
+     * $meetingMethod ('zoom'/'telpon'/'chat') HANYA wajib & dipakai
+     * saat evidence_type = 'upload' (Online) - lihat migration
+     * add_meeting_metode_to_checklist_pertemuan_columns &
+     * User::CHECKLIST_MEETING_METHODS. Untuk evidence_type = 'selfie'
+     * (Offline), selalu null.
+     *
+     * @return array{0: string, 1: string, 2: ?string}
      *
      * @throws ValidationException
      */
     protected function resolveChecklistEvidence(Request $request, string $rolePrefix, int $subjectId): array
     {
         $validated = $request->validate([
-            'evidence_type' => 'required|in:upload,selfie',
-            'evidence_file' => 'required_if:evidence_type,upload|nullable|image|max:5120',
-            'selfie'        => 'required_if:evidence_type,selfie|nullable|string',
+            'evidence_type'  => 'required|in:upload,selfie',
+            'evidence_file'  => 'required_if:evidence_type,upload|nullable|image|max:5120',
+            'selfie'         => 'required_if:evidence_type,selfie|nullable|string',
+            'meeting_method' => 'required_if:evidence_type,upload|nullable|in:zoom,telpon,chat',
         ], [
             'evidence_type.required'    => 'Silakan pilih metode bukti checklist terlebih dahulu.',
             'evidence_type.in'          => 'Metode bukti checklist tidak valid.',
@@ -141,7 +148,13 @@ trait HandlesChecklistEvidence
             'evidence_file.image'       => 'File yang diupload harus berupa gambar.',
             'evidence_file.max'         => 'Ukuran file maksimal 5MB.',
             'selfie.required_if'        => 'Silakan ambil selfie terlebih dahulu.',
+            'meeting_method.required_if' => 'Silakan pilih metode pertemuan (Zoom/Telpon/Chat) terlebih dahulu.',
+            'meeting_method.in'          => 'Metode pertemuan tidak valid.',
         ]);
+
+        $meetingMethod = $validated['evidence_type'] === 'upload'
+            ? $validated['meeting_method']
+            : null;
 
         // Metode Upload File: file dikirim sebagai multipart. Dikompres
         // dulu (lihat compressChecklistImage()) sebelum disimpan lewat
@@ -227,7 +240,7 @@ trait HandlesChecklistEvidence
                 ]);
             }
 
-            return [$path, 'upload'];
+            return [$path, 'upload', $meetingMethod];
         }
 
         // Metode Ambil Selfie: base64 PNG/JPEG dari canvas kamera,
@@ -263,6 +276,6 @@ trait HandlesChecklistEvidence
             ]);
         }
 
-        return [$path, 'selfie'];
+        return [$path, 'selfie', null];
     }
 }

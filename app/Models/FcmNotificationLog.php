@@ -83,6 +83,39 @@ class FcmNotificationLog extends Model
      */
     public const TYPE_SIAP_CHECKLIST_ATASAN_PEJABAT = 'siap_checklist_atasan_pejabat';
 
+    /**
+     * Nilai (Evaluation) pegawai sudah dibuat oleh Penilai (users.supervisor_id
+     * pegawai ini), jadi hasil penilaiannya sudah bisa dilihat pegawai.
+     * Dikirim ke PEGAWAI itu sendiri, langsung setelah Penilai menyimpan
+     * Evaluation - lihat OfficialController::evaluate() &
+     * NotificationTriggerService::triggerNilaiMunculPegawai(). Sama seperti
+     * TYPE_SIAP_TANGGAPAN_CHECKLIST_PEGAWAI, employee_id & supervisor_id
+     * pada baris log untuk jenis ini bernilai SAMA (notifikasi ke diri
+     * sendiri).
+     */
+    public const TYPE_NILAI_MUNCUL_PEGAWAI = 'nilai_muncul_pegawai';
+
+    /**
+     * Checklist pertemuan PEGAWAI & PENILAI untuk seorang pegawai sudah
+     * sama-sama lengkap, jadi HRD sudah boleh menandatangani penilaian
+     * pegawai ini (lihat User::checklistPertemuanLengkap() &
+     * HrdController::signAsHrd()). Dikirim ke SETIAP akun ber-role
+     * 'hrd' - employee_id pada baris log tetap subjek (pegawai ini),
+     * supervisor_id diisi id akun HRD penerima (satu baris per HRD, jadi
+     * tiap HRD dedupe sendiri-sendiri). Lihat
+     * NotificationTriggerService::triggerSiapTandaTanganHrdJikaPerlu().
+     */
+    public const TYPE_SIAP_TANDA_TANGAN_HRD = 'siap_tanda_tangan_hrd';
+
+    /**
+     * Versi pejabat dari TYPE_SIAP_TANDA_TANGAN_HRD - checklist
+     * pertemuan PEJABAT & ATASAN sudah lengkap (lihat
+     * User::checklistPertemuanPejabatLengkap() &
+     * HrdController::signAsHrdOfficial()), dikirim ke setiap akun
+     * ber-role 'hrd'.
+     */
+    public const TYPE_SIAP_TANDA_TANGAN_HRD_PEJABAT = 'siap_tanda_tangan_hrd_pejabat';
+
     protected $fillable = [
         'employee_id',
         'supervisor_id',

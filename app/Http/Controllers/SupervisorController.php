@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\User;
 use App\Models\OfficialEvaluation;
 use App\Services\NotificationTriggerService;
+use App\Support\AccountSignature;
 use App\Http\Controllers\Concerns\HandlesChecklistEvidence;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -127,19 +128,17 @@ class SupervisorController extends Controller
             return back()->with('success', 'Pejabat ini sudah pernah Anda nilai untuk tahun ' . $tahunIni . '.');
         }
 
-        [$validated, $recommendationValue, $kenaikanGajiAmount, $promosiKeterangan, $demosiKeterangan, $error] = $this->validateOfficialEvaluationInput($request, $pejabat);
+        if (! Auth::user()->hasSavedSignature()) {
+            return back()->withErrors(['signature' => 'Tanda tangan akun Anda belum tersimpan. Silakan muat ulang halaman.'])->withInput();
+        }
+
+        [$validated, $recommendationValue, $kenaikanGajiAmount, $promosiKeterangan, $demosiKeterangan, $mutasiKeterangan, $error] = $this->validateOfficialEvaluationInput($request, $pejabat);
 
         if ($error) {
             return $error;
         }
 
-        if (! preg_match('/^data:image\/png;base64,/', $validated['signature'])) {
-            return back()->withErrors(['signature' => 'Format tanda tangan tidak valid.'])->withInput();
-        }
-
-        $imageContent = base64_decode(substr($validated['signature'], strpos($validated['signature'], ',') + 1));
-        $signaturePath = "signatures/official_evaluation_{$pejabat->id}_" . Auth::id() . '_' . time() . '.png';
-        Storage::disk('public')->put($signaturePath, $imageContent);
+        $signaturePath = AccountSignature::copyFor(Auth::user(), "official_evaluation_{$pejabat->id}_" . Auth::id());
 
         $score = OfficialEvaluation::calculateScore($validated);
 
@@ -173,6 +172,7 @@ class SupervisorController extends Controller
                 'kenaikan_gaji_amount'                               => $kenaikanGajiAmount,
                 'promosi_keterangan'                                 => $promosiKeterangan,
                 'demosi_keterangan'                                  => $demosiKeterangan,
+                'mutasi_keterangan'                                  => $mutasiKeterangan,
                 'signature'                                          => $signaturePath,
             ]);
         } catch (\Illuminate\Database\QueryException $e) {
@@ -223,29 +223,17 @@ class SupervisorController extends Controller
             );
         }
 
-        [$validated, $recommendationValue, $kenaikanGajiAmount, $promosiKeterangan, $demosiKeterangan, $error] = $this->validateOfficialEvaluationInput($request, $pejabat, signatureRequired: false);
+        [$validated, $recommendationValue, $kenaikanGajiAmount, $promosiKeterangan, $demosiKeterangan, $mutasiKeterangan, $error] = $this->validateOfficialEvaluationInput($request, $pejabat, signatureRequired: false);
 
         if ($error) {
             return $error;
         }
 
+        // Tanda tangan sudah diisi otomatis dari tanda tangan akun saat
+        // penilaian ini pertama kali dibuat (lihat evaluate() di bawah) -
+        // pada edit ini tidak perlu digambar/diganti lagi, cukup
+        // dipertahankan apa adanya.
         $signaturePath = $evaluation->signature;
-
-        if (! empty($validated['signature'])) {
-            if (! preg_match('/^data:image\/png;base64,/', $validated['signature'])) {
-                return back()->withErrors(['signature' => 'Format tanda tangan tidak valid.'])->withInput();
-            }
-
-            $imageContent = base64_decode(substr($validated['signature'], strpos($validated['signature'], ',') + 1));
-            $newSignaturePath = "signatures/official_evaluation_{$pejabat->id}_" . Auth::id() . '_' . time() . '.png';
-            Storage::disk('public')->put($newSignaturePath, $imageContent);
-
-            if ($signaturePath) {
-                Storage::disk('public')->delete($signaturePath);
-            }
-
-            $signaturePath = $newSignaturePath;
-        }
 
         $score = OfficialEvaluation::calculateScore($validated);
 
@@ -275,6 +263,7 @@ class SupervisorController extends Controller
             'kenaikan_gaji_amount'                               => $kenaikanGajiAmount,
             'promosi_keterangan'                                 => $promosiKeterangan,
             'demosi_keterangan'                                  => $demosiKeterangan,
+                'mutasi_keterangan'                                  => $mutasiKeterangan,
             'signature'                                          => $signaturePath,
         ]);
 
@@ -317,6 +306,7 @@ class SupervisorController extends Controller
                 'atasan_konfirmasi_pertemuan_at' => null,
                 'atasan_konfirmasi_pertemuan_selfie' => null,
                 'atasan_konfirmasi_pertemuan_evidence_type' => null,
+                'atasan_konfirmasi_pertemuan_metode' => null,
                 'atasan_konfirmasi_pertemuan_tahun' => null,
             ]);
 
@@ -330,7 +320,7 @@ class SupervisorController extends Controller
             );
         }
 
-        [$selfiePath, $evidenceType] = $this->resolveChecklistEvidence($request, 'atasan', $pejabat->id);
+        [$selfiePath, $evidenceType, $meetingMethod] = $this->resolveChecklistEvidence($request, 'atasan', $pejabat->id);
 
         $this->deleteChecklistEvidence($pejabat->atasan_konfirmasi_pertemuan_selfie);
 
@@ -338,8 +328,14 @@ class SupervisorController extends Controller
             'atasan_konfirmasi_pertemuan_at' => now(),
             'atasan_konfirmasi_pertemuan_selfie' => $selfiePath,
             'atasan_konfirmasi_pertemuan_evidence_type' => $evidenceType,
+            'atasan_konfirmasi_pertemuan_metode' => $meetingMethod,
             'atasan_konfirmasi_pertemuan_tahun' => now()->year,
         ]);
+
+        // Kalau checklist PEJABAT sudah lebih dulu lengkap, checklist
+        // ATASAN barusan ini yang melengkapi syarat - beri tahu HRD.
+        app(NotificationTriggerService::class)
+            ->triggerSiapTandaTanganHrdPejabatJikaPerlu($pejabat);
 
         return back()->with('success', 'Checklist pertemuan & evaluasi berhasil dicentang.');
     }
@@ -371,7 +367,12 @@ class SupervisorController extends Controller
             'kenaikan_gaji_amount'                               => 'nullable|integer|min:1',
             'promosi_keterangan'                                 => 'nullable|string|max:255',
             'demosi_keterangan'                                  => 'nullable|string|max:255',
-            'signature'                                          => ($signatureRequired ? 'required' : 'nullable') . '|string',
+            'mutasi_keterangan'                                   => 'nullable|string|max:255',
+            // Tanda tangan tidak lagi dikirim dari form (lihat
+            // App\Support\AccountSignature) - kolom ini dibiarkan nullable
+            // untuk kompatibilitas, keberadaan tanda tangan akun dicek
+            // terpisah lewat Auth::user()->hasSavedSignature().
+            'signature'                                          => 'nullable|string',
         ]);
 
         $recommendations = $validated['recommendation'] ?? [];
@@ -383,7 +384,7 @@ class SupervisorController extends Controller
                 ->withErrors(['recommendation' => 'Rekomendasi Promosi dan Demosi tidak bisa dipilih bersamaan.'])
                 ->withInput();
 
-            return [$validated, null, null, null, null, $error];
+            return [$validated, null, null, null, null, null, $error];
         }
 
         // "Kontrak Dagsap ke Tetap" hanya boleh diajukan kalau status
@@ -393,7 +394,7 @@ class SupervisorController extends Controller
                 ->withErrors(['recommendation' => 'Rekomendasi "Kontrak Dagsap ke Tetap" tidak bisa diajukan karena status pejabat ini bukan Kontrak Dagsap (masih PHL atau Kontrak OS).'])
                 ->withInput();
 
-            return [$validated, null, null, null, null, $error];
+            return [$validated, null, null, null, null, null, $error];
         }
 
         if (in_array('kenaikan_gaji', $recommendations, true) && empty($validated['kenaikan_gaji_amount'])) {
@@ -401,7 +402,7 @@ class SupervisorController extends Controller
                 ->withErrors(['kenaikan_gaji_amount' => 'Nominal kenaikan gaji wajib diisi.'])
                 ->withInput();
 
-            return [$validated, null, null, null, null, $error];
+            return [$validated, null, null, null, null, null, $error];
         }
 
         // Kalau rekomendasi "Promosi" dicentang, keterangan tujuan promosi wajib diisi.
@@ -410,7 +411,7 @@ class SupervisorController extends Controller
                 ->withErrors(['promosi_keterangan' => 'Keterangan tujuan promosi wajib diisi (mis. jabatan/posisi tujuan).'])
                 ->withInput();
 
-            return [$validated, null, null, null, null, $error];
+            return [$validated, null, null, null, null, null, $error];
         }
 
         // Kalau rekomendasi "Demosi" dicentang, keterangan tujuan demosi wajib diisi.
@@ -419,7 +420,16 @@ class SupervisorController extends Controller
                 ->withErrors(['demosi_keterangan' => 'Keterangan tujuan demosi wajib diisi (mis. jabatan/posisi tujuan).'])
                 ->withInput();
 
-            return [$validated, null, null, null, null, $error];
+            return [$validated, null, null, null, null, null, $error];
+        }
+
+        // Kalau rekomendasi "Mutasi" dicentang, keterangan tujuan mutasi wajib diisi.
+        if (in_array('mutasi', $recommendations, true) && empty(trim((string) ($validated['mutasi_keterangan'] ?? '')))) {
+            $error = back()
+                ->withErrors(['mutasi_keterangan' => 'Keterangan tujuan mutasi wajib diisi (mis. posisi/unit kerja tujuan).'])
+                ->withInput();
+
+            return [$validated, null, null, null, null, null, $error];
         }
 
         $recommendationValue = empty($recommendations) ? 'tidak_ada' : implode(',', $recommendations);
@@ -432,7 +442,10 @@ class SupervisorController extends Controller
         $demosiKeterangan = in_array('demosi', $recommendations, true)
             ? trim($validated['demosi_keterangan'])
             : null;
+        $mutasiKeterangan = in_array('mutasi', $recommendations, true)
+            ? trim($validated['mutasi_keterangan'])
+            : null;
 
-        return [$validated, $recommendationValue, $kenaikanGajiAmount, $promosiKeterangan, $demosiKeterangan, null];
+        return [$validated, $recommendationValue, $kenaikanGajiAmount, $promosiKeterangan, $demosiKeterangan, $mutasiKeterangan, null];
     }
 }

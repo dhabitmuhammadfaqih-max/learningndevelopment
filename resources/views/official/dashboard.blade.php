@@ -166,7 +166,12 @@
                                 $pejabatBinaanLocked = (bool) ($pejabatBinaanEvalTahunIni?->employee_signature);
                             @endphp
 
-                            <div class="dashboard-searchable flex flex-col sm:flex-row sm:items-center gap-4 p-4 rounded-2xl border border-slate-100 hover:border-blue-100 hover:bg-blue-50/30 transition" data-name="{{ mb_strtolower($pejabat->name) }}">
+                            {{-- id checklist-pejabat-{id}: target anchor notifikasi
+                                 TYPE_SIAP_CHECKLIST_ATASAN_PEJABAT supaya klik notif
+                                 langsung scroll ke tombol checklist kartu ini, bukan
+                                 ke halaman Penilaian - lihat
+                                 NotificationTriggerService::triggerSiapChecklistAtasanPejabatJikaPerlu(). --}}
+                            <div id="checklist-pejabat-{{ $pejabat->id }}" class="dashboard-searchable flex flex-col sm:flex-row sm:items-center gap-4 p-4 rounded-2xl border border-slate-100 hover:border-blue-100 hover:bg-blue-50/30 transition" data-name="{{ mb_strtolower($pejabat->name) }}">
                                 <div class="flex items-center gap-4 flex-1 min-w-0">
                                     <div class="w-12 h-12 rounded-2xl shrink-0 grid place-items-center text-white font-bold text-sm {{ $palettes[$i % count($palettes)] }}">
                                         {{ $initialsOf($pejabat->name) }}
@@ -227,6 +232,7 @@
                                         'checkedAt' => $pejabat->atasan_konfirmasi_pertemuan_at,
                                         'selfieUrl' => $pejabat->atasan_konfirmasi_pertemuan_selfie ? Storage::disk('public')->url($pejabat->atasan_konfirmasi_pertemuan_selfie) : null,
                                         'evidenceType' => $pejabat->atasan_konfirmasi_pertemuan_evidence_type,
+                                        'meetingMethod' => $pejabat->atasan_konfirmasi_pertemuan_metode,
                                         'checkedLabel' => 'Sudah Bertemu',
                                         'uncheckedLabel' => 'Tandai Pertemuan',
                                         'boleh' => $atasanBolehCentang,
@@ -277,7 +283,12 @@
                                 $readyToEvaluate = $employee->siapDinilaiPenilai();
                             @endphp
 
-                            <div class="dashboard-searchable flex flex-col sm:flex-row sm:items-center gap-4 p-4 rounded-2xl border border-slate-100 hover:border-blue-100 hover:bg-blue-50/30 transition" data-name="{{ mb_strtolower($employee->name) }}">
+                            {{-- id checklist-employee-{id}: target anchor notifikasi
+                                 TYPE_SIAP_CHECKLIST_PENILAI supaya klik notif langsung
+                                 scroll ke tombol checklist kartu ini, bukan ke halaman
+                                 Penilaian pegawai - lihat
+                                 NotificationTriggerService::triggerSiapChecklistPenilaiJikaPerlu(). --}}
+                            <div id="checklist-employee-{{ $employee->id }}" class="dashboard-searchable flex flex-col sm:flex-row sm:items-center gap-4 p-4 rounded-2xl border border-slate-100 hover:border-blue-100 hover:bg-blue-50/30 transition" data-name="{{ mb_strtolower($employee->name) }}">
                                 <div class="flex items-center gap-4 flex-1 min-w-0">
                                     <div class="w-12 h-12 rounded-2xl shrink-0 grid place-items-center text-white font-bold text-sm {{ $palettes[$i % count($palettes)] }}">
                                         {{ $initialsOf($employee->name) }}
@@ -344,6 +355,7 @@
                                             'checkedAt' => $employee->penilai_konfirmasi_pertemuan_at,
                                             'selfieUrl' => $employee->penilai_konfirmasi_pertemuan_selfie ? Storage::disk('public')->url($employee->penilai_konfirmasi_pertemuan_selfie) : null,
                                             'evidenceType' => $employee->penilai_konfirmasi_pertemuan_evidence_type,
+                                            'meetingMethod' => $employee->penilai_konfirmasi_pertemuan_metode,
                                             'checkedLabel' => 'Sudah Bertemu & Evaluasi',
                                             'uncheckedLabel' => 'Tandai Sudah Bertemu & Evaluasi',
                                             'boleh' => $penilaiBolehCentang,
@@ -606,12 +618,11 @@
 
                         <div>
                             <label class="block text-xs font-semibold text-slate-500 mb-2">Tanda Tangan</label>
-                            <canvas id="official-signature-pad" class="signature-canvas rounded-xl border border-slate-200 bg-white touch-none cursor-crosshair block w-full max-w-[400px] sm:w-[400px] sm:h-[150px]" style="aspect-ratio: 400 / 150;"></canvas>
-                            <div class="flex items-center justify-between mt-2">
-                                <span class="text-xs text-slate-400">Gambar tanda tangan di kotak di atas</span>
-                                <button type="button" id="btn-clear-official-signature" class="text-xs font-medium text-slate-500 underline hover:text-slate-800">Hapus &amp; ulangi</button>
-                            </div>
-                            <input type="hidden" name="signature" id="official-signature-input">
+                            <img src="{{ auth()->user()->signature_url }}" alt="Tanda tangan Anda"
+                                 class="rounded-xl border border-slate-200 bg-white block w-full max-w-[400px] h-[150px] object-contain">
+                            <p class="text-xs text-slate-400 mt-2">
+                                Tanda tangan akun Anda akan otomatis dipakai untuk tanggapan ini.
+                            </p>
                         </div>
 
                         <button type="submit"
@@ -775,151 +786,15 @@
     </script>
 
     <script>
-        // Fungsi reusable untuk pad tanda tangan (sama seperti dashboard pegawai).
-        function initSignaturePad(canvasId, clearBtnId) {
-            const canvas = document.getElementById(canvasId);
-            if (!canvas) return null;
-
-            const ctx = canvas.getContext('2d', { alpha: true });
-            let drawing = false;
-            let last = null;
-            let hasStroke = false;
-            let ratio = Math.max(window.devicePixelRatio || 1, 1);
-
-            function setupCanvas(keepDrawing = false) {
-                const rect = canvas.getBoundingClientRect();
-                const cssWidth = Math.max(Math.round(rect.width), 1);
-                const cssHeight = Math.max(Math.round(rect.height), 1);
-
-                ratio = Math.max(window.devicePixelRatio || 1, 1);
-
-                const oldImage = keepDrawing && canvas.width && canvas.height
-                    ? canvas.toDataURL('image/png')
-                    : null;
-
-                canvas.width = Math.round(cssWidth * ratio);
-                canvas.height = Math.round(cssHeight * ratio);
-
-                ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
-                ctx.lineCap = 'round';
-                ctx.lineJoin = 'round';
-                ctx.lineWidth = 2.2;
-                ctx.strokeStyle = '#111';
-
-                if (oldImage) {
-                    const image = new Image();
-                    image.onload = function () {
-                        ctx.drawImage(image, 0, 0, cssWidth, cssHeight);
-                    };
-                    image.src = oldImage;
-                }
-            }
-
-            requestAnimationFrame(() => setupCanvas(false));
-
-            if ('ResizeObserver' in window) {
-                const observer = new ResizeObserver(() => {
-                    if (!drawing) setupCanvas(true);
-                });
-                observer.observe(canvas);
-            }
-
-            window.addEventListener('resize', () => {
-                if (!drawing) setupCanvas(true);
-            });
-
-            function getPos(e) {
-                const rect = canvas.getBoundingClientRect();
-                return {
-                    x: e.clientX - rect.left,
-                    y: e.clientY - rect.top
-                };
-            }
-
-            function start(e) {
-                if (e.pointerType === 'mouse' && e.button !== 0) return;
-                e.preventDefault();
-                drawing = true;
-                hasStroke = true;
-                last = getPos(e);
-                if (canvas.setPointerCapture) {
-                    try { canvas.setPointerCapture(e.pointerId); } catch (_) {}
-                }
-            }
-
-            function move(e) {
-                if (!drawing) return;
-                e.preventDefault();
-                const pos = getPos(e);
-
-                ctx.beginPath();
-                ctx.moveTo(last.x, last.y);
-                ctx.lineTo(pos.x, pos.y);
-                ctx.stroke();
-
-                last = pos;
-            }
-
-            function end(e) {
-                if (e) e.preventDefault();
-                drawing = false;
-                last = null;
-            }
-
-            canvas.style.touchAction = 'none';
-            canvas.addEventListener('pointerdown', start);
-            canvas.addEventListener('pointermove', move);
-            canvas.addEventListener('pointerup', end);
-            canvas.addEventListener('pointercancel', end);
-            canvas.addEventListener('pointerleave', function (e) {
-                if (drawing && e.pointerType === 'mouse') end(e);
-            });
-
-            const clearBtn = document.getElementById(clearBtnId);
-            if (clearBtn) {
-                clearBtn.addEventListener('click', function () {
-                    ctx.save();
-                    ctx.setTransform(1, 0, 0, 1, 0, 0);
-                    ctx.clearRect(0, 0, canvas.width, canvas.height);
-                    ctx.restore();
-
-                    ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
-                    ctx.lineCap = 'round';
-                    ctx.lineJoin = 'round';
-                    ctx.lineWidth = 2.2;
-                    ctx.strokeStyle = '#111';
-
-                    drawing = false;
-                    last = null;
-                    hasStroke = false;
-                });
-            }
-
-            return {
-                hasStroke: () => hasStroke,
-                toDataURL: () => canvas.toDataURL('image/png'),
-            };
-        }
-
-        const officialPad = initSignaturePad('official-signature-pad', 'btn-clear-official-signature');
         const officialForm = document.getElementById('form-official-feedback');
-        const officialSignatureInput = document.getElementById('official-signature-input');
         const officialIdInput = document.getElementById('official-id-input');
 
-        if (officialForm && officialPad) {
+        if (officialForm) {
             officialForm.addEventListener('submit', function (e) {
                 if (!officialIdInput.value) {
                     e.preventDefault();
                     alert('Silakan pilih pejabat terlebih dahulu.');
-                    return;
                 }
-
-                if (!officialPad.hasStroke()) {
-                    e.preventDefault();
-                    alert('Tanda tangan wajib diisi sebelum mengirim tanggapan.');
-                    return;
-                }
-                officialSignatureInput.value = officialPad.toDataURL();
             });
         }
 
@@ -976,6 +851,8 @@
             }
 
             function poll() {
+                if (document.hidden) return;
+
                 fetch(STATUS_URL + '?t=' + Date.now(), { headers: { 'Accept': 'application/json', 'ngrok-skip-browser-warning': 'true' }, cache: 'no-store' })
                     .then(res => res.ok ? res.json() : null)
                     .then(data => {
@@ -986,11 +863,15 @@
                         }
                         if (data.version !== currentVersion) {
                             if (isUserTyping()) return;
-                            window.location.reload();
+                            window.showReloadOverlay();
                         }
                     })
                     .catch((err) => console.error('status-version polling error:', err));
             }
+
+            document.addEventListener('visibilitychange', () => {
+                if (document.visibilityState === 'visible') poll();
+            });
 
             setInterval(poll, POLL_INTERVAL_MS);
         })();

@@ -36,49 +36,73 @@ class FirebaseCloudMessagingService
     private const OAUTH_TOKEN_URL = 'https://oauth2.googleapis.com/token';
 
     /**
-     * Kirim notifikasi ke SEMUA device/browser (FcmToken) milik satu user.
-     * Token yang sudah tidak valid (UNREGISTERED / NOT_FOUND) otomatis
-     * dihapus dari database.
+     * Kirim notifikasi HANYA ke device/browser TERAKHIR yang dipakai user
+     * ini login (bukan ke semua device terdaftar). "Terakhir dipakai"
+     * dilihat dari FcmToken::updated_at - kolom itu ikut ter-update setiap
+     * kali storeToken() dipanggil (lihat FcmController@storeToken, yang
+     * jalan otomatis tiap kali browser register/registrasi ulang token),
+     * jadi device yang paling baru dipakai login akan selalu punya
+     * updated_at paling baru dibanding device lain milik user yang sama.
+     *
+     * Token-token lain (device lama) TETAP disimpan di database (tidak
+     * dihapus) - cuma tidak diikutkan kirim push. Kalau user login lagi
+     * di device lama itu, token-nya otomatis jadi "terbaru" lagi dan mulai
+     * kebagian push lagi.
      *
      * @param  array<string,string>  $data  Payload tambahan (opsional), mis. ['url' => route(...)]
      * @return array{sent:int, failed:int, no_token:bool}
      */
     public function sendToUser(User $user, string $title, string $body, array $data = []): array
     {
-        $tokens = $user->fcmTokens()->pluck('token', 'id');
+        // Simpan juga ke inbox notifikasi in-app terlepas dari ada/tidaknya
+        // token push terdaftar - supaya user yang belum mengizinkan
+        // notifikasi browser (atau device-nya tidak dapat token, mis. Mi
+        // Browser tanpa Google Play Services / Safari) tetap kebagian
+        // notifikasi ini saat membuka halaman "Notifikasi" di web.
+        try {
+            \App\Models\Notification::create([
+                'user_id' => $user->id,
+                'title'   => $title,
+                'body'    => $body,
+                'url'     => $data['url'] ?? null,
+            ]);
+        } catch (\Throwable $e) {
+            Log::error('FCM: gagal menyimpan notifikasi in-app.', [
+                'user_id' => $user->id,
+                'error'   => $e->getMessage(),
+            ]);
+        }
 
-        if ($tokens->isEmpty()) {
+        $latestToken = $user->fcmTokens()->orderByDesc('updated_at')->first();
+
+        if (! $latestToken) {
             Log::warning('FCM: user tidak punya token terdaftar.', ['user_id' => $user->id]);
 
             return ['sent' => 0, 'failed' => 0, 'no_token' => true];
         }
 
-        $sent = 0;
-        $failed = 0;
+        $result = $this->sendToToken($latestToken->token, $title, $body, $data);
 
-        foreach ($tokens as $fcmTokenId => $token) {
-            $result = $this->sendToToken($token, $title, $body, $data);
+        if ($result === true) {
+            FcmToken::whereKey($latestToken->id)->update(['last_used_at' => now()]);
 
-            if ($result === true) {
-                $sent++;
-                FcmToken::whereKey($fcmTokenId)->update(['last_used_at' => now()]);
-            } else {
-                $failed++;
-
-                // Token sudah tidak valid di sisi Google -> bersihkan dari DB
-                // supaya tidak terus dicoba kirim ke token mati.
-                if ($result === 'invalid_token') {
-                    FcmToken::whereKey($fcmTokenId)->delete();
-
-                    Log::info('FCM: token tidak valid, dihapus dari database.', [
-                        'user_id' => $user->id,
-                        'fcm_token_id' => $fcmTokenId,
-                    ]);
-                }
-            }
+            return ['sent' => 1, 'failed' => 0, 'no_token' => false];
         }
 
-        return ['sent' => $sent, 'failed' => $failed, 'no_token' => false];
+        // Token sudah tidak valid di sisi Google -> bersihkan dari DB
+        // supaya tidak terus dicoba kirim ke token mati. Device ini akan
+        // otomatis dapat token baru & tersimpan lagi lain kali browsernya
+        // dibuka (lihat fcm-client.js).
+        if ($result === 'invalid_token') {
+            FcmToken::whereKey($latestToken->id)->delete();
+
+            Log::info('FCM: token tidak valid, dihapus dari database.', [
+                'user_id' => $user->id,
+                'fcm_token_id' => $latestToken->id,
+            ]);
+        }
+
+        return ['sent' => 0, 'failed' => 1, 'no_token' => false];
     }
 
     /**
@@ -114,23 +138,23 @@ class FirebaseCloudMessagingService
         ]));
         $fcmOptions = array_filter(['link' => $data['url'] ?? null]);
 
-        // PENTING - JANGAN tambahkan kembali key `notification` di sini
-        // (baik `message.notification` maupun `webpush.notification`).
+        // SENGAJA data-only (TIDAK ada key `message.notification` /
+        // `webpush.notification`).
         //
-        // Sebelumnya title/body dikirim lewat `message.notification`.
-        // Begitu payload FCM punya field `notification`, browser
-        // (lewat service worker) OTOMATIS menampilkan notifikasi
-        // sendiri di background - TAPI firebase-messaging-sw.js di
-        // project ini JUGA memanggil showNotification() secara manual
-        // di onBackgroundMessage(). Kombinasi keduanya menyebabkan SATU
-        // push dari server muncul sebagai DUA notifikasi di device
-        // (notifikasi "double kirim"/dobel).
+        // Kenapa BUKAN kirim `notification` + `data` sekaligus: kombinasi
+        // itu memang terlihat lebih "reliable" untuk background push, tapi
+        // ini penyebab klasik notifikasi tampil DOBEL di web push FCM -
+        // saat payload punya field `notification`, browser/OS di banyak
+        // kasus TETAP auto-display notifikasi di level platform (di luar
+        // kendali JS kita), sementara kode kita sendiri (service worker /
+        // onMessage foreground) JUGA menampilkannya secara manual. Hasilnya
+        // muncul 2x untuk satu push yang sama.
         //
-        // Fix: kirim data-only message. title/body dilewatkan lewat
-        // `data` saja, lalu ditampilkan manual SEKALI oleh
-        // onBackgroundMessage() di service worker (lihat
-        // public/firebase-messaging-sw.js) maupun onMessage() di
-        // public/js/fcm-client.js saat tab aktif.
+        // Dengan data-only, browser/OS TIDAK PERNAH auto-display apa pun -
+        // satu-satunya yang menampilkan notifikasi adalah kode kita sendiri
+        // (public/firebase-messaging-sw.js untuk background, fcm-client.js
+        // untuk foreground), masing-masing PERSIS SATU KALI. title/body
+        // dibaca dari payload.data di kedua sisi.
         $payload = [
             'message' => [
                 'token' => $token,

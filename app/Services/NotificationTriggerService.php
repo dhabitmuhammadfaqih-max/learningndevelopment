@@ -332,9 +332,16 @@ class NotificationTriggerService
                 type: FcmNotificationLog::TYPE_SIAP_CHECKLIST_PENILAI,
                 title: 'Checklist Pertemuan Sudah Bisa Dicentang',
                 body: "Atasan Penilai sudah memberikan tanggapan untuk {$employee->name}. Silakan centang checklist pertemuan Anda.",
-                routeName: 'official.employee',
-                routeParam: $employee->id,
+                // Diarahkan ke Dashboard (BUKAN halaman Penilaian
+                // 'official.employee') karena tombol checklist-nya sudah
+                // dipindah ke Dashboard - lihat komentar di
+                // official/evaluate.blade.php ("dipindahkan ke Dashboard").
+                // Fragment #checklist-employee-{id} otomatis scroll ke
+                // kartu pegawai ini (lihat id di dashboard.blade.php).
+                routeName: 'official.dashboard',
+                routeParam: null,
                 fallbackRouteName: 'official.dashboard',
+                urlFragment: "#checklist-employee-{$employee->id}",
             );
         } catch (\Throwable $e) {
             Log::error('FCM SiapChecklistPenilai trigger: exception.', [
@@ -377,15 +384,185 @@ class NotificationTriggerService
                 type: FcmNotificationLog::TYPE_SIAP_CHECKLIST_ATASAN_PEJABAT,
                 title: 'Checklist Pertemuan Sudah Bisa Dicentang',
                 body: "Atasan Penilai sudah memberikan tanggapan untuk {$pejabat->name}. Silakan centang checklist pertemuan Anda.",
-                routeName: 'supervisor.official',
-                routeParam: $pejabat->id,
+                // Diarahkan ke Dashboard (BUKAN 'supervisor.official' -
+                // halaman Penilaian pejabat) karena tombol checklist-nya
+                // sudah dipindah ke Dashboard - lihat komentar di
+                // supervisor/evaluate_official.blade.php. Fragment
+                // #checklist-pejabat-{id} otomatis scroll ke kartu
+                // pejabat ini (lihat id di dashboard.blade.php).
+                routeName: 'official.dashboard',
+                routeParam: null,
                 fallbackRouteName: 'official.dashboard',
+                urlFragment: "#checklist-pejabat-{$pejabat->id}",
             );
         } catch (\Throwable $e) {
             Log::error('FCM SiapChecklistAtasanPejabat trigger: exception.', [
                 'official_id' => $pejabat->id,
                 'error'       => $e->getMessage(),
             ]);
+        }
+    }
+
+    /**
+     * Beri tahu PEGAWAI itu sendiri bahwa Penilai baru saja menyimpan
+     * Evaluation untuk dirinya, jadi nilainya sudah muncul/bisa dilihat.
+     *
+     * Berbeda dari trigger lain di service ini yang mengecek dulu apakah
+     * suatu kondisi "siap" terpenuhi (mis. siapDinilaiPenilai()) - method
+     * ini tidak perlu pengecekan tambahan karena dipanggil PERSIS setelah
+     * Evaluation berhasil disimpan, jadi kondisinya sudah pasti terpenuhi.
+     *
+     * Dipanggil dari OfficialController::evaluate() — setelah Evaluation
+     * berhasil disimpan oleh Penilai.
+     */
+    public function triggerNilaiMunculPegawai(User $employee, ?float $score = null): void
+    {
+        try {
+            $body = $score !== null
+                ? "Penilai sudah memberikan penilaian untuk Anda. Nilai akhir: {$score}."
+                : 'Penilai sudah memberikan penilaian untuk Anda. Silakan cek hasilnya.';
+
+            $this->dispatchTriggered(
+                subjectUserId: $employee->id,
+                recipientUserId: $employee->id,
+                type: FcmNotificationLog::TYPE_NILAI_MUNCUL_PEGAWAI,
+                title: 'Nilai Penilaian Sudah Muncul',
+                body: $body,
+                routeName: 'employee.dashboard',
+                routeParam: null,
+                fallbackRouteName: 'employee.dashboard',
+            );
+        } catch (\Throwable $e) {
+            Log::error('FCM NilaiMunculPegawai trigger: exception.', [
+                'employee_id' => $employee->id,
+                'error'       => $e->getMessage(),
+            ]);
+        }
+    }
+
+    /**
+     * Cek apakah checklist pertemuan PEGAWAI & PENILAI untuk $employee
+     * kini sudah sama-sama lengkap (User::checklistPertemuanLengkap()),
+     * jadi HRD sudah boleh menandatangani penilaiannya
+     * (HrdController::signAsHrd()) - dan jika ya, kirim notifikasi ke
+     * SETIAP akun ber-role 'hrd'.
+     *
+     * Dipanggil dari:
+     * - EmployeeController::toggleChecklistPertemuan()       — checklist milik PEGAWAI
+     * - OfficialController::toggleChecklistPertemuanPegawai() — checklist milik PENILAI
+     * (checklist mana pun yang menyelesaikan syarat "lengkap" akan
+     * memicu notifikasi ini; dedupe per akun HRD ada di
+     * FcmNotificationLog jadi HRD tidak akan menerima notifikasi
+     * duplikat walau dipanggil dari kedua tempat).
+     *
+     * Kalau HRD sudah pernah tanda tangan penilaian ini (mis. sempat
+     * dibatalkan lalu checklist diisi ulang), notifikasi TIDAK dikirim
+     * lagi - lihat User::hrdSudahMenandatanganiPenilaian().
+     */
+    public function triggerSiapTandaTanganHrdJikaPerlu(User $employee): void
+    {
+        try {
+            $employee->refresh();
+
+            if (! $employee->checklistPertemuanLengkap()) {
+                return;
+            }
+
+            if ($employee->hrdSudahMenandatanganiPenilaian()) {
+                return;
+            }
+
+            $this->dispatchTriggeredKeSemuaHrd(
+                subjectUser: $employee,
+                type: FcmNotificationLog::TYPE_SIAP_TANDA_TANGAN_HRD,
+                title: 'Siap Ditandatangani',
+                body: "Checklist pertemuan {$employee->name} sudah lengkap. Silakan tanda tangan penilaiannya.",
+                routeName: 'admin.employee',
+                routeParam: $employee->id,
+            );
+        } catch (\Throwable $e) {
+            Log::error('FCM SiapTandaTanganHrd trigger: exception.', [
+                'employee_id' => $employee->id,
+                'error'       => $e->getMessage(),
+            ]);
+        }
+    }
+
+    /**
+     * Versi pejabat dari triggerSiapTandaTanganHrdJikaPerlu() di atas -
+     * lihat User::checklistPertemuanPejabatLengkap() &
+     * HrdController::signAsHrdOfficial().
+     *
+     * Dipanggil dari:
+     * - OfficialController::toggleChecklistPertemuanSaya()       — checklist milik PEJABAT
+     * - SupervisorController::toggleChecklistPertemuanPejabat()  — checklist milik ATASAN
+     */
+    public function triggerSiapTandaTanganHrdPejabatJikaPerlu(User $pejabat): void
+    {
+        try {
+            $pejabat->refresh();
+
+            if (! $pejabat->checklistPertemuanPejabatLengkap()) {
+                return;
+            }
+
+            if ($pejabat->hrdSudahMenandatanganiPenilaianPejabat()) {
+                return;
+            }
+
+            $this->dispatchTriggeredKeSemuaHrd(
+                subjectUser: $pejabat,
+                type: FcmNotificationLog::TYPE_SIAP_TANDA_TANGAN_HRD_PEJABAT,
+                title: 'Siap Ditandatangani',
+                body: "Checklist pertemuan {$pejabat->name} sudah lengkap. Silakan tanda tangan penilaiannya.",
+                routeName: 'admin.employee',
+                routeParam: $pejabat->id,
+            );
+        } catch (\Throwable $e) {
+            Log::error('FCM SiapTandaTanganHrdPejabat trigger: exception.', [
+                'official_id' => $pejabat->id,
+                'error'       => $e->getMessage(),
+            ]);
+        }
+    }
+
+    /**
+     * Helper: dispatch satu SendTriggeredFcmNotification PER akun
+     * ber-role 'hrd' yang ada, supaya semua HRD (bukan cuma satu)
+     * kebagian notifikasi. Dedupe tetap jalan per (subjek, penerima,
+     * jenis) di FcmNotificationLog, jadi aman dipanggil berkali-kali
+     * dari beberapa tempat trigger yang berbeda.
+     */
+    private function dispatchTriggeredKeSemuaHrd(
+        User $subjectUser,
+        string $type,
+        string $title,
+        string $body,
+        string $routeName,
+        mixed $routeParam,
+    ): void {
+        $hrdUsers = User::where('role', 'hrd')->get();
+
+        if ($hrdUsers->isEmpty()) {
+            Log::warning('FCM SiapTandaTanganHrd trigger: tidak ada akun HRD, notifikasi tidak dikirim.', [
+                'subject_id' => $subjectUser->id,
+                'type'       => $type,
+            ]);
+
+            return;
+        }
+
+        foreach ($hrdUsers as $hrd) {
+            $this->dispatchTriggered(
+                subjectUserId: $subjectUser->id,
+                recipientUserId: $hrd->id,
+                type: $type,
+                title: $title,
+                body: $body,
+                routeName: $routeName,
+                routeParam: $routeParam,
+                fallbackRouteName: 'admin.dashboard',
+            );
         }
     }
 
@@ -404,9 +581,21 @@ class NotificationTriggerService
         string $routeName,
         mixed $routeParam,
         string $fallbackRouteName,
+        // Fragment URL opsional (mis. '#checklist-employee-12') supaya
+        // begitu notifikasi di-klik, halaman langsung scroll ke kartu/
+        // tombol yang relevan - bukan cuma ke halaman secara umum. Lihat
+        // triggerSiapChecklistPenilaiJikaPerlu() &
+        // triggerSiapChecklistAtasanPejabatJikaPerlu() untuk contoh
+        // pemakaian: keduanya mengarah ke Dashboard (bukan halaman
+        // Penilaian) karena tombol checklist-nya sudah dipindah ke sana.
+        ?string $urlFragment = null,
     ): void {
         try {
             $url = $routeParam !== null ? route($routeName, $routeParam) : route($routeName);
+
+            if ($urlFragment !== null) {
+                $url .= $urlFragment;
+            }
         } catch (\Throwable) {
             try {
                 $url = route($fallbackRouteName);

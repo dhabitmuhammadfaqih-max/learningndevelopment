@@ -41,10 +41,18 @@ trait FiltersByTahun
         // mengirim <input type="hidden" name="tahun">), bukan cuma dari
         // query string ?tahun=... di URL GET seperti pemakaian lain trait
         // ini. Untuk request GET, hasilnya sama persis dengan query().
-        $tahun = (int) $request->input('tahun', now()->year);
+        //
+        // Default (kalau tidak ada ?tahun= sama sekali) pakai periode
+        // aktif yang di-set HRD (App\Support\ActivePeriod), BUKAN
+        // now()->year - supaya begitu HRD buka halaman tanpa pilih
+        // tahun, yang muncul otomatis periode yang masih berjalan
+        // (mis. Januari-Februari masih menampilkan tahun lalu kalau
+        // periode itu belum ditutup), bukan tahun kalender yang mungkin
+        // belum ada datanya sama sekali.
+        $tahun = (int) $request->input('tahun', \App\Support\ActivePeriod::year());
 
         if ($tahun < 2000 || $tahun > 2100) {
-            $tahun = now()->year;
+            $tahun = \App\Support\ActivePeriod::year();
         }
 
         return $tahun;
@@ -62,6 +70,7 @@ trait FiltersByTahun
             ->merge(OfficialEvaluation::query()->distinct()->pluck('tahun'))
             ->merge(SupervisorFeedback::query()->distinct()->pluck('tahun'))
             ->push(now()->year)
+            ->push(\App\Support\ActivePeriod::year())
             ->map(fn ($tahun) => (int) $tahun)
             ->unique()
             ->sortDesc()

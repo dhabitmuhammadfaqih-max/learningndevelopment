@@ -188,6 +188,10 @@
         }
 
         function poll() {
+            // Jangan polling kalau tab lagi tidak aktif/di-minimize - hemat
+            // request ke server saat user buka banyak tab tapi cuma lihat 1.
+            if (document.hidden) return;
+
             // STATUS_URL sudah mengandung '?tahun=...', jadi anti-cache
             // param di sini pakai '&', bukan '?', supaya query string-nya
             // tetap valid.
@@ -201,11 +205,15 @@
                     }
                     if (data.version !== currentVersion) {
                         if (isUserTyping()) return;
-                        window.location.reload();
+                        window.showReloadOverlay();
                     }
                 })
                 .catch((err) => console.error('status-version polling error:', err));
         }
+
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible') poll();
+        });
 
         setInterval(poll, POLL_INTERVAL_MS);
     })();

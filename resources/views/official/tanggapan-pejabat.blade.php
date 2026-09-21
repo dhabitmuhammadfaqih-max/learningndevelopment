@@ -9,6 +9,7 @@
         $kenaikanGajiValue = old('kenaikan_gaji_amount', $officialSupervisorFeedback?->kenaikan_gaji_amount ?? '');
         $promosiKeteranganValue = old('promosi_keterangan', $officialSupervisorFeedback?->promosi_keterangan ?? '');
         $demosiKeteranganValue = old('demosi_keterangan', $officialSupervisorFeedback?->demosi_keterangan ?? '');
+        $mutasiKeteranganValue = old('mutasi_keterangan', $officialSupervisorFeedback?->mutasi_keterangan ?? '');
     @endphp
 
     <a href="{{ route('official.dashboard') }}"
@@ -193,6 +194,7 @@
                             'kenaikanGajiValue' => $kenaikanGajiValue,
                             'promosiKeteranganValue' => $promosiKeteranganValue,
                             'demosiKeteranganValue' => $demosiKeteranganValue,
+                            'mutasiKeteranganValue' => $mutasiKeteranganValue,
                             'recommendations' => \App\Models\OfficialEvaluation::RECOMMENDATIONS,
                             'recommendationDescriptions' => \App\Models\OfficialEvaluation::RECOMMENDATION_DESCRIPTIONS,
                             'subjectLabel' => 'pejabat',
@@ -202,20 +204,16 @@
 
                         <div class="mt-5 max-w-md">
                             <label class="block text-sm font-bold text-slate-700 mb-1.5">Tanda Tangan</label>
-                            <canvas id="signature-pad" class="rounded-xl border border-slate-200 bg-white cursor-crosshair block w-full max-w-[400px] sm:w-[400px] sm:h-[150px]" style="touch-action:none; aspect-ratio: 400 / 150;"></canvas>
-                            <div class="flex items-center justify-between mt-2">
-                                <span class="text-xs text-slate-400">Gambar tanda tangan di kotak di atas</span>
-                                <button type="button" id="btn-clear-signature" class="text-xs text-slate-500 hover:text-slate-800 underline">Hapus &amp; ulangi</button>
-                            </div>
-                            <input type="hidden" name="signature" id="signature-input">
-                            @error('signature')
-                                <p class="text-xs text-red-600 mt-1.5">{{ $message }}</p>
-                            @enderror
-
                             @if ($officialSupervisorFeedback?->signature)
-                                <img src="{{ Storage::disk('public')->url($officialSupervisorFeedback->signature) }}"
-                                     class="mt-3 w-full max-w-[220px] h-24 object-contain border border-slate-200 rounded-xl bg-slate-50">
+                                <img src="{{ Storage::disk('public')->url($officialSupervisorFeedback->signature) }}" alt="Tanda tangan Anda"
+                                     class="rounded-xl border border-slate-200 bg-white block w-full max-w-[400px] h-[150px] object-contain">
+                            @else
+                                <img src="{{ auth()->user()->signature_url }}" alt="Tanda tangan Anda"
+                                     class="rounded-xl border border-slate-200 bg-white block w-full max-w-[400px] h-[150px] object-contain">
                             @endif
+                            <p class="text-xs text-slate-400 mt-2">
+                                Tanda tangan akun Anda akan otomatis dipakai untuk tanggapan ini.
+                            </p>
                         </div>
 
                         <button type="submit"
@@ -253,139 +251,6 @@
     </div>
 
     <script>
-        function initSignaturePad(canvasId, clearBtnId) {
-            const canvas = document.getElementById(canvasId);
-            if (!canvas) return null;
-
-            const ctx = canvas.getContext('2d');
-            let drawing = false;
-            let last = null;
-            let hasStroke = false;
-            let cssWidth = 0;
-            let cssHeight = 0;
-            let ratio = window.devicePixelRatio || 1;
-
-            function setupCanvas(preserve) {
-                const oldImage = preserve && hasStroke ? canvas.toDataURL() : null;
-
-                cssWidth = canvas.clientWidth;
-                cssHeight = canvas.clientHeight;
-                ratio = window.devicePixelRatio || 1;
-
-                canvas.width = cssWidth * ratio;
-                canvas.height = cssHeight * ratio;
-
-                ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
-                ctx.lineCap = 'round';
-                ctx.lineJoin = 'round';
-                ctx.lineWidth = 2.2;
-                ctx.strokeStyle = '#111';
-
-                if (oldImage) {
-                    const image = new Image();
-                    image.onload = function () {
-                        ctx.drawImage(image, 0, 0, cssWidth, cssHeight);
-                    };
-                    image.src = oldImage;
-                }
-            }
-
-            requestAnimationFrame(() => setupCanvas(false));
-
-            if ('ResizeObserver' in window) {
-                const observer = new ResizeObserver(() => {
-                    if (!drawing) setupCanvas(true);
-                });
-                observer.observe(canvas);
-            }
-
-            window.addEventListener('resize', () => {
-                if (!drawing) setupCanvas(true);
-            });
-
-            function getPos(e) {
-                const rect = canvas.getBoundingClientRect();
-                return { x: e.clientX - rect.left, y: e.clientY - rect.top };
-            }
-
-            function start(e) {
-                if (e.pointerType === 'mouse' && e.button !== 0) return;
-                e.preventDefault();
-                drawing = true;
-                hasStroke = true;
-                last = getPos(e);
-                if (canvas.setPointerCapture) {
-                    try { canvas.setPointerCapture(e.pointerId); } catch (_) {}
-                }
-            }
-
-            function move(e) {
-                if (!drawing) return;
-                e.preventDefault();
-                const pos = getPos(e);
-                ctx.beginPath();
-                ctx.moveTo(last.x, last.y);
-                ctx.lineTo(pos.x, pos.y);
-                ctx.stroke();
-                last = pos;
-            }
-
-            function end(e) {
-                if (e) e.preventDefault();
-                drawing = false;
-                last = null;
-            }
-
-            canvas.style.touchAction = 'none';
-            canvas.addEventListener('pointerdown', start);
-            canvas.addEventListener('pointermove', move);
-            canvas.addEventListener('pointerup', end);
-            canvas.addEventListener('pointercancel', end);
-            canvas.addEventListener('pointerleave', function (e) {
-                if (drawing && e.pointerType === 'mouse') end(e);
-            });
-
-            const clearBtn = document.getElementById(clearBtnId);
-            if (clearBtn) {
-                clearBtn.addEventListener('click', function () {
-                    ctx.save();
-                    ctx.setTransform(1, 0, 0, 1, 0, 0);
-                    ctx.clearRect(0, 0, canvas.width, canvas.height);
-                    ctx.restore();
-                    ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
-                    ctx.lineCap = 'round';
-                    ctx.lineJoin = 'round';
-                    ctx.lineWidth = 2.2;
-                    ctx.strokeStyle = '#111';
-                    drawing = false;
-                    last = null;
-                    hasStroke = false;
-                });
-            }
-
-            return {
-                hasStroke: () => hasStroke,
-                toDataURL: () => canvas.toDataURL('image/png'),
-            };
-        }
-
-        const tanggapanPad = initSignaturePad('signature-pad', 'btn-clear-signature');
-        const tanggapanForm = document.getElementById('form-tanggapan-atasan-pejabat');
-        const tanggapanSignatureInput = document.getElementById('signature-input');
-
-        if (tanggapanForm && tanggapanPad) {
-            tanggapanForm.addEventListener('submit', function (e) {
-                if (!tanggapanPad.hasStroke()) {
-                    e.preventDefault();
-                    alert('Tanda tangan wajib diisi sebelum menyimpan tanggapan.');
-                    return;
-                }
-                tanggapanSignatureInput.value = tanggapanPad.toDataURL();
-            });
-        }
-    </script>
-
-    <script>
         // AJAX polling: cek berkala apakah Penilai baru saja memberi nilai
         // ke pejabat ini (form ini ke-unlock), atau pejabat yang dinilai
         // baru saja tanda tangan (form ini ke-lock), lalu reload otomatis.
@@ -403,6 +268,8 @@
             }
 
             function poll() {
+                if (document.hidden) return;
+
                 fetch(STATUS_URL + '?t=' + Date.now(), {
                     headers: {
                         'Accept': 'application/json',
@@ -419,11 +286,15 @@
                         }
                         if (data.version !== currentVersion) {
                             if (isUserTyping()) return;
-                            window.location.reload();
+                            window.showReloadOverlay();
                         }
                     })
                     .catch((err) => console.error('status-version polling error:', err));
             }
+
+            document.addEventListener('visibilitychange', () => {
+                if (document.visibilityState === 'visible') poll();
+            });
 
             setInterval(poll, POLL_INTERVAL_MS);
         })();
