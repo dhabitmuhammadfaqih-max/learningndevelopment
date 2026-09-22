@@ -43,7 +43,7 @@ class MeetingCode extends Model
      * SEKARANG", bukan janji pertemuan. Kalau kedaluwarsa, kedua pihak
      * tinggal minta lagi (tidak ada batas jumlah permintaan).
      */
-    public const VALID_MINUTES = 15;
+    public const VALID_MINUTES = 30;
 
     /**
      * Panjang kode & karakter yang dipakai. Karakter ambigu saat
