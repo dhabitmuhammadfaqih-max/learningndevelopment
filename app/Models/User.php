@@ -634,6 +634,7 @@ class User extends Authenticatable
         'zoom'   => 'Zoom',
         'telpon' => 'Telpon',
         'chat'   => 'Chat',
+        'email'  => 'Email',
     ];
 
     /**

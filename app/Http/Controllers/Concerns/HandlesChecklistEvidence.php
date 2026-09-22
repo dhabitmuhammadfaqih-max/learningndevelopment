@@ -147,7 +147,7 @@ trait HandlesChecklistEvidence
             'evidence_type'  => 'required|in:upload,kode',
             'evidence_file'  => 'required_if:evidence_type,upload|nullable|image|max:5120',
             'meeting_code'   => 'required_if:evidence_type,kode|nullable|string|max:16',
-            'meeting_method' => 'required_if:evidence_type,upload|nullable|in:zoom,telpon,chat',
+            'meeting_method' => 'required_if:evidence_type,upload|nullable|in:zoom,telpon,chat,email',
         ], [
             'evidence_type.required'    => 'Silakan pilih metode bukti checklist terlebih dahulu.',
             'evidence_type.in'          => 'Metode bukti checklist tidak valid.',
@@ -155,7 +155,7 @@ trait HandlesChecklistEvidence
             'evidence_file.image'       => 'File yang diupload harus berupa gambar.',
             'evidence_file.max'         => 'Ukuran file maksimal 5MB.',
             'meeting_code.required_if'  => 'Silakan masukkan kode pertemuan dari Penilai Anda.',
-            'meeting_method.required_if' => 'Silakan pilih metode pertemuan (Zoom/Telpon/Chat) terlebih dahulu.',
+            'meeting_method.required_if' => 'Silakan pilih metode pertemuan (Zoom/Telpon/Chat/Email) terlebih dahulu.',
             'meeting_method.in'          => 'Metode pertemuan tidak valid.',
         ]);
 
