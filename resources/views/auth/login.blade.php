@@ -178,7 +178,7 @@
                                     name="password"
                                     required
                                     autocomplete="current-password"
-                                    placeholder="nik.kamu"
+                                    placeholder="nik kamu"
                                     class="w-full bg-transparent border-0 text-[#171717] placeholder-[#A3A3A3] text-sm focus:outline-none focus:ring-0 focus:border-0 p-0"
                                 />
                                 <button type="button" @click="show = !show" aria-label="Toggle password visibility"
