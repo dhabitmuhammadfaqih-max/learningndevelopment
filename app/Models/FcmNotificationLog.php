@@ -116,6 +116,18 @@ class FcmNotificationLog extends Model
      */
     public const TYPE_SIAP_TANDA_TANGAN_HRD_PEJABAT = 'siap_tanda_tangan_hrd_pejabat';
 
+    /**
+     * Seseorang (reviewer) baru saja DITUNJUK sebagai KORELASI orang lain
+     * (target) oleh Penilai/Atasan target lewat halaman "Atur Korelasi" -
+     * lihat Concerns\ManagesKorelasi::saveKorelasi() &
+     * NotificationTriggerService::triggerDitunjukKorelasi().
+     * employee_id = target (orang yang akan ditanggapi), supervisor_id =
+     * reviewer (penerima notifikasi). Baris log dihapus saat penunjukan
+     * dicabut, supaya kalau ditunjuk lagi di kemudian hari notifikasi
+     * tetap terkirim.
+     */
+    public const TYPE_DITUNJUK_KORELASI = 'ditunjuk_korelasi';
+
     protected $fillable = [
         'employee_id',
         'supervisor_id',

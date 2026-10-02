@@ -527,6 +527,39 @@ class NotificationTriggerService
     }
 
     /**
+     * Beri tahu $reviewer bahwa dirinya baru saja ditunjuk sebagai KORELASI
+     * $target (yaitu yang akan memberi tanggapan kepada $target), oleh
+     * $penunjuk (Penilai/Atasan $target).
+     *
+     * Dipanggil dari Concerns\ManagesKorelasi::saveKorelasi() - HANYA untuk
+     * reviewer yang BARU ditambahkan pada penyimpanan itu (yang sudah
+     * terdaftar sebelumnya tidak diberi notifikasi lagi).
+     */
+    public function triggerDitunjukKorelasi(User $reviewer, User $target, ?User $penunjuk = null): void
+    {
+        try {
+            $oleh = $penunjuk ? " oleh {$penunjuk->name}" : '';
+
+            $this->dispatchTriggered(
+                subjectUserId: $target->id,
+                recipientUserId: $reviewer->id,
+                type: FcmNotificationLog::TYPE_DITUNJUK_KORELASI,
+                title: 'Anda Ditunjuk Sebagai Korelasi',
+                body: "Anda ditunjuk{$oleh} menjadi korelasi {$target->name}. Silakan berikan tanggapan kepada {$target->name}.",
+                routeName: $reviewer->role === 'pejabat' ? 'official.dashboard' : 'employee.dashboard',
+                routeParam: null,
+                fallbackRouteName: $reviewer->role === 'pejabat' ? 'official.dashboard' : 'employee.dashboard',
+            );
+        } catch (\Throwable $e) {
+            Log::error('FCM DitunjukKorelasi trigger: exception.', [
+                'reviewer_id' => $reviewer->id,
+                'target_id'   => $target->id,
+                'error'       => $e->getMessage(),
+            ]);
+        }
+    }
+
+    /**
      * Helper: dispatch satu SendTriggeredFcmNotification PER akun
      * ber-role 'hrd' yang ada, supaya semua HRD (bukan cuma satu)
      * kebagian notifikasi. Dedupe tetap jalan per (subjek, penerima,

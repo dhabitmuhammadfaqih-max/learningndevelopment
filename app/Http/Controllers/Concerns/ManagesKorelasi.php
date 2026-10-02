@@ -2,9 +2,11 @@
 
 namespace App\Http\Controllers\Concerns;
 
+use App\Models\FcmNotificationLog;
 use App\Models\Feedback;
 use App\Models\KorelasiAssignment;
 use App\Models\User;
+use App\Services\NotificationTriggerService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -132,10 +134,25 @@ trait ManagesKorelasi
                 ->withInput();
         }
 
-        DB::transaction(function () use ($subject, $finalIds) {
+        $baruDitunjuk = collect();
+
+        DB::transaction(function () use ($subject, $finalIds, &$baruDitunjuk) {
+            $dicabutIds = KorelasiAssignment::where('target_id', $subject->id)
+                ->whereNotIn('reviewer_id', $finalIds)
+                ->pluck('reviewer_id');
+
             KorelasiAssignment::where('target_id', $subject->id)
                 ->whereNotIn('reviewer_id', $finalIds)
                 ->delete();
+
+            // Penunjukan yang dicabut -> hapus log notifikasinya supaya
+            // kalau ditunjuk lagi nanti, notifikasi tetap terkirim.
+            if ($dicabutIds->isNotEmpty()) {
+                FcmNotificationLog::where('employee_id', $subject->id)
+                    ->where('notification_type', FcmNotificationLog::TYPE_DITUNJUK_KORELASI)
+                    ->whereIn('supervisor_id', $dicabutIds)
+                    ->delete();
+            }
 
             $existing = KorelasiAssignment::where('target_id', $subject->id)
                 ->pluck('reviewer_id')
@@ -147,8 +164,21 @@ trait ManagesKorelasi
                     'target_id'   => $subject->id,
                     'assigned_by' => Auth::id(),
                 ]);
+
+                $baruDitunjuk->push((int) $reviewerId);
             }
         });
+
+        // Notifikasi ke korelasi yang BARU ditunjuk (di luar transaksi;
+        // error notifikasi tidak boleh menggagalkan penyimpanan).
+        if ($baruDitunjuk->isNotEmpty()) {
+            $trigger = app(NotificationTriggerService::class);
+            $penunjuk = Auth::user();
+
+            User::whereIn('id', $baruDitunjuk)->get()->each(
+                fn (User $reviewer) => $trigger->triggerDitunjukKorelasi($reviewer, $subject, $penunjuk)
+            );
+        }
 
         return redirect($redirectUrl)
             ->with('success', 'Korelasi untuk ' . $subject->name . ' disimpan (' . $finalIds->count() . ' orang).');
