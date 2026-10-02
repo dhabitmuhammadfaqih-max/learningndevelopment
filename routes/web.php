@@ -6,7 +6,6 @@ use App\Http\Controllers\OfficialController;
 use App\Http\Controllers\SupervisorController;
 use App\Http\Controllers\HrdController;
 use Illuminate\Support\Facades\Auth;
-use App\Http\Controllers\SignatureDocumentController;
 use App\Http\Controllers\FcmController;
 use Illuminate\Support\Facades\Storage;
 
@@ -550,16 +549,12 @@ Route::middleware('auth')->group(function () {
         });
 });
 
-    Route::get('/dokumen/baru', [SignatureDocumentController::class, 'create'])
-        ->name('signature.create');
- 
-    Route::get('/dokumen/{document}', [SignatureDocumentController::class, 'edit'])
-        ->name('signature.edit');
- 
-    Route::post('/dokumen/{document}/tanda-tangan/{role}', [SignatureDocumentController::class, 'saveSignature'])
-        ->name('signature.save');
- 
-    Route::get('/dokumen/{document}/pdf', [SignatureDocumentController::class, 'generatePdf'])
-        ->name('signature.pdf');
+/*
+| CATATAN: route /dokumen/... (SignatureDocumentController) sengaja dihapus.
+| Dulu route-nya berada DI LUAR grup auth (bisa diakses tanpa login), dan
+| view-nya (signature.create / signature.pdf) memang tidak ada. Kalau fitur
+| ini mau dihidupkan lagi, taruh route-nya DI DALAM grup
+| Route::middleware('auth') + middleware role yang sesuai.
+*/
 
 require __DIR__.'/auth.php';
