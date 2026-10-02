@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\FcmNotificationLog;
 use App\Support\ActivePeriod;
 use Illuminate\Http\Request;
 
@@ -53,9 +54,28 @@ class SettingsController extends Controller
             'tahun.integer'  => 'Tahun periode harus berupa angka.',
         ]);
 
-        ActivePeriod::setYear($validated['tahun']);
+        $tahunLama = ActivePeriod::year();
+        $tahunBaru = (int) $validated['tahun'];
 
-        return back()->with('success', "Periode penilaian aktif berhasil diubah ke tahun {$validated['tahun']}.");
+        ActivePeriod::setYear($tahunBaru);
+
+        $pesan = "Periode penilaian aktif berhasil diubah ke tahun {$tahunBaru}.";
+
+        // Pindah ke periode yang LEBIH BARU = siklus penilaian dimulai lagi
+        // dari awal. Log notifikasi (FcmNotificationLog) dihapus supaya
+        // semua notifikasi bisa terkirim lagi untuk siklus baru - kalau
+        // tidak, notifikasi yang sudah pernah terkirim di tahun lalu
+        // dianggap "sudah dikirim" dan tidak akan terkirim lagi.
+        //
+        // Sengaja HANYA saat tahun maju. Kalau HRD menurunkan tahun
+        // (koreksi salah klik), log dibiarkan supaya tidak terjadi
+        // notifikasi dobel untuk siklus yang sudah berjalan.
+        if ($tahunBaru > $tahunLama) {
+            FcmNotificationLog::query()->delete();
+            $pesan .= ' Log notifikasi sudah di-reset, jadi notifikasi periode baru akan terkirim lagi.';
+        }
+
+        return back()->with('success', $pesan);
     }
 
     /**
