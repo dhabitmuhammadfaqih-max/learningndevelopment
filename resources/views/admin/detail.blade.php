@@ -415,7 +415,7 @@
             <p>{{ $feedback->feedback }}</p>
 
             @if($feedback->signature)
-                <img src="{{ Storage::disk('public')->url($feedback->signature) }}" class="signature-saved">
+                <img src="{{ Storage::disk('private')->url($feedback->signature) }}" class="signature-saved">
             @endif
         </div>
     @empty
@@ -465,7 +465,7 @@
         @endif
 
         @if($evaluation->employee_signature)
-            <img src="{{ Storage::disk('public')->url($evaluation->employee_signature) }}" class="signature-saved">
+            <img src="{{ Storage::disk('private')->url($evaluation->employee_signature) }}" class="signature-saved">
         @endif
     @else
         <p class="empty">Belum ada tanggapan dari pegawai.</p>
@@ -501,7 +501,7 @@
         <p style="color:#475569; font-size:13.5px; line-height:1.5;">{{ $atasanFeedback->feedback }}</p>
 
         @if($atasanFeedback->signature)
-            <img src="{{ Storage::disk('public')->url($atasanFeedback->signature) }}" class="signature-saved">
+            <img src="{{ Storage::disk('private')->url($atasanFeedback->signature) }}" class="signature-saved">
         @endif
     @elseif($employee->tanggapanAtasanManual())
         <p class="empty">Diisi manual oleh atasan.</p>
@@ -522,7 +522,7 @@
         <p class="empty" style="margin:0 0 8px;">
             {{ $evaluation->hrd_signed_at?->translatedFormat('d M Y H:i') }}
         </p>
-        <img src="{{ Storage::disk('public')->url($evaluation->hrd_signature) }}" class="signature-saved">
+        <img src="{{ Storage::disk('private')->url($evaluation->hrd_signature) }}" class="signature-saved">
     @elseif(empty($evaluation->employee_signature) && ! $employee->penilaianUtamaManual() && ! $employee->tanggapanAtasanManual())
         <p class="empty">
             Belum bisa ditanda-tangani. Menunggu pegawai memberikan tanggapan &amp; tanda tangan atas penilaiannya sendiri.
@@ -691,7 +691,7 @@
             <p>{{ $feedback->feedback }}</p>
 
             @if($feedback->signature)
-                <img src="{{ Storage::disk('public')->url($feedback->signature) }}" class="signature-saved">
+                <img src="{{ Storage::disk('private')->url($feedback->signature) }}" class="signature-saved">
             @endif
         </div>
     @empty
@@ -722,7 +722,7 @@
         @endif
 
         @if($officialEvaluation->signature)
-            <img src="{{ Storage::disk('public')->url($officialEvaluation->signature) }}" class="signature-saved">
+            <img src="{{ Storage::disk('private')->url($officialEvaluation->signature) }}" class="signature-saved">
         @endif
     @else
         <p class="empty">Belum ada penilaian dari Atasan Pejabat yang ditugaskan.</p>
@@ -752,7 +752,7 @@
         @endif
 
         @if($officialSupervisorFeedback->signature)
-            <img src="{{ Storage::disk('public')->url($officialSupervisorFeedback->signature) }}" class="signature-saved">
+            <img src="{{ Storage::disk('private')->url($officialSupervisorFeedback->signature) }}" class="signature-saved">
         @endif
     @else
         <p class="empty">Belum ada tanggapan dari atasan penilai.</p>
@@ -787,7 +787,7 @@
         <p class="empty" style="margin:0 0 8px;">
             {{ $officialEvaluation->hrd_signed_at?->translatedFormat('d M Y H:i') }}
         </p>
-        <img src="{{ Storage::disk('public')->url($officialEvaluation->hrd_signature) }}" class="signature-saved">
+        <img src="{{ Storage::disk('private')->url($officialEvaluation->hrd_signature) }}" class="signature-saved">
     @elseif(empty($officialEvaluation->employee_signature) && ! $employee->tanggapanPenilaiPejabatManual())
         <p class="empty">
             Belum bisa ditanda-tangani. Menunggu pejabat memberikan tanggapan &amp; tanda tangan atas penilaiannya sendiri.

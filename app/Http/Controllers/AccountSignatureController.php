@@ -32,12 +32,12 @@ class AccountSignatureController extends Controller
 
         // Hapus file lama kalau user memang sedang memperbarui tanda
         // tangannya (bukan mengisi untuk pertama kali).
-        if ($user->signature_path && Storage::disk('public')->exists($user->signature_path)) {
-            Storage::disk('public')->delete($user->signature_path);
+        if ($user->signature_path && Storage::disk('private')->exists($user->signature_path)) {
+            Storage::disk('private')->delete($user->signature_path);
         }
 
-        $path = 'signatures/account/user_' . $user->id . '_' . time() . '.png';
-        Storage::disk('public')->put($path, $imageContent);
+        $path = 'signatures/account/user_' . $user->id . '_' . time() . '_' . bin2hex(random_bytes(8)) . '.png';
+        Storage::disk('private')->put($path, $imageContent);
 
         $user->update([
             'signature_path' => $path,
@@ -46,7 +46,7 @@ class AccountSignatureController extends Controller
 
         return response()->json([
             'message' => 'Tanda tangan berhasil disimpan.',
-            'signature_url' => Storage::disk('public')->url($path),
+            'signature_url' => Storage::disk('private')->url($path),
         ]);
     }
 }

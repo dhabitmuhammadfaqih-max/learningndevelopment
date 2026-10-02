@@ -69,7 +69,7 @@
             'counterpartLabel' => 'Atasan Anda',
             'checked' => $pejabatSudahCentang,
             'checkedAt' => auth()->user()->pejabat_konfirmasi_pertemuan_at,
-            'selfieUrl' => auth()->user()->pejabat_konfirmasi_pertemuan_selfie ? Storage::disk('public')->url(auth()->user()->pejabat_konfirmasi_pertemuan_selfie) : null,
+            'selfieUrl' => auth()->user()->pejabat_konfirmasi_pertemuan_selfie ? Storage::disk('private')->url(auth()->user()->pejabat_konfirmasi_pertemuan_selfie) : null,
             'evidenceType' => auth()->user()->pejabat_konfirmasi_pertemuan_evidence_type,
             'meetingMethod' => auth()->user()->pejabat_konfirmasi_pertemuan_metode,
             'meetingCode' => auth()->user()->pejabat_konfirmasi_pertemuan_kode,
@@ -188,7 +188,7 @@
 
                         @if ($evaluation->signature)
                             <p class="text-xs font-semibold text-slate-500 mt-4 mb-2">Tanda Tangan Atasan</p>
-                            <img src="{{ Storage::disk('public')->url($evaluation->signature) }}"
+                            <img src="{{ Storage::disk('private')->url($evaluation->signature) }}"
                                  class="w-40 h-[70px] object-contain border border-slate-100 rounded-lg bg-slate-50">
                         @endif
                     </div>
@@ -222,7 +222,7 @@
                             </div>
 
                             @if ($atasanFeedbackTahunIni->signature)
-                                <img src="{{ Storage::disk('public')->url($atasanFeedbackTahunIni->signature) }}"
+                                <img src="{{ Storage::disk('private')->url($atasanFeedbackTahunIni->signature) }}"
                                      class="w-40 h-[70px] object-contain border border-slate-100 rounded-lg bg-slate-50 mt-3">
                             @endif
                         @else
@@ -258,7 +258,7 @@
                                 </p>
 
                                 @if ($evaluation->employee_signature)
-                                    <img src="{{ Storage::disk('public')->url($evaluation->employee_signature) }}"
+                                    <img src="{{ Storage::disk('private')->url($evaluation->employee_signature) }}"
                                          class="w-40 h-[70px] object-contain border border-slate-100 rounded-lg bg-slate-50 mt-2">
                                 @endif
                             </div>

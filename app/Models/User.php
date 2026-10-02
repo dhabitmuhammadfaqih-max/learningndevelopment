@@ -107,7 +107,7 @@ class User extends Authenticatable
     public function hasSavedSignature(): bool
     {
         return ! empty($this->signature_path)
-            && \Illuminate\Support\Facades\Storage::disk('public')->exists($this->signature_path);
+            && \Illuminate\Support\Facades\Storage::disk('private')->exists($this->signature_path);
     }
 
     /**
@@ -118,7 +118,7 @@ class User extends Authenticatable
     public function getSignatureUrlAttribute(): ?string
     {
         return $this->hasSavedSignature()
-            ? \Illuminate\Support\Facades\Storage::disk('public')->url($this->signature_path)
+            ? \Illuminate\Support\Facades\Storage::disk('private')->url($this->signature_path)
             : null;
     }
 

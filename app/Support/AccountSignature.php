@@ -36,11 +36,11 @@ class AccountSignature
             return null;
         }
 
-        $newPath = 'signatures/' . $prefix . '_' . time() . '_' . $user->id . '.png';
+        $newPath = 'signatures/' . $prefix . '_' . time() . '_' . $user->id . '_' . bin2hex(random_bytes(8)) . '.png';
 
-        Storage::disk('public')->put(
+        Storage::disk('private')->put(
             $newPath,
-            Storage::disk('public')->get($user->signature_path)
+            Storage::disk('private')->get($user->signature_path)
         );
 
         return $newPath;

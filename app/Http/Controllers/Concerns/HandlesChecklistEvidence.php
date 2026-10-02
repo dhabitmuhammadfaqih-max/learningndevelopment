@@ -61,7 +61,7 @@ trait HandlesChecklistEvidence
         }
 
         try {
-            Storage::disk('public')->delete($path);
+            Storage::disk('private')->delete($path);
         } catch (\Throwable $e) {
             // Sengaja diamkan - lihat catatan di atas.
         }
@@ -232,7 +232,7 @@ trait HandlesChecklistEvidence
                 file_get_contents($path)
             );
 
-            $path = 'checklist-selfies/' . $rolePrefix . '_' . $subjectId . '_' . time() . '.' . $extension;
+            $path = 'checklist-selfies/' . $rolePrefix . '_' . $subjectId . '_' . time() . '_' . bin2hex(random_bytes(8)) . '.' . $extension;
 
             // Jaring pengaman terakhir: kalaupun lolos semua cek di
             // atas tapi penyimpanan tetap gagal karena kondisi
@@ -240,7 +240,7 @@ trait HandlesChecklistEvidence
             // error 500 mentah ke user - ubah jadi pesan validasi yang
             // jelas.
             try {
-                Storage::disk('public')->put($path, $compressed);
+                Storage::disk('private')->put($path, $compressed);
             } catch (\Throwable $e) {
                 throw ValidationException::withMessages([
                     'evidence_file' => 'Upload file gagal, silakan coba lagi dengan file yang lebih kecil, atau gunakan metode Ambil Selfie.',

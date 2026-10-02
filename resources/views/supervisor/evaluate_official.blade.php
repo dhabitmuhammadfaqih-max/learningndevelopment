@@ -124,7 +124,7 @@
                     <p class="text-sm text-slate-600 mt-1.5 leading-relaxed">{{ $feedback->feedback }}</p>
 
                     @if ($feedback->signature)
-                        <img src="{{ Storage::disk('public')->url($feedback->signature) }}"
+                        <img src="{{ Storage::disk('private')->url($feedback->signature) }}"
                              class="mt-3 w-full max-w-[220px] h-24 object-contain border border-slate-200 rounded-xl bg-white">
                     @endif
                 </div>
@@ -189,7 +189,7 @@
                 @if ($myEvaluation->signature)
                     <div class="mt-5">
                         <p class="text-sm font-bold text-slate-700 mb-1.5">Tanda Tangan Penilai</p>
-                        <img src="{{ Storage::disk('public')->url($myEvaluation->signature) }}"
+                        <img src="{{ Storage::disk('private')->url($myEvaluation->signature) }}"
                              class="w-full max-w-[260px] h-28 object-contain border border-slate-200 rounded-xl bg-slate-50">
                     </div>
                 @endif
@@ -204,7 +204,7 @@
                 @if ($myEvaluation->employee_signature)
                     <div class="mt-5">
                         <p class="text-sm font-bold text-slate-700 mb-1.5">Tanda Tangan Pejabat</p>
-                        <img src="{{ Storage::disk('public')->url($myEvaluation->employee_signature) }}"
+                        <img src="{{ Storage::disk('private')->url($myEvaluation->employee_signature) }}"
                              class="w-full max-w-[260px] h-28 object-contain border border-slate-200 rounded-xl bg-slate-50">
                     </div>
                 @endif
@@ -306,7 +306,7 @@
                 <div class="mt-5 max-w-md">
                     <label class="block text-sm font-bold text-slate-700 mb-1.5">Tanda Tangan Penilai</label>
                     @if ($isEdit && $myEvaluation->signature)
-                        <img src="{{ Storage::disk('public')->url($myEvaluation->signature) }}" alt="Tanda tangan Anda"
+                        <img src="{{ Storage::disk('private')->url($myEvaluation->signature) }}" alt="Tanda tangan Anda"
                              class="rounded-xl border border-slate-200 bg-white block w-full max-w-[400px] h-[150px] object-contain">
                         <p class="text-xs text-slate-400 mt-2">
                             Tanda tangan ini diambil dari tanda tangan akun Anda saat pertama kali menilai.

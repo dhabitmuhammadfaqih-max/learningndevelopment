@@ -176,7 +176,7 @@
                             </div>
 
                             @if ($mySupervisorFeedback->signature)
-                                <img src="{{ Storage::disk('public')->url($mySupervisorFeedback->signature) }}"
+                                <img src="{{ Storage::disk('private')->url($mySupervisorFeedback->signature) }}"
                                      class="w-40 h-[70px] object-contain border border-slate-100 rounded-lg bg-slate-50 mt-3">
                             @endif
                         @else
@@ -211,7 +211,7 @@
                                 </p>
 
                                 @if ($myEvaluation->employee_signature)
-                                    <img src="{{ Storage::disk('public')->url($myEvaluation->employee_signature) }}"
+                                    <img src="{{ Storage::disk('private')->url($myEvaluation->employee_signature) }}"
                                          class="w-40 h-[70px] object-contain border border-slate-100 rounded-lg bg-slate-50 mt-2">
                                 @endif
                             </div>
@@ -559,7 +559,7 @@
                     'counterpartLabel' => 'Penilai Anda',
                     'checked' => $pegawaiSudahCentang,
                     'checkedAt' => auth()->user()->pegawai_konfirmasi_pertemuan_at,
-                    'selfieUrl' => auth()->user()->pegawai_konfirmasi_pertemuan_selfie ? Storage::disk('public')->url(auth()->user()->pegawai_konfirmasi_pertemuan_selfie) : null,
+                    'selfieUrl' => auth()->user()->pegawai_konfirmasi_pertemuan_selfie ? Storage::disk('private')->url(auth()->user()->pegawai_konfirmasi_pertemuan_selfie) : null,
                     'evidenceType' => auth()->user()->pegawai_konfirmasi_pertemuan_evidence_type,
                     'meetingMethod' => auth()->user()->pegawai_konfirmasi_pertemuan_metode,
                     'meetingCode' => auth()->user()->pegawai_konfirmasi_pertemuan_kode,

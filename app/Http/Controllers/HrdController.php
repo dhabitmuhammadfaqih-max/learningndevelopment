@@ -301,17 +301,17 @@ class HrdController extends Controller
 
         $referenced = $this->referencedStoragePaths();
 
-        $diskFiles = collect(Storage::disk('public')->files('checklist-selfies'))
-            ->merge(Storage::disk('public')->files('signatures'));
+        $diskFiles = collect(Storage::disk('private')->files('checklist-selfies'))
+            ->merge(Storage::disk('private')->files('signatures'));
 
         $orphans = $diskFiles
             ->reject(fn ($path) => isset($referenced[$path]))
             ->map(function ($path) {
                 return [
                     'path'        => $path,
-                    'size'        => Storage::disk('public')->size($path),
+                    'size'        => Storage::disk('private')->size($path),
                     'modified_at' => \Illuminate\Support\Carbon::createFromTimestamp(
-                        Storage::disk('public')->lastModified($path)
+                        Storage::disk('private')->lastModified($path)
                     ),
                 ];
             })
@@ -378,13 +378,13 @@ class HrdController extends Controller
                 return false;
             })
             ->filter(fn ($path) => ! isset($referenced[$path]))
-            ->filter(fn ($path) => Storage::disk('public')->exists($path))
+            ->filter(fn ($path) => Storage::disk('private')->exists($path))
             ->values();
 
         $skippedCount = count($validated['paths']) - $safeToDelete->count();
 
         if ($safeToDelete->isNotEmpty()) {
-            Storage::disk('public')->delete($safeToDelete->all());
+            Storage::disk('private')->delete($safeToDelete->all());
         }
 
         $message = $safeToDelete->count() . ' file berhasil dihapus.';
@@ -1729,7 +1729,7 @@ class HrdController extends Controller
         $account->delete();
 
         if ($signaturePaths->isNotEmpty()) {
-            Storage::disk('public')->delete($signaturePaths->all());
+            Storage::disk('private')->delete($signaturePaths->all());
         }
 
         return back()->with('success', 'Akun berhasil dihapus.');
@@ -2186,12 +2186,12 @@ class HrdController extends Controller
         }
 
         $toBase64 = function (?string $path) {
-            if (!$path || !Storage::disk('public')->exists($path)) {
+            if (!$path || !Storage::disk('private')->exists($path)) {
                 return null;
             }
 
             return 'data:image/png;base64,' .
-                base64_encode(Storage::disk('public')->get($path));
+                base64_encode(Storage::disk('private')->get($path));
         };
 
         $korelasiSignatures = $feedbacks->map(function ($feedback) use ($toBase64) {
@@ -2329,12 +2329,12 @@ class HrdController extends Controller
         }
 
         $toBase64 = function (?string $path) {
-            if (!$path || !Storage::disk('public')->exists($path)) {
+            if (!$path || !Storage::disk('private')->exists($path)) {
                 return null;
             }
 
             return 'data:image/png;base64,' .
-                base64_encode(Storage::disk('public')->get($path));
+                base64_encode(Storage::disk('private')->get($path));
         };
 
         $korelasiSignatures = $feedbacks->map(function ($feedback) use ($toBase64) {

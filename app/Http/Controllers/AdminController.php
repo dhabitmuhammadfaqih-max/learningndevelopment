@@ -667,7 +667,7 @@ class AdminController extends Controller
         $account->delete();
 
         if ($signaturePaths->isNotEmpty()) {
-            Storage::disk('public')->delete($signaturePaths->all());
+            Storage::disk('private')->delete($signaturePaths->all());
         }
 
         return back()->with('success', 'Akun berhasil dihapus.');
@@ -778,12 +778,12 @@ class AdminController extends Controller
         $hrd = $evaluation->hrd ?? null;
 
         $toBase64 = function (?string $path) {
-            if (!$path || !Storage::disk('public')->exists($path)) {
+            if (!$path || !Storage::disk('private')->exists($path)) {
                 return null;
             }
 
             return 'data:image/png;base64,' .
-                base64_encode(Storage::disk('public')->get($path));
+                base64_encode(Storage::disk('private')->get($path));
         };
 
         $korelasiSignatures = $feedbacks->map(function ($feedback) use ($toBase64) {

@@ -47,6 +47,19 @@ return [
             'report' => false,
         ],
 
+        // Disk PRIVATE untuk foto/bukti/tanda tangan. Foldernya di luar
+        // folder public, jadi tidak bisa dibuka langsung lewat URL.
+        // Satu-satunya jalan melihatnya: route /files/... (routes/web.php)
+        // yang WAJIB login.
+        'private' => [
+            'driver' => 'local',
+            'root' => storage_path('app/private-files'),
+            'url' => rtrim(env('APP_URL', 'http://localhost'), '/').'/files',
+            'visibility' => 'private',
+            'throw' => false,
+            'report' => false,
+        ],
+
         's3' => [
             'driver' => 's3',
             'key' => env('AWS_ACCESS_KEY_ID'),

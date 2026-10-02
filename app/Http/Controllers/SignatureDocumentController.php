@@ -69,12 +69,12 @@ class SignatureDocumentController extends Controller
 
         $imageContent = base64_decode(substr($imageData, strpos($imageData, ',') + 1));
         $imageContent = $this->optimizeSignaturePng($imageContent);
-        $filename = "signatures/{$document->id}_{$role}_" . time() . '.png';
-        Storage::disk('public')->put($filename, $imageContent);
+        $filename = "signatures/{$document->id}_{$role}_" . time() . '_' . bin2hex(random_bytes(8)) . '.png';
+        Storage::disk('private')->put($filename, $imageContent);
 
         // Hapus file lama jika sebelumnya ada (jaga-jaga)
         if ($document->{"{$role}_signature"}) {
-            Storage::disk('public')->delete($document->{"{$role}_signature"});
+            Storage::disk('private')->delete($document->{"{$role}_signature"});
         }
 
         $document->update([
@@ -91,7 +91,7 @@ class SignatureDocumentController extends Controller
             'message' => 'Tanda tangan berhasil disimpan.',
             'next_role' => $document->nextRole(),
             'is_complete' => $document->isComplete(),
-            'signature_url' => Storage::disk('public')->url($filename),
+            'signature_url' => Storage::disk('private')->url($filename),
         ]);
     }
 
@@ -110,7 +110,7 @@ class SignatureDocumentController extends Controller
         foreach (SignatureDocument::ROLES as $role) {
             $path = $document->{"{$role}_signature"};
             $signatures[$role] = $path
-                ? 'data:image/png;base64,' . base64_encode(Storage::disk('public')->get($path))
+                ? 'data:image/png;base64,' . base64_encode(Storage::disk('private')->get($path))
                 : null;
         }
 

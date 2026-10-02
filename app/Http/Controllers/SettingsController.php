@@ -122,9 +122,9 @@ class SettingsController extends Controller
                 ->pluck($selfieCol);
 
             foreach ($paths as $path) {
-                if (\Storage::disk('public')->exists($path)) {
-                    $freedBytes += \Storage::disk('public')->size($path);
-                    \Storage::disk('public')->delete($path);
+                if (\Storage::disk('private')->exists($path)) {
+                    $freedBytes += \Storage::disk('private')->size($path);
+                    \Storage::disk('private')->delete($path);
                 }
                 $deletedCount++;
             }

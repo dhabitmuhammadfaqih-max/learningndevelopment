@@ -605,7 +605,7 @@ class OfficialController extends Controller
                 'signature'                   => $signaturePath,
             ]);
         } catch (\Illuminate\Database\QueryException $e) {
-            Storage::disk('public')->delete($signaturePath);
+            Storage::disk('private')->delete($signaturePath);
 
             if (! str_contains(strtolower($e->getMessage()), 'duplicate')) {
                 throw $e;
@@ -922,7 +922,7 @@ class OfficialController extends Controller
             ->first();
 
         if ($existing && $existing->signature) {
-            Storage::disk('public')->delete($existing->signature);
+            Storage::disk('private')->delete($existing->signature);
         }
 
         SupervisorFeedback::updateOrCreate(
@@ -1164,7 +1164,7 @@ class OfficialController extends Controller
             ->first();
 
         if ($existing && $existing->signature) {
-            Storage::disk('public')->delete($existing->signature);
+            Storage::disk('private')->delete($existing->signature);
         }
 
         OfficialSupervisorFeedback::updateOrCreate(

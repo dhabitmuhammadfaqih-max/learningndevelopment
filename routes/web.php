@@ -12,52 +12,6 @@ use Illuminate\Support\Facades\Storage;
 
 /*
 |--------------------------------------------------------------------------
-| FALLBACK FILE SERVING (storage/app/public)
-|--------------------------------------------------------------------------
-| Menyajikan file dari disk "public" (mis. tanda tangan) meski symlink
-| `public/storage` belum dibuat lewat `php artisan storage:link`.
-| Kalau symlink sudah ada, web server akan menyajikan file itu langsung
-| sebagai static file dan route ini tidak akan pernah dipanggil.
-|
-| CATATAN: path sengaja diganti dari /storage/ ke /files/ karena di
-| hosting ini path /storage/ diblokir oleh security module server
-| (mengembalikan 403 sebelum request sempat sampai ke Laravel).
-*/
-
-Route::get('/files/{path}', function (string $path) {
-    if (! Storage::disk('public')->exists($path)) {
-        abort(404);
-    }
-
-    $extension = strtolower(pathinfo($path, PATHINFO_EXTENSION));
-
-    $mimeMap = [
-        'png'  => 'image/png',
-        'jpg'  => 'image/jpeg',
-        'jpeg' => 'image/jpeg',
-        'gif'  => 'image/gif',
-        'webp' => 'image/webp',
-        'svg'  => 'image/svg+xml',
-        'pdf'  => 'application/pdf',
-    ];
-
-    // Tebak Content-Type dari ekstensi file dulu (tidak butuh extension
-    // "fileinfo" PHP, yang kadang tidak aktif di beberapa environment).
-    // Kalau ekstensinya tidak dikenal, baru coba mimeType() bawaan Laravel.
-    $contentType = $mimeMap[$extension]
-        ?? Storage::disk('public')->mimeType($path)
-        ?? 'application/octet-stream';
-
-    return response(
-        Storage::disk('public')->get($path),
-        200,
-        ['Content-Type' => $contentType]
-    );
-})->where('path', '.*')->name('files.fallback');
-
-
-/*
-|--------------------------------------------------------------------------
 | ROOT REDIRECT
 |--------------------------------------------------------------------------
 | Arahkan user ke dashboard sesuai role masing-masing.
@@ -78,6 +32,54 @@ Route::get('/', function () {
 });
 
 Route::middleware('auth')->group(function () {
+
+    /*
+    |--------------------------------------------------------------------------
+    | FILE PRIVATE (foto bukti & tanda tangan)
+    |--------------------------------------------------------------------------
+    | File disimpan di storage/app/private-files (disk 'private'), tidak
+    | bisa dibuka langsung lewat URL. Hanya user yang SUDAH LOGIN yang
+    | bisa melihatnya lewat route ini. URL dari Storage::disk('private')
+    | ->url() otomatis mengarah ke /files/... ini.
+    |
+    | Nama path sengaja /files/ (bukan /storage/) karena /storage/ diblokir
+    | oleh security module hosting.
+    */
+    Route::get('/files/{path}', function (string $path) {
+        // Hanya dua folder ini yang boleh dilayani.
+        if (! str_starts_with($path, 'checklist-selfies/') && ! str_starts_with($path, 'signatures/')) {
+            abort(404);
+        }
+
+        // Cegah akses ke folder lain lewat "../"
+        if (str_contains($path, '..')) {
+            abort(404);
+        }
+
+        if (! Storage::disk('private')->exists($path)) {
+            abort(404);
+        }
+
+        $extension = strtolower(pathinfo($path, PATHINFO_EXTENSION));
+
+        $mimeMap = [
+            'png'  => 'image/png',
+            'jpg'  => 'image/jpeg',
+            'jpeg' => 'image/jpeg',
+        ];
+
+        return response(
+            Storage::disk('private')->get($path),
+            200,
+            [
+                'Content-Type'  => $mimeMap[$extension] ?? 'application/octet-stream',
+                // 'private' = jangan disimpan di cache bersama (proxy/CDN)
+                'Cache-Control' => 'private, max-age=3600',
+                'X-Content-Type-Options' => 'nosniff',
+            ]
+        );
+    })->where('path', '.*')->name('files.fallback');
+
 
     /*
     |--------------------------------------------------------------------------

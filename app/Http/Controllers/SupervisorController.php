@@ -178,7 +178,7 @@ class SupervisorController extends Controller
                 'signature'                                          => $signaturePath,
             ]);
         } catch (\Illuminate\Database\QueryException $e) {
-            Storage::disk('public')->delete($signaturePath);
+            Storage::disk('private')->delete($signaturePath);
 
             return back()->with('success', 'Pejabat ini sudah pernah Anda nilai sebelumnya.');
         }

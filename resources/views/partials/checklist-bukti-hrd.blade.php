@@ -33,7 +33,7 @@
          sudah tercetak di baris di atas. Gambar hanya untuk metode
          Online (upload) & data lama bermetode selfie. --}}
     @if(! $adalahKode && $file)
-        <img src="{{ Storage::disk('public')->url($file) }}"
+        <img src="{{ Storage::disk('private')->url($file) }}"
              alt="Bukti checklist {{ $label }}"
              style="width:64px;height:64px;object-fit:cover;border-radius:12px;border:1px solid #e2e8f0;margin-top:6px;">
     @endif

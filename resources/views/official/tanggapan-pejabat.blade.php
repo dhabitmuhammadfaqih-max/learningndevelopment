@@ -155,7 +155,7 @@
                                 </p>
                             @endif
                             @if ($officialSupervisorFeedback->signature)
-                                <img src="{{ Storage::disk('public')->url($officialSupervisorFeedback->signature) }}"
+                                <img src="{{ Storage::disk('private')->url($officialSupervisorFeedback->signature) }}"
                                      class="w-full max-w-[220px] h-24 object-contain border border-slate-200 rounded-xl bg-slate-50">
                             @endif
                         </div>
@@ -205,7 +205,7 @@
                         <div class="mt-5 max-w-md">
                             <label class="block text-sm font-bold text-slate-700 mb-1.5">Tanda Tangan</label>
                             @if ($officialSupervisorFeedback?->signature)
-                                <img src="{{ Storage::disk('public')->url($officialSupervisorFeedback->signature) }}" alt="Tanda tangan Anda"
+                                <img src="{{ Storage::disk('private')->url($officialSupervisorFeedback->signature) }}" alt="Tanda tangan Anda"
                                      class="rounded-xl border border-slate-200 bg-white block w-full max-w-[400px] h-[150px] object-contain">
                             @else
                                 <img src="{{ auth()->user()->signature_url }}" alt="Tanda tangan Anda"
