@@ -189,6 +189,10 @@ class SupervisorController extends Controller
         app(NotificationTriggerService::class)
             ->triggerSiapTanggapanAtasanPenilaiPejabatJikaPerlu($pejabat);
 
+        // Beri tahu pejabat yang dinilai bahwa nilainya sudah muncul.
+        app(NotificationTriggerService::class)
+            ->triggerNilaiMunculPejabat($pejabat, $score);
+
         return back()->with('success', 'Penilaian berhasil disimpan. Nilai akhir: ' . $score);
     }
 

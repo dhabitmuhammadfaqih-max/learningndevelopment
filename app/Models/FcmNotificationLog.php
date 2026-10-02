@@ -96,6 +96,19 @@ class FcmNotificationLog extends Model
     public const TYPE_NILAI_MUNCUL_PEGAWAI = 'nilai_muncul_pegawai';
 
     /**
+     * Versi pejabat dari TYPE_NILAI_MUNCUL_PEGAWAI - penilaian kinerja
+     * (OfficialEvaluation) pejabat sudah dibuat oleh Atasan-nya
+     * (users.supervisor_id pejabat ini), jadi hasilnya sudah bisa dilihat
+     * pejabat di halaman "Penilaian Saya". Dikirim ke PEJABAT itu sendiri,
+     * langsung setelah Atasan menyimpan penilaian - lihat
+     * SupervisorController::evaluateOfficial() &
+     * NotificationTriggerService::triggerNilaiMunculPejabat(). employee_id
+     * & supervisor_id pada baris log untuk jenis ini bernilai SAMA
+     * (notifikasi ke diri sendiri).
+     */
+    public const TYPE_NILAI_MUNCUL_PEJABAT = 'nilai_muncul_pejabat';
+
+    /**
      * Checklist pertemuan PEGAWAI & PENILAI untuk seorang pegawai sudah
      * sama-sama lengkap, jadi HRD sudah boleh menandatangani penilaian
      * pegawai ini (lihat User::checklistPertemuanLengkap() &

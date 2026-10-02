@@ -441,6 +441,39 @@ class NotificationTriggerService
     }
 
     /**
+     * Versi pejabat dari triggerNilaiMunculPegawai() - beri tahu PEJABAT
+     * itu sendiri bahwa Atasan-nya baru saja menyimpan penilaian kinerja
+     * (OfficialEvaluation) untuk dirinya, jadi nilainya sudah bisa dilihat.
+     *
+     * Dipanggil dari SupervisorController::evaluateOfficial() — setelah
+     * OfficialEvaluation berhasil disimpan.
+     */
+    public function triggerNilaiMunculPejabat(User $pejabat, ?float $score = null): void
+    {
+        try {
+            $body = $score !== null
+                ? "Atasan sudah memberikan penilaian untuk Anda. Nilai akhir: {$score}."
+                : 'Atasan sudah memberikan penilaian untuk Anda. Silakan cek hasilnya.';
+
+            $this->dispatchTriggered(
+                subjectUserId: $pejabat->id,
+                recipientUserId: $pejabat->id,
+                type: FcmNotificationLog::TYPE_NILAI_MUNCUL_PEJABAT,
+                title: 'Nilai Penilaian Sudah Muncul',
+                body: $body,
+                routeName: 'official.my-evaluations',
+                routeParam: null,
+                fallbackRouteName: 'official.dashboard',
+            );
+        } catch (\Throwable $e) {
+            Log::error('FCM NilaiMunculPejabat trigger: exception.', [
+                'official_id' => $pejabat->id,
+                'error'       => $e->getMessage(),
+            ]);
+        }
+    }
+
+    /**
      * Cek apakah checklist pertemuan PEGAWAI & PENILAI untuk $employee
      * kini sudah sama-sama lengkap (User::checklistPertemuanLengkap()),
      * jadi HRD sudah boleh menandatangani penilaiannya
