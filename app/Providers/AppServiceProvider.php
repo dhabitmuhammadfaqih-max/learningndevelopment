@@ -2,7 +2,9 @@
 
 namespace App\Providers;
 
+use App\Listeners\AuditAuthSubscriber;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -20,6 +22,9 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // Audit Log: catat login/logout/gagal login/diblokir.
+        Event::subscribe(AuditAuthSubscriber::class);
+
         // Fix umum Laravel: migration yang memakai ->change() akan gagal
         // kalau ada kolom bertipe "enum" di tabel yang sama, karena
         // Doctrine DBAL tidak tahu cara membaca tipe "enum" (mis. kolom

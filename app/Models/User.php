@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\Auditable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -13,6 +14,8 @@ use App\Models\OfficialSupervisorFeedback;
 
 class User extends Authenticatable
 {
+    use Auditable;
+
     use HasFactory;
     use Notifiable;
 
@@ -863,5 +866,13 @@ class User extends Authenticatable
     public function notifications()
     {
         return $this->hasMany(\App\Models\Notification::class)->latest();
+    }
+
+    /**
+     * Teks objek yang tampil di halaman Audit Log (lihat trait Auditable).
+     */
+    public function auditLabel(): string
+    {
+        return "Akun {$this->name} ({$this->role})";
     }
 }

@@ -58,6 +58,11 @@
             'label' => 'Pengaturan Periode',
             'icon'  => 'calendar',
         ] : null,
+        $role === 'hrd' ? [
+            'route' => 'admin.audit-logs',
+            'label' => 'Audit Log',
+            'icon'  => 'shield',
+        ] : null,
     ])->filter()->values();
 
     // Badge notifikasi "bisa ditanggapi/dinilai" per menu - lihat
@@ -169,6 +174,9 @@
                                         @break
                                     @case('key')
                                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><circle cx="8" cy="15" r="4"/><path stroke-linecap="round" stroke-linejoin="round" d="m10.5 12.5 8-8M16 6l2 2M19 3l2 2"/></svg>
+                                        @break
+                                    @case('shield')
+                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3 4 6v6c0 4.5 3.2 8.3 8 9 4.8-.7 8-4.5 8-9V6l-8-3Z"/><path stroke-linecap="round" stroke-linejoin="round" d="m9 12 2 2 4-4"/></svg>
                                         @break
                                     @default
                                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>

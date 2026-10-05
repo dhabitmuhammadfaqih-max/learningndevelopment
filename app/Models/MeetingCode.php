@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\Auditable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -35,6 +36,8 @@ use Illuminate\Validation\ValidationException;
  */
 class MeetingCode extends Model
 {
+    use Auditable;
+
     use HasFactory;
 
     /**
@@ -394,5 +397,15 @@ class MeetingCode extends Model
         }
 
         return $code;
+    }
+
+    /**
+     * Teks objek yang tampil di halaman Audit Log (lihat trait Auditable).
+     */
+    public function auditLabel(): string
+    {
+        return 'Kode pertemuan ' . \App\Support\AuditLogger::userName($this->subject_id)
+            . ' & ' . \App\Support\AuditLogger::userName($this->issuer_id)
+            . " ({$this->context})";
     }
 }

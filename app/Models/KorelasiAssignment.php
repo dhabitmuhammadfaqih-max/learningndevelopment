@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\Auditable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -15,6 +16,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class KorelasiAssignment extends Model
 {
+    use Auditable;
+
     protected $fillable = [
         'reviewer_id',
         'target_id',
@@ -34,5 +37,14 @@ class KorelasiAssignment extends Model
     public function assignedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'assigned_by');
+    }
+
+    /**
+     * Teks objek yang tampil di halaman Audit Log (lihat trait Auditable).
+     */
+    public function auditLabel(): string
+    {
+        return 'Korelasi: ' . \App\Support\AuditLogger::userName($this->reviewer_id)
+            . ' menanggapi ' . \App\Support\AuditLogger::userName($this->target_id);
     }
 }

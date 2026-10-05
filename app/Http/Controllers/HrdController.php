@@ -6,7 +6,9 @@ use App\Http\Concerns\FiltersByTahun;
 use App\Models\User;
 use App\Models\Feedback;
 use App\Services\NotificationTriggerService;
+use App\Models\AuditLog;
 use App\Support\AccountSignature;
+use App\Support\AuditLogger;
 use App\Models\Evaluation;
 use App\Models\SupervisorFeedback;
 use App\Models\OfficialEvaluation;
@@ -385,6 +387,12 @@ class HrdController extends Controller
 
         if ($safeToDelete->isNotEmpty()) {
             Storage::disk('private')->delete($safeToDelete->all());
+
+            AuditLogger::log(
+                AuditLog::EVENT_FILE_DELETED,
+                "Menghapus {$safeToDelete->count()} file orphan dari penyimpanan",
+                ['meta' => ['paths' => $safeToDelete->all()]]
+            );
         }
 
         $message = $safeToDelete->count() . ' file berhasil dihapus.';
@@ -1524,6 +1532,23 @@ class HrdController extends Controller
             // KEMBALIKAN HASIL IMPORT
             // =====================================================
 
+            // Tiap akun yang dibuat/diubah di atas sudah tercatat sendiri-
+            // sendiri (event model User). Baris ini ringkasan per-importnya.
+            // CATATAN: penautan Penilai/Atasan lewat User::where()->update()
+            // di atas tidak memicu event model, jadi hanya terwakili di sini.
+            AuditLogger::log(
+                AuditLog::EVENT_IMPORT,
+                'Import akun dari Excel: ' . count($created) . ' dibuat, '
+                    . count($updated) . ' diperbarui, ' . count($skipped) . ' dilewati',
+                ['meta' => [
+                    'file'      => $file->getClientOriginalName(),
+                    'dibuat'    => count($created),
+                    'diperbarui' => count($updated),
+                    'dilewati'  => count($skipped),
+                    'peringatan' => count($warnings),
+                ]]
+            );
+
             return back()->with('import_report', [
                 'created' => $created,
                 'updated' => $updated,
@@ -2229,6 +2254,12 @@ class HrdController extends Controller
             )
         );
 
+        AuditLogger::log(
+            AuditLog::EVENT_PDF,
+            "Mengunduh PDF penilaian {$employee->name} (tahun {$tahun})",
+            ['subject' => $employee, 'meta' => ['tahun' => $tahun]]
+        );
+
         return $pdf->download(
             'penilaian-' .
             str_replace(' ', '-', strtolower($employee->name)) .
@@ -2365,6 +2396,14 @@ class HrdController extends Controller
         $pdf = Pdf::loadView(
             'admin.pdf-pejabat',
             compact('pejabat', 'feedbacks', 'evaluation', 'signatures', 'officialSupervisorFeedback')
+        );
+
+        $tahunLog = $tahun ?? \App\Support\ActivePeriod::year();
+
+        AuditLogger::log(
+            AuditLog::EVENT_PDF,
+            "Mengunduh PDF penilaian pejabat {$pejabat->name} (tahun {$tahunLog})",
+            ['subject' => $pejabat, 'meta' => ['tahun' => $tahunLog]]
         );
 
         return $pdf->download(

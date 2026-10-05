@@ -2,10 +2,13 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\Auditable;
 use Illuminate\Database\Eloquent\Model;
 
 class OfficialSupervisorFeedback extends Model
 {
+    use Auditable;
+
     protected $table = 'official_supervisor_feedbacks';
 
     protected $fillable = [
@@ -81,5 +84,15 @@ class OfficialSupervisorFeedback extends Model
         }, $list);
 
         return implode(', ', $labels);
+    }
+
+    /**
+     * Teks objek yang tampil di halaman Audit Log (lihat trait Auditable).
+     */
+    public function auditLabel(): string
+    {
+        return 'Tanggapan atasan penilai ' . \App\Support\AuditLogger::userName($this->supervisor_id)
+            . ' atas pejabat ' . \App\Support\AuditLogger::userName($this->official_id)
+            . ($this->tahun ? " tahun {$this->tahun}" : '');
     }
 }

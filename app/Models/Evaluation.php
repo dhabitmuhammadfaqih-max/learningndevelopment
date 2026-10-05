@@ -2,10 +2,13 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\Auditable;
 use Illuminate\Database\Eloquent\Model;
 
 class Evaluation extends Model
 {
+    use Auditable;
+
     protected $table = 'evaluations';
 
     protected $fillable = [
@@ -238,5 +241,14 @@ class Evaluation extends Model
         }
 
         return 'D';
+    }
+
+    /**
+     * Teks objek yang tampil di halaman Audit Log (lihat trait Auditable).
+     */
+    public function auditLabel(): string
+    {
+        return 'Penilaian pegawai ' . \App\Support\AuditLogger::userName($this->employee_id)
+            . ($this->tahun ? " tahun {$this->tahun}" : '');
     }
 }

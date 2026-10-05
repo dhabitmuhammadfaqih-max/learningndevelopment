@@ -2,11 +2,14 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\Auditable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Cache;
 
 class AppSetting extends Model
 {
+    use Auditable;
+
     protected $fillable = ['key', 'value'];
 
     /**
@@ -31,5 +34,13 @@ class AppSetting extends Model
         static::query()->updateOrCreate(['key' => $key], ['value' => $value]);
 
         Cache::forget("app_setting:{$key}");
+    }
+
+    /**
+     * Teks objek yang tampil di halaman Audit Log (lihat trait Auditable).
+     */
+    public function auditLabel(): string
+    {
+        return "Pengaturan {$this->key}";
     }
 }

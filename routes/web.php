@@ -5,6 +5,7 @@ use App\Http\Controllers\EmployeeController;
 use App\Http\Controllers\OfficialController;
 use App\Http\Controllers\SupervisorController;
 use App\Http\Controllers\HrdController;
+use App\Http\Controllers\AuditLogController;
 use Illuminate\Support\Facades\Auth;
 use App\Http\Controllers\FcmController;
 use Illuminate\Support\Facades\Storage;
@@ -524,6 +525,18 @@ Route::middleware('auth')->group(function () {
                 '/kode-pertemuan/{meetingCode}/generate',
                 [HrdController::class, 'generateMeetingCode']
             )->name('meeting-codes.generate');
+
+            // Audit Log - siapa melakukan apa & kapan. Hanya-baca (log tidak
+            // bisa diubah/dihapus dari UI). Lihat App\Support\AuditLogger.
+            Route::get(
+                '/audit-log',
+                [AuditLogController::class, 'index']
+            )->name('audit-logs');
+
+            Route::get(
+                '/audit-log/export',
+                [AuditLogController::class, 'export']
+            )->name('audit-logs.export');
         });
 
     /*
